@@ -6,7 +6,6 @@ import com.intellij.codeInspection.util.IntentionFamilyName
 import com.intellij.modcommand.ActionContext
 import com.intellij.modcommand.ModPsiUpdater
 import com.intellij.modcommand.Presentation
-import com.intellij.openapi.util.IntellijInternalApi
 import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.intentions.KotlinPsiUpdateModCommandAction
@@ -22,8 +21,7 @@ import org.jetbrains.kotlin.psi.KtWhenEntry
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 
 @Internal
-@IntellijInternalApi
-class AddBracesIntention : KotlinPsiUpdateModCommandAction.Contextless<KtElement>(KtElement::class) {
+class AddBracesIntention : KotlinPsiUpdateModCommandAction.ClassContextless<KtElement>(KtElement::class) {
     override fun getFamilyName(): @IntentionFamilyName String =
         KotlinBundle.message("add.braces")
 
@@ -39,7 +37,7 @@ class AddBracesIntention : KotlinPsiUpdateModCommandAction.Contextless<KtElement
         }
     }
 
-    override fun getPresentation(context: ActionContext, element: KtElement): Presentation? {
+    override fun getActionPresentation(context: ActionContext, element: KtElement): Presentation? {
         val expression = element.getTargetExpression(context.offset) ?: return null
         if (expression is KtBlockExpression) return null
 

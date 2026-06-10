@@ -97,18 +97,70 @@ class FileChannelWithWALTest {
   }
 
   @Test
-  fun `writable channel creates missing file on opening`(@TempDir tempDir: Path) {
+  fun `writable channel initializes missing file size lazily`(@TempDir tempDir: Path) {
     val file = tempDir.resolve("missing-storage.bin")
     val writeAheadLog = RecordingWriteAheadLog()
 
     assertFalse(Files.exists(file), "Precondition: file should not exist before channel opening")
 
-    // Whether WAL-backed channels should create files eagerly is debatable, but this is the current contract:
-    // writable FileChannelWithWAL mirrors ordinary writable FileChannel open semantics and creates a missing file on construction.
     openWritableChannel(file, writeAheadLog).use { channel ->
-      assertTrue(Files.exists(file), "Writable WAL channel must create a missing file on opening")
+      assertFalse(Files.exists(file), "Writable WAL channel must not create a missing file on opening")
+
+      assertEquals(2, channel.write(ByteBuffer.wrap(byteArrayOf(1, 2)), 0))
+      assertFalse(Files.exists(file), "WAL write must not create a missing file before underlying channel is needed")
+
+      assertEquals(2, channel.size())
+      assertTrue(Files.exists(file), "size() initializes underlying channel lazily")
+    }
+  }
+
+  @Test
+  fun `writable channel can create missing file on opening`(@TempDir tempDir: Path) {
+    val file = tempDir.resolve("missing-storage.bin")
+    val writeAheadLog = RecordingWriteAheadLog()
+
+    assertFalse(Files.exists(file), "Precondition: file should not exist before channel opening")
+
+    FileChannelWithWAL(
+      file,
+      writeAheadLog,
+      PageCacheUtils.getCachedChannelsAccessor(false),
+      readOnly = false,
+      createFileImmediately = true,
+    ).use { channel ->
+      assertTrue(Files.exists(file), "Writable WAL channel must create a missing file on opening if requested")
       assertEquals(0, channel.size())
     }
+  }
+
+  @Test
+  fun `channel rejects underlying accessor with different mode`(@TempDir tempDir: Path) {
+    val file = tempDir.storageFile()
+    val writeAheadLog = RecordingWriteAheadLog()
+
+    val error = assertThrows<IllegalArgumentException> {
+      FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.getCachedChannelsAccessor(true), readOnly = false)
+    }
+
+    assertTrue(error.message!!.contains("must match FileChannelWithWAL mode"))
+  }
+
+  @Test
+  fun `channel rejects eager file creation in read only mode`(@TempDir tempDir: Path) {
+    val file = tempDir.resolve("missing-storage.bin")
+    val writeAheadLog = RecordingWriteAheadLog()
+
+    val error = assertThrows<IllegalArgumentException> {
+      FileChannelWithWAL(
+        file,
+        writeAheadLog,
+        PageCacheUtils.getCachedChannelsAccessor(true),
+        readOnly = true,
+        createFileImmediately = true,
+      )
+    }
+
+    assertTrue(error.message!!.contains("createFileImmediately"))
   }
 
   @Test
@@ -117,12 +169,12 @@ class FileChannelWithWALTest {
     Files.write(file, byteArrayOf(1, 2, 3, 4))
     val writeAheadLog = fileBackedWriteAheadLog()
 
-    FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.CHANNELS_CACHE, readOnly = false).use { writeableChannel ->
+    FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.getCachedChannelsAccessor(false), readOnly = false).use { writeableChannel ->
       writeableChannel.write(ByteBuffer.wrap(byteArrayOf(9, 8)), 1)
 
       assertArrayEquals(byteArrayOf(1, 2, 3, 4), Files.readAllBytes(file), "Write is pending: file content is unchanged")
 
-      FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.CHANNELS_CACHE, readOnly = true).use { readOnlyChannel ->
+      FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.getCachedChannelsAccessor(true), readOnly = true).use { readOnlyChannel ->
         val target = ByteBuffer.allocate(4)
 
         assertEquals(4, readOnlyChannel.read(target, 0))
@@ -147,7 +199,7 @@ class FileChannelWithWALTest {
     FileChannelWithWAL(
       file,
       writeAheadLog,
-      PageCacheUtils.CHANNELS_CACHE,
+      PageCacheUtils.getCachedChannelsAccessor(false),
       readOnly = false,
       applyUnfinishedOnRead = true
     ).use { writeableChannel ->
@@ -158,7 +210,7 @@ class FileChannelWithWALTest {
       FileChannelWithWAL(
         file,
         writeAheadLog,
-        PageCacheUtils.CHANNELS_CACHE,
+        PageCacheUtils.getCachedChannelsAccessor(true),
         readOnly = true,
         applyUnfinishedOnRead = true
       ).use { readOnlyChannel ->
@@ -169,6 +221,41 @@ class FileChannelWithWALTest {
         assertArrayEquals(byteArrayOf(1, 9, 8, 4), target.array())
         assertTrue(writeAheadLog.hasUnfinished())
         assertArrayEquals(initialContent, Files.readAllBytes(file), "Overlay read must not flush pending writes")
+      }
+    }
+  }
+
+  @Test
+  fun `new channel sees size extended by pending write from existing channel`(@TempDir tempDir: Path) {
+    val file = tempDir.storageFile()
+    val initialContent = byteArrayOf(1, 2, 3, 4)
+    Files.write(file, initialContent)
+    val writeAheadLog = fileBackedWriteAheadLog()
+
+    FileChannelWithWAL(
+      file,
+      writeAheadLog,
+      PageCacheUtils.getCachedChannelsAccessor(false),
+      readOnly = false,
+      applyUnfinishedOnRead = true,
+    ).use { writeableChannel ->
+      writeableChannel.write(ByteBuffer.wrap(byteArrayOf(5, 6)), initialContent.size.toLong())
+
+      assertEquals(6, writeableChannel.size())
+      assertEquals(initialContent.size.toLong(), Files.size(file), "Write is pending: file size is unchanged")
+
+      FileChannelWithWAL(
+        file,
+        writeAheadLog,
+        PageCacheUtils.getCachedChannelsAccessor(true),
+        readOnly = true,
+        applyUnfinishedOnRead = true,
+      ).use { readOnlyChannel ->
+        assertEquals(6, readOnlyChannel.size())
+
+        val target = ByteBuffer.allocate(6)
+        assertEquals(6, readOnlyChannel.read(target, 0))
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4, 5, 6), target.array())
       }
     }
   }
@@ -188,14 +275,14 @@ class FileChannelWithWALTest {
     FileChannelWithWAL(
       flushReadFile,
       fileBackedWriteAheadLog(),
-      PageCacheUtils.CHANNELS_CACHE,
+      PageCacheUtils.getCachedChannelsAccessor(false),
       readOnly = false,
       applyUnfinishedOnRead = false,
     ).use { flushReadChannel ->
       FileChannelWithWAL(
         overlayReadFile,
         fileBackedWriteAheadLog(),
-        PageCacheUtils.CHANNELS_CACHE,
+        PageCacheUtils.getCachedChannelsAccessor(false),
         readOnly = false,
         applyUnfinishedOnRead = true,
       ).use { overlayReadChannel ->
@@ -230,7 +317,7 @@ class FileChannelWithWALTest {
   private fun Path.storageFile(): Path = resolve("storage.bin").also { Files.createFile(it) }
 
   private fun openWritableChannel(file: Path, writeAheadLog: WriteAheadLog): FileChannelWithWAL {
-    return FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.CHANNELS_CACHE, readOnly = false)
+    return FileChannelWithWAL(file, writeAheadLog, PageCacheUtils.getCachedChannelsAccessor(false), readOnly = false)
   }
 
   private fun readChannelContent(channel: FileChannelWithWAL): ByteArray {
@@ -263,17 +350,14 @@ class FileChannelWithWALTest {
   }
 
   private fun fileBackedWriteAheadLog(): WriteAheadLog {
+    val writeableAccessor = PageCacheUtils.getCachedChannelsAccessor(/*readOnly = */false)
     return ByteArrayQueueWriteAheadLog { path, offsetInFile, data ->
-      PageCacheUtils.CHANNELS_CACHE.executeOp(
-        path,
-        { channel ->
-          var offset = offsetInFile
-          while (data.hasRemaining()) {
-            offset += channel.write(data, offset)
-          }
-        },
-        false,
-      )
+      writeableAccessor.executeOp(path) { channel ->
+        var offset = offsetInFile
+        while (data.hasRemaining()) {
+          offset += channel.write(data, offset)
+        }
+      }
     }
   }
 
@@ -315,6 +399,13 @@ class FileChannelWithWALTest {
 
         override fun hasUnfinished(): Boolean = writes.isNotEmpty()
 
+        override fun maxUnfinishedWriteOffset(): Long {
+          return writes
+            .asSequence()
+            .filter { it.file == file }
+            .maxOfOrNull { it.offset + it.data.size } ?: -1
+        }
+
         override fun applyUnfinished(offsetInFile: Long, length: Int, targetBuffer: ByteBuffer, offsetInBuffer: Int) =
           throw UnsupportedOperationException("Intentionally not implemented")
 
@@ -343,6 +434,8 @@ class FileChannelWithWALTest {
 
         override fun hasUnfinished(): Boolean = false
 
+        override fun maxUnfinishedWriteOffset(): Long = -1
+
         override fun applyUnfinished(offsetInFile: Long, length: Int, targetBuffer: ByteBuffer, offsetInBuffer: Int) =
           throw UnsupportedOperationException("Intentionally not implemented")
 
@@ -365,6 +458,8 @@ class FileChannelWithWALTest {
         override fun write(fileOffset: Long, writer: ByteBufferWriter, recordSize: Int) = Unit
 
         override fun hasUnfinished(): Boolean = this@CountingFlushWriteAheadLog.hasUnfinished()
+
+        override fun maxUnfinishedWriteOffset(): Long = -1
 
         override fun applyUnfinished(fileOffset: Long, length: Int, buffer: ByteBuffer, offsetInBuffer: Int) = Unit
 

@@ -56,7 +56,8 @@ class CodexSessionSourceRealTuiIntegrationTest {
           }
 
           assertThat(hintsAfterRead)
-            .withFailMessage("Timed out waiting for read tracking to suppress passive unread rollout hint from real Codex TUI.\n%s", session.diagnostics())
+            .withFailMessage("Timed out waiting for read tracking to suppress passive unread rollout hint from real Codex TUI.\n%s",
+                             session.diagnostics())
             .isNotNull
         }
       }
@@ -142,7 +143,8 @@ class CodexSessionSourceRealTuiIntegrationTest {
             .withFailMessage("Timed out waiting for NEEDS_INPUT source hint from real Codex TUI.\n%s", session.diagnostics())
             .isNotNull
           assertThat(mergedHint)
-            .withFailMessage("Timed out waiting for response-required NEEDS_INPUT Codex hint from real Codex TUI.\n%s", session.diagnostics())
+            .withFailMessage("Timed out waiting for response-required NEEDS_INPUT Codex hint from real Codex TUI.\n%s",
+                             session.diagnostics())
             .isNotNull
         }
       }

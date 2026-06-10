@@ -9,6 +9,7 @@
     <module name="intellij.platform.core.impl"/>
     <module name="intellij.platform.core.ui"/>
     <module name="intellij.platform.credentialStore"/>
+    <module name="intellij.platform.diff"/>
     <module name="intellij.platform.editor.ex"/>
     <module name="intellij.platform.editor.ui"/>
     <module name="intellij.platform.ide"/>
@@ -83,6 +84,11 @@
       <add-to-group group-id="EditorPopupMenu" anchor="last"/>
     </action>
 
+    <group id="Code.Review.Diff.Editor.Popup">
+      <separator/>
+      <add-to-group group-id="Diff.EditorPopupMenu" anchor="first"/>
+    </group>
+
     <action id="Code.Review.Editor.New.Comment"
             class="com.intellij.collaboration.ui.codereview.editor.action.CodeReviewEditorNewCommentAction">
       <keyboard-shortcut first-keystroke="control shift X" keymap="$default"/>
@@ -91,7 +97,7 @@
       <keyboard-shortcut first-keystroke="meta shift X" keymap="Eclipse (Mac OS X)" remove="true"/>
       <keyboard-shortcut first-keystroke="control shift X" keymap="Emacs" remove="true"/>
       <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-      <add-to-group group-id="Diff.EditorPopupMenu" anchor="last"/>
+      <add-to-group group-id="Code.Review.Diff.Editor.Popup" anchor="first"/>
     </action>
   </actions>
 </idea-plugin>

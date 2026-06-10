@@ -1,4 +1,4 @@
-// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.openapi.vfs.newvfs.persistent;
 
 import com.intellij.concurrency.ConcurrentCollectionFactory;
@@ -12,7 +12,6 @@ import com.intellij.notification.NotificationGroup;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.Application;
-import com.intellij.openapi.diagnostic.ControlFlowException;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.diagnostic.ThrottledLogger;
 import com.intellij.openapi.extensions.PluginId;
@@ -148,6 +147,7 @@ import java.util.function.Function;
 
 import static com.intellij.configurationStore.StorageUtilKt.RELOADING_STORAGE_WRITE_REQUESTOR;
 import static com.intellij.notification.NotificationType.WARNING;
+import static com.intellij.openapi.diagnostic.LoggerKt.rethrowControlFlowException;
 import static com.intellij.openapi.vfs.newvfs.AsyncEventSupport.afterVfsChange;
 import static com.intellij.openapi.vfs.newvfs.events.VFileEvent.REFRESH_REQUESTOR;
 import static com.intellij.openapi.vfs.newvfs.impl.VfsThreadingUtil.runActionOnBackgroundRegardlessOfCurrentThread;
@@ -437,6 +437,8 @@ public final class PersistentFSImpl extends PersistentFS implements Disposable {
       flushPendingUpdates();
     }
     catch (Exception e) {
+      rethrowControlFlowException(e);
+
       LOG.error(".fsync() fails", e );
       NotificationGroup notificationGroup = NotificationGroupManager.getInstance().getNotificationGroup("VFS");
       notificationGroup.createNotification(
@@ -2139,9 +2141,7 @@ public final class PersistentFSImpl extends PersistentFS implements Disposable {
       return cachedRoot;
     }
     catch (Throwable t) {
-      if (t instanceof ControlFlowException) {
-        throw t;
-      }
+      rethrowControlFlowException(t);
       StringBuilder sb = new StringBuilder();
       vfsPeer.forEachRoot((rootUrl, rootFileId) -> {
         sb.append("[#").append(rootFileId).append("]: '").append(rootUrl).append("'\n");
@@ -2733,7 +2733,7 @@ public final class PersistentFSImpl extends PersistentFS implements Disposable {
   private static void invalidateSingleNode(@NotNull VirtualFileSystemEntry file, @NotNull Object source, @NotNull Object reason) {
     if (file.is(VFileProperty.SYMLINK)) {
       VirtualFileSystem fs = file.getFileSystem();
-      if (fs instanceof SymlinksCapableFileSystem scfs && scfs.isSymlinksSupported()) {
+      if (fs instanceof SymlinksCapableFileSystem scfs && scfs.areSymlinksSupported()) {
         scfs.symlinkRemoved(file.getId());
       }
     }
@@ -2774,7 +2774,7 @@ public final class PersistentFSImpl extends PersistentFS implements Disposable {
     int id = fileId(file);
     vfsPeer.storeSymlinkTarget(id, target);
     VirtualFileSystem fs = file.getFileSystem();
-    if (fs instanceof SymlinksCapableFileSystem scfs && scfs.isSymlinksSupported()) {
+    if (fs instanceof SymlinksCapableFileSystem scfs && scfs.areSymlinksSupported()) {
       scfs.symlinkUpdated(id, file.getParent(), file.getNameSequence(), file.getPath(), target);
     }
   }

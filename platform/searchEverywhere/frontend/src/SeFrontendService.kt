@@ -1,6 +1,4 @@
 // Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
-@file:OptIn(IntellijInternalApi::class)
-
 package com.intellij.platform.searchEverywhere.frontend
 
 import com.intellij.ide.actions.SearchEverywhereManagerFactory
@@ -20,10 +18,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.IntellijInternalApi
 import com.intellij.openapi.util.WindowStateService
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.platform.project.projectId
+import com.intellij.platform.rpc.RemoteApiProviderService
 import com.intellij.platform.searchEverywhere.SeSession
 import com.intellij.platform.searchEverywhere.SeSessionEntity
 import com.intellij.platform.searchEverywhere.asRef
@@ -299,9 +297,12 @@ class SeFrontendService(val project: Project?, private val coroutineScope: Corou
   ) : SuspendLazyProperty<List<SeTab>> = initAsync(popupScope) {
     val (fetchedRemoteLegacyContributors, orphanedRemoteAdaptedTabInfos) = initAsync(popupScope) {
       val dataContextId = readAction { initEvent.dataContext.rpcId() }
-      val availableRemoteProviders = project?.let {
-        SeRemoteApi.getInstance().getAvailableProviderIds(it.projectId(), session, dataContextId)
-      } ?: return@initAsync null
+      val availableRemoteProviders = when {
+        project == null -> null
+        !service<RemoteApiProviderService>().isServiceOperational() -> null
+        else -> SeRemoteApi.getInstance().getAvailableProviderIds(project.projectId(), session, dataContextId)
+      }
+      if (availableRemoteProviders == null) return@initAsync null
 
       val fetchedRemoteLegacyContributors = availableRemoteProviders.originalBackendLegacyContributors?.separateTab ?: emptyMap()
       val adaptedSeparateTabInfos = availableRemoteProviders.adaptedWithPresentationOrFetchable(fetchedRemoteLegacyContributors.keys).separateTab

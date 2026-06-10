@@ -18,6 +18,7 @@ import com.intellij.agent.workbench.chat.openChat
 import com.intellij.agent.workbench.chat.rebindOpenPendingAgentChatTabs
 import com.intellij.agent.workbench.chat.serializeAgentChatLaunchMode
 import com.intellij.agent.workbench.chat.updateAgentChatDeferredStartState
+import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.normalizeAgentWorkbenchPath
 import com.intellij.agent.workbench.common.parseAgentWorkbenchPathOrNull
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
@@ -35,12 +36,15 @@ import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchContr
 import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchSpecs
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchPlan
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchStep
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageMode
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessagePlan
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageStartupPolicy
+import com.intellij.agent.workbench.sessions.core.providers.AgentPromptProviderOptionTarget
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
 import com.intellij.agent.workbench.sessions.core.providers.isBlockedForExistingThreadPlanMode
+import com.intellij.agent.workbench.sessions.core.providers.resolveEffectiveProviderOptionIds
 import com.intellij.agent.workbench.sessions.core.statistics.AgentWorkbenchEntryPoint
 import com.intellij.agent.workbench.sessions.core.statistics.AgentWorkbenchTargetKind
 import com.intellij.agent.workbench.sessions.core.statistics.AgentWorkbenchTelemetry
@@ -65,6 +69,7 @@ import com.intellij.ide.impl.ProjectUtilService
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.UI
+import com.intellij.openapi.application.UiWithModelAccess
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -212,6 +217,9 @@ class AgentSessionLaunchService internal constructor(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingAgentChatTabs,
   private val archivedSessionsRefreshIfLoaded: () -> Unit = {},
+  private val branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { project, originBranch, currentBranch ->
+    showBranchMismatchDialog(project, originBranch, currentBranch)
+  },
 ) {
   @Suppress("unused")
   constructor(serviceScope: CoroutineScope) : this(
@@ -323,8 +331,8 @@ class AgentSessionLaunchService internal constructor(
         val worktreeBranch = stateStore.findWorktreeBranch(normalizedPath)
         val originBranch = effectiveThread.originBranch
         if (worktreeBranch != null && originBranch != null && originBranch != worktreeBranch && !isBranchMismatchDialogSuppressed()) {
-          val proceed = withContext(Dispatchers.UI) {
-            showBranchMismatchDialog(originBranch, worktreeBranch)
+          val proceed = withContext(Dispatchers.UiWithModelAccess) {
+            branchMismatchConfirmation(currentProject, originBranch, worktreeBranch)
           }
           if (!proceed) {
             promptLaunchResolved?.invoke(AgentPromptLaunchResult.failure(AgentPromptLaunchError.CANCELLED))
@@ -625,11 +633,15 @@ class AgentSessionLaunchService internal constructor(
           return@launchDropAction
         }
         descriptor.onConversationOpened()
+        val effectiveInitialMessageRequest = initialMessageRequest?.withEffectiveProviderOptions(
+          descriptor = descriptor,
+          target = AgentPromptProviderOptionTarget.NEW_TASK,
+        )
         if (updateGeneralProviderPreferences && descriptor.supportsPromptLaunch) {
-          uiPreferencesState.updateProviderPreferencesOnLaunch(provider, mode, initialMessageRequest)
+          uiPreferencesState.updateProviderPreferencesOnLaunch(provider, mode, effectiveInitialMessageRequest)
         }
 
-        val initialMessagePlan = initialMessageRequest
+        val initialMessagePlan = effectiveInitialMessageRequest
                                    ?.let(descriptor::buildInitialMessagePlan)
                                  ?: AgentInitialMessagePlan.EMPTY
         val baseLaunchSpec = descriptor.buildNewSessionLaunchSpec(mode)
@@ -785,7 +797,7 @@ class AgentSessionLaunchService internal constructor(
             project = openedChat.project,
             file = file,
             deferredStartState = AgentChatDeferredStartState(AgentChatDeferredStartPhase.READY_TO_START, title = ""),
-            threadActivity = com.intellij.agent.workbench.common.AgentThreadActivity.READY,
+            threadActivity = AgentThreadActivity.READY,
             startupLaunchSpecOverride = initialMessageDispatchPlan.startupLaunchSpecOverride,
             initialMessageDispatchPlan = initialMessageDispatchPlan,
             newSessionProvider = provider,
@@ -809,7 +821,7 @@ class AgentSessionLaunchService internal constructor(
               title = title,
               message = message,
             ),
-            threadActivity = com.intellij.agent.workbench.common.AgentThreadActivity.READY,
+            threadActivity = AgentThreadActivity.READY,
             forgetPersistedSnapshot = true,
           )
         }
@@ -826,7 +838,7 @@ class AgentSessionLaunchService internal constructor(
               title = title,
               message = message,
             ),
-            threadActivity = com.intellij.agent.workbench.common.AgentThreadActivity.READY,
+            threadActivity = AgentThreadActivity.READY,
             forgetPersistedSnapshot = true,
           )
         }
@@ -877,21 +889,25 @@ class AgentSessionLaunchService internal constructor(
             threadId = targetThreadId,
           )
                              ?: return@run reportPromptLaunchResolved(AgentPromptLaunchResult.failure(AgentPromptLaunchError.TARGET_THREAD_NOT_FOUND))
-          val initialMessagePlan = bridge.buildInitialMessagePlan(request.initialMessageRequest)
+          val effectiveInitialMessageRequest = request.initialMessageRequest.withEffectiveProviderOptions(
+            descriptor = bridge,
+            target = AgentPromptProviderOptionTarget.EXISTING_TASK,
+          )
+          val initialMessagePlan = bridge.buildInitialMessagePlan(effectiveInitialMessageRequest)
           if (initialMessagePlan.isBlockedForExistingThreadPlanMode(targetThread.activity)) {
             return@run reportPromptLaunchResolved(AgentPromptLaunchResult.failure(AgentPromptLaunchError.TARGET_THREAD_BUSY_FOR_PLAN_MODE))
           }
           uiPreferencesState.updateProviderPreferencesOnLaunch(
             request.provider,
             request.launchMode,
-            request.initialMessageRequest
+            effectiveInitialMessageRequest
           )
 
           openChatThread(
             path = normalizedPath,
             thread = targetThread,
             entryPoint = AgentWorkbenchEntryPoint.PROMPT,
-            initialMessageRequest = request.initialMessageRequest,
+            initialMessageRequest = effectiveInitialMessageRequest,
             precomputedInitialMessagePlan = initialMessagePlan,
             resumeLaunchMode = request.launchMode,
             singleFlightPolicy = SingleFlightPolicy.RESTART_LATEST,
@@ -1071,7 +1087,6 @@ private fun buildStartupLaunchSpecOverride(
   initialMessagePlan: AgentInitialMessagePlan,
   allowStartupPromptOverride: Boolean,
 ): AgentSessionTerminalLaunchSpec? {
-  // Existing-thread launches intentionally deliver the prompt after the chat opens.
   if (!allowStartupPromptOverride) {
     return null
   }
@@ -1123,6 +1138,18 @@ private fun buildInitialMessageToken(identity: String, steps: List<AgentInitialM
   return "$identity:${sequenceKey.hashCode()}:${System.nanoTime()}"
 }
 
+private fun AgentPromptInitialMessageRequest.withEffectiveProviderOptions(
+  descriptor: AgentSessionProviderDescriptor,
+  target: AgentPromptProviderOptionTarget,
+): AgentPromptInitialMessageRequest {
+  val effectiveOptionIds = resolveEffectiveProviderOptionIds(
+    selectedProvider = descriptor,
+    selectedOptionIds = providerOptionIds,
+    target = target,
+  )
+  return if (effectiveOptionIds == providerOptionIds) this else copy(providerOptionIds = effectiveOptionIds)
+}
+
 private suspend fun resolvePromptInitialMessageDispatchPlan(
   normalizedPath: String,
   thread: AgentSessionThread,
@@ -1147,7 +1174,7 @@ private suspend fun resolvePromptInitialMessageDispatchPlan(
     baseLaunchSpec = resumeLaunchSpec,
     identity = identity,
     initialMessagePlan = initialMessagePlan,
-    allowStartupPromptOverride = false,
+    allowStartupPromptOverride = initialMessagePlan.mode == AgentInitialMessageMode.PLAN,
   )
 }
 
@@ -1388,7 +1415,7 @@ private suspend fun openNewChatInProject(
     threadId = threadId,
     threadTitle = title,
     subAgentId = null,
-    threadActivity = com.intellij.agent.workbench.common.AgentThreadActivity.READY,
+    threadActivity = AgentThreadActivity.READY,
     pendingCreatedAtMs = pendingMetadata?.createdAtMs,
     pendingLaunchMode = pendingMetadata?.launchMode,
     launchMode = serializeAgentChatLaunchMode(launchMode) ?: pendingMetadata?.launchMode,
@@ -1457,7 +1484,7 @@ private suspend fun openDeferredNewChatInProject(
     threadId = threadId,
     threadTitle = title,
     subAgentId = null,
-    threadActivity = com.intellij.agent.workbench.common.AgentThreadActivity.READY,
+    threadActivity = AgentThreadActivity.READY,
     pendingCreatedAtMs = pendingMetadata?.createdAtMs,
     pendingLaunchMode = pendingMetadata?.launchMode,
     launchMode = serializeAgentChatLaunchMode(launchMode) ?: pendingMetadata?.launchMode,
@@ -1626,7 +1653,7 @@ private fun isBranchMismatchDialogSuppressed(): Boolean {
   return PropertiesComponent.getInstance().getBoolean(SUPPRESS_BRANCH_MISMATCH_DIALOG_KEY, false)
 }
 
-private fun showBranchMismatchDialog(originBranch: String, currentBranch: String): Boolean {
+private fun showBranchMismatchDialog(project: Project?, originBranch: String, currentBranch: String): Boolean {
   return MessageDialogBuilder
     .okCancel(
       AgentSessionsBundle.message("toolwindow.thread.branch.mismatch.dialog.title"),
@@ -1641,9 +1668,9 @@ private fun showBranchMismatchDialog(originBranch: String, currentBranch: String
       }
     })
     .asWarning()
-    .ask(null as Project?)
+    .ask(project)
 }
 
 private fun AgentSessionThread.matchesPromptTarget(provider: AgentSessionProvider, threadId: String): Boolean {
-  return this.provider == provider && !archived && id == threadId
+  return this.provider == provider && !archived && !isAgentSessionNewSessionId(id) && id == threadId
 }

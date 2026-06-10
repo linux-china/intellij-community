@@ -23,7 +23,6 @@ import org.jetbrains.kotlin.idea.base.fir.analysisApiPlatform.sessions.AbstractL
 import org.jetbrains.kotlin.idea.base.fir.analysisApiPlatform.trackers.AbstractProjectWideSourceKotlinModificationTrackerTest
 import org.jetbrains.kotlin.idea.base.fir.projectStructure.scope.AbstractCombinedSourceAndClassRootsScopeContainsTest
 import org.jetbrains.kotlin.idea.base.fir.projectStructure.scope.AbstractCombinedSourceAndClassRootsScopeStructureTest
-import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginMode
 import org.jetbrains.kotlin.idea.coverage.AbstractKotlinCoverageOutputFilesTest
 import org.jetbrains.kotlin.idea.fir.AbstractK2JsBasicCompletionLegacyStdlibTest
 import org.jetbrains.kotlin.idea.fir.actions.AbstractK2AddImportActionTest
@@ -41,9 +40,9 @@ import org.jetbrains.kotlin.idea.fir.completion.AbstractK2JvmBasicCompletionFull
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2JvmBasicCompletionStdlibDuplicationTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2JvmBasicCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2JvmBasicCompletionTestWithResolveExtension
-import org.jetbrains.kotlin.idea.fir.completion.AbstractK2LiveTemplateCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2KotlinInJavaCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2KotlinSourceInJavaWithMockLibCompletionTest
+import org.jetbrains.kotlin.idea.fir.completion.AbstractK2LiveTemplateCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2MultiPlatformCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2SmartCompletionTest
 import org.jetbrains.kotlin.idea.fir.completion.AbstractK2TypeCodeFragmentCompletionTest
@@ -166,7 +165,7 @@ fun generateK2Tests(isUpToDateCheck: Boolean = false) {
     TestGenerator.write(assembleWorkspace(), isUpToDateCheck)
 }
 
-private fun assembleWorkspace(): TWorkspace = workspace(KotlinPluginMode.K2) {
+private fun assembleWorkspace(): TWorkspace = workspace() {
     generateK2CodeInsightTests()
     generateK2NavigationTests()
     generateK2DebuggerTests()
@@ -180,7 +179,6 @@ private fun assembleWorkspace(): TWorkspace = workspace(KotlinPluginMode.K2) {
     generateK2InjectionTests()
     generateProjectStructureTest()
     generateK2GradleTests()
-    generateK2ScratchTests()
 
     testGroup("base/fir/analysis-api-platform") {
         testClass<AbstractProjectWideSourceKotlinModificationTrackerTest> {
@@ -313,8 +311,18 @@ private fun assembleWorkspace(): TWorkspace = workspace(KotlinPluginMode.K2) {
         }
 
         testClass<AbstractK2EnterHandlerTest> {
-            model("editor/enterHandler", pattern = Patterns.forRegex("""^([^.]+)\.after\.kt.*$"""), testMethodName = "doNewlineTest", testClassName = "DirectSettings")
-            model("editor/enterHandler", pattern = Patterns.forRegex("""^([^.]+)\.after\.inv\.kt.*$"""), testMethodName = "doNewlineTestWithInvert", testClassName = "InvertedSettings")
+            model(
+                "editor/enterHandler",
+                pattern = Patterns.forRegex("""^([^.]+)\.after\.kt.*$"""),
+                testMethodName = "doNewlineTest",
+                testClassName = "DirectSettings"
+            )
+            model(
+                "editor/enterHandler",
+                pattern = Patterns.forRegex("""^([^.]+)\.after\.inv\.kt.*$"""),
+                testMethodName = "doNewlineTestWithInvert",
+                testClassName = "InvertedSettings"
+            )
         }
 
         testClass<AbstractK2BackspaceHandlerTest> {
@@ -670,8 +678,17 @@ private fun assembleWorkspace(): TWorkspace = workspace(KotlinPluginMode.K2) {
         }
 
         testClass<AbstractFirQuickDocTest> {
-            model("../../../idea/tests/testData/editor/quickDoc", pattern = Patterns.forRegex("""^([^_]+)\.(kt|java)$"""), isRecursive = false)
-            model("../../../idea/tests/testData/editor/quickDoc/misc", pattern = Patterns.forRegex("""^([^_]+)\.(kt|java)$"""), isRecursive = true, excludedDirectories = listOf("dependencies"))
+            model(
+                "../../../idea/tests/testData/editor/quickDoc",
+                pattern = Patterns.forRegex("""^([^_]+)\.(kt|java)$"""),
+                isRecursive = false
+            )
+            model(
+                "../../../idea/tests/testData/editor/quickDoc/misc",
+                pattern = Patterns.forRegex("""^([^_]+)\.(kt|java)$"""),
+                isRecursive = true,
+                excludedDirectories = listOf("dependencies")
+            )
         }
         testClass<AbstractFirQuickDocMultiplatformTest> {
             model("../../../idea/tests/testData/editor/quickDoc/multiplatform", pattern = Patterns.forRegex("""^([^_]+)\.(kt|java)$"""))

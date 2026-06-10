@@ -13,7 +13,6 @@
       <li><b>Context from UI</b> — click any IDE component (tool window, editor, panel) to screenshot it and attach the image as visual context for the agent.</li>
       <li><b>Context from Screen</b> — drag to select any screen area and capture it as a screenshot to share with the agent, even outside the IDE.</li>
     </ul>
-    <em>Experimental — features are under active development and may change without notice.</em>
   ]]></description>
   <!--suppress PluginXmlValidity -->
   <vendor>Vladimir Krivosheev</vendor>
@@ -27,6 +26,7 @@
     <module name="intellij.agent.workbench.codex.sessions"/>
     <module name="intellij.agent.workbench.junie.common"/>
     <module name="intellij.agent.workbench.junie.sessions"/>
+    <module name="intellij.agent.workbench.pi.sessions"/>
     <module name="intellij.agent.workbench.terminal.sessions"/>
     <module name="intellij.agent.workbench.sessions.core"/>
     <module name="intellij.agent.workbench.sessions.launch.config.backend"/>
@@ -37,19 +37,19 @@
     <module name="intellij.agent.workbench.prompt.vcs.ui"/>
     <module name="intellij.agent.workbench.prompt.testrunner"/>
     <module name="intellij.agent.workbench.sessions"/>
+    <module name="intellij.agent.workbench.sessions.jbcentral"/>
     <module name="intellij.agent.workbench.sessions.actions"/>
     <module name="intellij.agent.workbench.sessions.toolwindow"/>
     <module name="intellij.agent.workbench.chat"/>
     <module name="intellij.agent.workbench.filewatch"/>
     <module name="intellij.agent.workbench.ai.review"/>
     <module name="intellij.agent.workbench.ai.review.agents"/>
-    <module name="intellij.agent.workbench.ai.review.llm.plugin.integration" loading="optional"/>
+    <module name="intellij.agent.workbench.ai.review.llm.plugin.integration"/>
     <module name="intellij.agent.workbench.ai.review.space"/>
     <module name="intellij.agent.workbench.vcs.merge"/>
     <module name="intellij.agent.workbench.container"/>
     <module name="intellij.agent.workbench.container.mcp"/>
     <module name="intellij.agent.workbench.container.eel"/>
-    <module name="intellij.agent.workbench.discoverability"/>
   </content>
 
   <extensions defaultExtensionNs="com.intellij">
@@ -57,13 +57,7 @@
                  defaultValue="false"
                  description="Collapse large Codex TUI patch transcripts in Agent Workbench chat tabs"/>
     <registryKey key="agent.workbench.semantic.proposed.plan.navigation"
-                  defaultValue="false"
-                  description="Highlight and navigate proposed plans in Agent Workbench chat tabs"/>
-    <registryKey key="agent.workbench.chat.rollout.poll.enabled"
-                 defaultValue="false"
-                 description="Enable fallback polling of agent rollout/session state after terminal input or output"/>
-    <registryKey key="agent.workbench.chat.terminal.output.scoped.refresh.enabled"
-                 defaultValue="false"
-                 description="Kill-switch fallback: enable scoped session refresh from terminal output in Agent Workbench chat tabs. Off by default; primary refresh path is the provider session source update with project-file-change evidence. Toggle on only if the primary path is missing refreshes for a specific provider."/>
+                   defaultValue="false"
+                   description="Highlight and navigate proposed plans in Agent Workbench chat tabs"/>
   </extensions>
 </idea-plugin>

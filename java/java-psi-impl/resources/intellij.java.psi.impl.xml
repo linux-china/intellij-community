@@ -14,6 +14,12 @@
   ~ limitations under the License.
   -->
 <idea-plugin visibility="public">
+  <!-- region Generated dependencies - run `Generate Product Layouts` to regenerate -->
+  <dependencies>
+    <module name="intellij.java.psi"/>
+    <module name="intellij.java.syntax"/>
+  </dependencies>
+  <!-- endregion -->
 
   <extensionPoints>
     <!--suppress PluginXmlValidity -->
@@ -50,7 +56,6 @@
     <extensionPoint qualifiedName="com.intellij.annotationSupport" beanClass="com.intellij.lang.LanguageExtensionPoint" dynamic="true">
       <with attribute="implementationClass" implements="com.intellij.psi.PsiAnnotationSupport"/>
     </extensionPoint>
-    <extensionPoint qualifiedName="com.intellij.testFramework" interface="com.intellij.testIntegration.TestFramework" dynamic="true"/>
     <extensionPoint qualifiedName="com.intellij.lang.dumb.mode.supported" beanClass="com.intellij.lang.LanguageExtensionPoint"
                     dynamic="true">
       <with attribute="implementationClass" implements="com.intellij.lang.jvm.JvmLanguageDumbAware"/>

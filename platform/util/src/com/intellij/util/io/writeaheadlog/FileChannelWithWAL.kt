@@ -39,23 +39,37 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
   private val path: Path,
   writeAheadLog: WriteAheadLog,
   channelsAccessor: ChannelsAccessor,
-  private val readOnly: Boolean,
+  private val readOnly: Boolean = channelsAccessor.isReadOnly,
   private val closeUnderlyingChannelOnClose: Boolean = true,
   private val applyUnfinishedOnRead: Boolean = APPLY_UNFINISHED_ON_READ,
+  /** `false`: create an underlying file lazily, maybe async -- when some IO op touches it; `true`: force creation on init */
+  createFileImmediately: Boolean = false,
 ) : FileChannel(), Resilient {
 
-  /** Fix (path, readOnly) arguments in `channelsAccessor` so that it can't be accidentally called with any other path/ro values */
-  private val channelOpExecutor: ChannelOpExecutor = ChannelOpExecutor.partiallyApply(channelsAccessor, path, readOnly)
+  init {
+    //MAYBE RC: why need 2 different sources of readOnly? maybe just use channelsAccessor.isReadOnly?
+    require(channelsAccessor.isReadOnly == readOnly) {
+      "channelsAccessor mode (${channelsAccessor.isReadOnly}) must match FileChannelWithWAL mode ($readOnly)"
+    }
+    require(!createFileImmediately || !readOnly) {
+      "createFileImmediately is not applicable for readOnly channel"
+    }
+  }
+
+  /** Seal `path` argument in `channelsAccessor` so that it can't be accidentally called with any other path. */
+  private val channelOpExecutor: ChannelOpExecutor = ChannelOpExecutor.partiallyApply(channelsAccessor, path)
 
   private val perFileWriter: WriteAheadLog.PerFileWriter = writeAheadLog.openFor(path)
 
-  /** Cache fileSize, so [size] always actual even without [force]. */
+  /** Cache fileSize, so [size] is always actual even without [force]. */
   @Volatile
-  private var fileSize: Long = channelOpExecutor(object : FileChannelOperation<Long> {
-    override fun execute(channel: FileChannel): Long = channel.size()
+  private var fileSize: Long = UNINITIALIZED_FILE_SIZE
 
-    override fun toString(): String = "size()"
-  })
+  init {
+    if (createFileImmediately) { // call .size() to actually open the underlying channel => trigger file creation
+      ensureFileSizeInitialized()
+    }
+  }
 
   /** @GuardedBy(this) */
   private var position: Long = 0
@@ -63,7 +77,7 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
   @Throws(IOException::class)
   override fun size(): Long {
     ensureOpen()
-    return fileSize
+    return ensureFileSizeInitialized()
   }
 
   @Throws(IOException::class)
@@ -87,6 +101,7 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
     }
 
     if (applyUnfinishedOnRead) {
+      val fileSize = ensureFileSizeInitialized()
       val bytesToRead = minOf(target.remaining().toLong(), fileSize - offset).toInt()
       if (bytesToRead <= 0) {
         return -1
@@ -189,7 +204,7 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
   override fun truncate(size: Long): FileChannel {
     require(!readOnly) { "truncate() is not applicable for readOnly channel" }
     ensureOpen()
-    if (size > fileSize) {
+    if (size > ensureFileSizeInitialized()) {
       return this//do nothing, as per spec
     }
 
@@ -223,11 +238,50 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
 
   private fun updateSizeAfterWrite(offset: Long, bytesWritten: Int) {
     val newSize = offset + bytesWritten
-    if (newSize > fileSize) {
-      synchronized(this) {
-        fileSize = maxOf(fileSize, newSize)
+    val currentFileSize = fileSize
+    //if(FileSize == UNINITIALIZED_FILE_SIZE || newSize <= currentFileSize) return!
+    if (currentFileSize != UNINITIALIZED_FILE_SIZE && newSize <= currentFileSize) {
+      return
+    }
+
+    synchronized(this) {
+      val recheckedFileSize = fileSize
+      if (recheckedFileSize != UNINITIALIZED_FILE_SIZE) {
+        fileSize = maxOf(recheckedFileSize, newSize)
       }
     }
+  }
+
+  private fun ensureFileSizeInitialized(): Long {
+    val currentFileSize = fileSize
+    if (currentFileSize != UNINITIALIZED_FILE_SIZE) {
+      return currentFileSize
+    }
+
+    synchronized(this) {
+      val recheckedFileSize = fileSize
+      if (recheckedFileSize != UNINITIALIZED_FILE_SIZE) {
+        return recheckedFileSize
+      }
+
+      return calculateInitialFileSize().also { fileSize = it }
+    }
+  }
+
+  private fun calculateInitialFileSize(): Long {
+    //Important to (read WAL) before actual channel.size(): this way fileSize is always correct even though
+    // it could be a bit outdated, but it could miss only the writes coming _in parallel_ with
+    // calculateInitialFileSize().
+    // On the other hand: first channel.size() and then (WAL read) could _miss_ some writes that have came
+    // _before_ the calculateInitialFileSize() is even started -- which is plainly incorrect.
+    val maxUnfinishedWriteOffset = perFileWriter.maxUnfinishedWriteOffset()
+    val channelSize = channelOpExecutor(object : FileChannelOperation<Long> {
+      override fun execute(channel: FileChannel): Long = channel.size()
+
+      override fun toString(): String = "size()"
+    })
+
+    return maxOf(channelSize, maxUnfinishedWriteOffset)
   }
 
   private fun ensureOpen() {
@@ -283,7 +337,10 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
   }
 
   companion object {
+    private const val UNINITIALIZED_FILE_SIZE = -1L
+
     private val APPLY_UNFINISHED_ON_READ = getBooleanProperty("indexes.write-ahead-log.apply-unfinished-on-read", false)
+
     /** Accumulated statistics of flush()-ed entries, split by different 'causes' */
     private val entriesFlushedOnRead = AtomicLong()
     private val entriesFlushedOnForce = AtomicLong()
@@ -351,12 +408,12 @@ class FileChannelWithWAL @Throws(IOException::class) constructor(
     override fun close()
 
     companion object {
-      /** Partial-application: fixes 'path' & 'readOnly' arguments */
+      /** Partial-application: fixes 'path' argument */
       @JvmStatic
-      fun partiallyApply(channelsAccessor: ChannelsAccessor, path: Path, readOnly: Boolean): ChannelOpExecutor {
+      fun partiallyApply(channelsAccessor: ChannelsAccessor, path: Path): ChannelOpExecutor {
         return object : ChannelOpExecutor {
           override fun <T> invoke(op: FileChannelOperation<T>): T {
-            return channelsAccessor.executeOp<T>(path, op, readOnly)
+            return channelsAccessor.executeOp<T>(path, op)
           }
 
           override fun close() {

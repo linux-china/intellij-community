@@ -156,7 +156,7 @@ private class MyService(val coroutineScope: CoroutineScope)
 internal suspend fun Sdk.getUvExecutionContext(project: Project? = null): UvExecutionContext<*>? =
   getUvExecutionContextAsync(service<MyService>().coroutineScope, project)?.await()
 
-suspend fun setupNewUvSdkAndEnv(uvExecutable: Path, workingDir: Path, version: Version?, errorSink: ErrorSink): PyResult<Sdk> =
+internal suspend fun setupNewUvSdkAndEnv(uvExecutable: Path, workingDir: Path, version: Version?, errorSink: ErrorSink): PyResult<Sdk> =
   setupNewUvSdkAndEnv(
     uvExecutable = PathHolder.Eel(uvExecutable),
     workingDir = workingDir,
@@ -166,20 +166,21 @@ suspend fun setupNewUvSdkAndEnv(uvExecutable: Path, workingDir: Path, version: V
     errorSink = errorSink,
   )
 
-suspend fun <P : PathHolder> setupNewUvSdkAndEnv(
+internal suspend fun <P : PathHolder> setupNewUvSdkAndEnv(
   uvExecutable: P,
   workingDir: Path,
   venvPath: P?,
   fileSystem: FileSystem<P>,
   version: Version?,
   errorSink: ErrorSink,
+  overrideExistingEnv: Boolean = false,
 ): PyResult<Sdk> {
   val shouldInitProject = !workingDir.resolve(PY_PROJECT_TOML).exists()
   val normalizedUvExecutablePath = fileSystem.normalizePathToRemote(uvExecutable)
 
   val uv = createUvLowLevel(workingDir, createUvCli(normalizedUvExecutablePath, fileSystem).getOr { return it }, fileSystem, venvPath)
   val pythonBinary = withProgressText(PyBundle.message("python.sdk.progress.uv.creating")) {
-    uv.initializeEnvironment(shouldInitProject, version)
+    uv.initializeEnvironment(shouldInitProject, version, clearExisting = overrideExistingEnv)
   }.getOr { return it }
 
   val sdk = setupExistingEnvAndSdk(
@@ -199,7 +200,7 @@ suspend fun <P : PathHolder> setupNewUvSdkAndEnv(
   return PyResult.success(sdk)
 }
 
-suspend fun setupExistingEnvAndSdk(
+internal suspend fun setupExistingEnvAndSdk(
   pythonBinary: PythonBinary,
   uvPath: Path,
   envWorkingDir: Path,
@@ -213,7 +214,7 @@ suspend fun setupExistingEnvAndSdk(
     usePip = usePip
   )
 
-suspend fun <P : PathHolder> setupExistingEnvAndSdk(
+internal suspend fun <P : PathHolder> setupExistingEnvAndSdk(
   pythonBinary: P,
   uvPath: P,
   workingDir: Path,

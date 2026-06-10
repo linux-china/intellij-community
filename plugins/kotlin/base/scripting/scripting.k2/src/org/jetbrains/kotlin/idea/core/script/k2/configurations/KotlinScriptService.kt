@@ -9,7 +9,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.io.relativizeToClosestAncestor
 import com.intellij.openapi.util.io.toNioPathOrNull
 import com.intellij.openapi.vfs.StandardFileSystems
@@ -42,6 +41,8 @@ import org.jetbrains.kotlin.idea.core.script.k2.modules.KotlinScriptLibraryEntit
 import org.jetbrains.kotlin.idea.core.script.k2.modules.modifyKotlinScriptLibraryEntity
 import org.jetbrains.kotlin.idea.core.script.shared.KotlinBaseScriptingBundle
 import org.jetbrains.kotlin.idea.core.script.shared.KotlinScriptProcessingFilter
+import org.jetbrains.kotlin.idea.core.script.shared.definition.javaHomePath
+import org.jetbrains.kotlin.idea.core.script.shared.definition.jdkSupplier
 import org.jetbrains.kotlin.idea.core.script.shared.smartRefineScriptCompilationConfiguration
 import org.jetbrains.kotlin.idea.core.script.v1.ScriptDependenciesModificationTracker
 import org.jetbrains.kotlin.idea.core.script.v1.awaitExternalSystemInitialization
@@ -51,7 +52,6 @@ import org.jetbrains.kotlin.scripting.definitions.findScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.scripting.resolve.VirtualFileScriptSource
-import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
@@ -237,15 +237,21 @@ class KotlinScriptService(val project: Project, val coroutineScope: CoroutineSco
         virtualFile: VirtualFile,
         definition: ScriptDefinition,
     ): ScriptCompilationConfigurationResult {
-        val projectSdk = ProjectRootManager.getInstance(project).projectSdk?.homePath
-        val configuration = definition.compilationConfiguration.with {
-            projectSdk?.let { jvm.jdkHome(File(it)) }
-        }
+        val configuration = definition.compilationConfiguration.withUpdatedJdkHome(virtualFile)
         val scriptSource = VirtualFileScriptSource(virtualFile)
         return withBackgroundProgress(
             project, title = KotlinBaseScriptingBundle.message("progress.title.dependency.resolution", virtualFile.name)
         ) {
             smartRefineScriptCompilationConfiguration(scriptSource, definition, project, configuration)
+        }
+    }
+
+    fun ScriptCompilationConfiguration.withUpdatedJdkHome(virtualFile: VirtualFile): ScriptCompilationConfiguration {
+        return with {
+            val jdk = get(ide.jdkSupplier)?.invoke(virtualFile) ?: project.javaHomePath
+            if (jdk != null) {
+                jvm.jdkHome(jdk)
+            }
         }
     }
 
@@ -323,7 +329,7 @@ private suspend fun <A> topologicalSort(
         // Keeping track of the nodes that are being visited allows the algorithm to throw an exception in case of a cycle. The input should
         // never be cyclic, but this approach gives some additional safety in case of bugs.
         visiting.add(node)
-        node.dependencies().forEach { it.dependencies() }
+        node.dependencies().forEach { visit(it) }
         visiting.remove(node)
 
         visited.add(node)

@@ -1,4 +1,4 @@
-// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.kotlin.idea.k2.codeinsight.quickDoc
 
 import com.google.common.html.HtmlEscapers
@@ -76,7 +76,6 @@ import org.jetbrains.kotlin.analysis.api.types.KaFunctionType
 import org.jetbrains.kotlin.analysis.api.types.KaStarTypeProjection
 import org.jetbrains.kotlin.analysis.api.types.KaType
 import org.jetbrains.kotlin.analysis.api.types.KaTypeArgumentWithVariance
-import org.jetbrains.kotlin.analysis.api.types.KaTypeNullability
 import org.jetbrains.kotlin.analysis.api.types.KaTypeParameterType
 import org.jetbrains.kotlin.analysis.api.types.KaUsualClassType
 import org.jetbrains.kotlin.analysis.api.useSiteSession
@@ -92,6 +91,7 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
+import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParameter
@@ -279,7 +279,7 @@ internal class KotlinIdeDeclarationRenderer(
                     }
                 ) { annotation ->
                     append(highlight("@") { asAnnotationName })
-                    (annotation.useSiteTarget?.renderName
+                    ((annotation.psi as? KtAnnotationEntry)?.useSiteTarget?.getAnnotationUseSiteTarget()?.renderName
                         ?: "field".takeIf { backingFieldAnnotations != null && annotation in backingFieldAnnotations })?.let { useSiteName ->
                             printer.append(highlight(useSiteName) { asKeyword })
                             printer.append(highlight(":") { asColon })
@@ -404,56 +404,65 @@ internal class KotlinIdeDeclarationRenderer(
                 typeRenderer: KaTypeRenderer,
                 printer: PrettyPrinter
             ): Unit = printer {
-                if (type.isReflectType) {
+                with(analysisSession) {
+                    if (type.isReflectType) {
+                        " ".separated(
+                            { typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) },
+                            {
+                                typeRenderer.classIdRenderer.renderClassTypeQualifier(
+                                    analysisSession,
+                                    type,
+                                    type.qualifiers,
+                                    typeRenderer,
+                                    printer
+                                )
+                                if (type.isMarkedNullable) {
+                                    append(highlight("?") { asNullityMarker })
+                                }
+                            },
+                        )
+                        return@printer
+                    }
+
+                    val annotationsRendered = checkIfPrinted {
+                        typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, this@printer)
+                    }
+
+                    if (annotationsRendered) printer.append(" ")
+                    if (annotationsRendered || type.isMarkedNullable) append(highlight("(") { asParentheses })
                     " ".separated(
-                        { typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) },
                         {
-                            typeRenderer.classIdRenderer.renderClassTypeQualifier(analysisSession, type, type.qualifiers, typeRenderer, printer)
-                            if (type.nullability == KaTypeNullability.NULLABLE) {
-                                append(highlight("?") { asNullityMarker })
+                            if (type.isSuspend) {
+                                typeRenderer.keywordsRenderer.renderKeyword(analysisSession, KtTokens.SUSPEND_KEYWORD, type, printer)
                             }
                         },
-                    )
-                    return@printer
-                }
-
-                val annotationsRendered = checkIfPrinted {
-                    typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, this)
-                }
-
-                if (annotationsRendered) printer.append(" ")
-                if (annotationsRendered || type.nullability == KaTypeNullability.NULLABLE) append(highlight("(") { asParentheses })
-                " ".separated(
-                    {
-                        if (type.isSuspend) {
-                            typeRenderer.keywordsRenderer.renderKeyword(analysisSession, KtTokens.SUSPEND_KEYWORD, type, printer)
-                        }
-                    },
-                    {
-                        if (type.hasContextReceivers) {
-                            typeRenderer.contextReceiversRenderer.renderContextReceivers(analysisSession, type, typeRenderer, printer)
-                        }
-                    },
-                    {
-                        type.receiverType?.let {
-                            typeRenderer.renderType(analysisSession, it, printer)
-                            printer.append(highlight(".") { asDot })
-                        }
-                        printCollection(type.parameters,
-                                        prefix = highlight("(") { asParentheses },
-                                        postfix = highlight(") ") { asParentheses }) { valueParameter ->
-                            valueParameter.name?.let { name ->
-                                typeRenderer.typeNameRenderer.renderName(analysisSession, name, valueParameter.type, typeRenderer, this)
-                                append(": ")
+                        {
+                            if (type.hasContextReceivers) {
+                                typeRenderer.contextReceiversRenderer.renderContextReceivers(analysisSession, type, typeRenderer, printer)
                             }
-                            typeRenderer.renderType(analysisSession, valueParameter.type, this)
-                        }
-                        printer.append(highlight("->".escape()) { asArrow }).append(" ")
-                        typeRenderer.renderType(analysisSession, type.returnType, printer)
-                    },
-                )
-                if (annotationsRendered || type.nullability == KaTypeNullability.NULLABLE) printer.append(highlight(")") { asParentheses })
-                if (type.nullability == KaTypeNullability.NULLABLE) printer.append(highlight("?") { asNullityMarker })
+                        },
+                        {
+                            type.receiverType?.let {
+                                typeRenderer.renderType(analysisSession, it, printer)
+                                printer.append(highlight(".") { asDot })
+                            }
+                            printCollection(
+                                type.parameters,
+                                prefix = highlight("(") { asParentheses },
+                                postfix = highlight(") ") { asParentheses }) { valueParameter ->
+                                valueParameter.name?.let { name ->
+                                    typeRenderer.typeNameRenderer.renderName(analysisSession, name, valueParameter.type, typeRenderer, this)
+                                    append(": ")
+                                }
+                                typeRenderer.renderType(analysisSession, valueParameter.type, this)
+                            }
+                            printer.append(highlight("->".escape()) { asArrow }).append(" ")
+                            typeRenderer.renderType(analysisSession, type.returnType, printer)
+                        },
+                    )
+                    if (annotationsRendered || type.isMarkedNullable) printer.append(highlight(")") { asParentheses })
+                    if (type.isMarkedNullable) printer.append(highlight("?") { asNullityMarker })
+                }
             }
         }
     }
@@ -467,13 +476,14 @@ internal class KotlinIdeDeclarationRenderer(
                 typeRenderer: KaTypeRenderer,
                 printer: PrettyPrinter
             ): Unit = printer {
-                " ".separated({ typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) }, {
-                    typeRenderer.typeNameRenderer.renderName(analysisSession, type.name, type, typeRenderer, printer)
-                    if (type.nullability == KaTypeNullability.NULLABLE) {
-                        printer.append(highlight("?") { asNullityMarker })
-                    }
-                })
-
+                with(analysisSession) {
+                    " ".separated({ typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) }, {
+                        typeRenderer.typeNameRenderer.renderName(analysisSession, type.name, type, typeRenderer, printer)
+                        if (type.isMarkedNullable) {
+                            printer.append(highlight("?") { asNullityMarker })
+                        }
+                    })
+                }
             }
         }
     }
@@ -487,15 +497,23 @@ internal class KotlinIdeDeclarationRenderer(
                 typeRenderer: KaTypeRenderer,
                 printer: PrettyPrinter
             ): Unit = printer {
-                " ".separated(
-                    { typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) },
-                    {
-                        typeRenderer.classIdRenderer.renderClassTypeQualifier(analysisSession, type, type.qualifiers, typeRenderer, printer)
-                        if (type.nullability == KaTypeNullability.NULLABLE) {
-                            append(highlight("?") { asNullityMarker })
-                        }
-                    },
-                )
+                with(analysisSession) {
+                    " ".separated(
+                        { typeRenderer.annotationsRenderer.renderAnnotations(analysisSession, type, printer) },
+                        {
+                            typeRenderer.classIdRenderer.renderClassTypeQualifier(
+                                analysisSession,
+                                type,
+                                type.qualifiers,
+                                typeRenderer,
+                                printer
+                            )
+                            if (type.isMarkedNullable) {
+                                append(highlight("?") { asNullityMarker })
+                            }
+                        },
+                    )
+                }
             }
         }
     }

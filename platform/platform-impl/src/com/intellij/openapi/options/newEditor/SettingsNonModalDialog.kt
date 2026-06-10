@@ -18,7 +18,6 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.help.HelpManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableGroup
-import com.intellij.openapi.options.ex.ConfigurableExtensionPointUtil
 import com.intellij.openapi.options.ex.ConfigurableWrapper
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectCloseListener
@@ -106,9 +105,11 @@ open class SettingsNonModalDialog @ApiStatus.Internal constructor(
     /**
      * Returns the single app-wide settings window, creating it if necessary.
      * - Same project: navigates to [configurable] / applies [filter]; returns the existing window.
-     * - Different project: prompts the user to save/discard, closes the current window, and schedules
-     *   opening a new window. Returns null in this case; the caller must not call show().
-     * - No existing window: creates a new one using [create] and returns it; the caller must call show().
+     * - Different project: prompts the user to save/discard, closes the current window, and creates
+     *   a new one. If the user canceled or apply failed, returns the existing window unchanged.
+     * - No existing window: creates a new one using [create] and returns it.
+     *
+     * The caller must call [show] on the returned dialog.
      *
      * @param create factory function used to create the dialog; defaults to [SettingsNonModalDialog] constructor.
      *               Pass a custom factory from [SettingsNonModalDialogFactory] to get a subclass.
@@ -120,7 +121,7 @@ open class SettingsNonModalDialog @ApiStatus.Internal constructor(
       configurable: Configurable?,
       filter: String?,
       create: (Project, List<ConfigurableGroup>, Configurable?, String?) -> SettingsNonModalDialog = ::SettingsNonModalDialog,
-    ): SettingsNonModalDialog? {
+    ): SettingsNonModalDialog {
       val existing = ourInstance
       if (existing != null && !existing.isDisposed) {
         if (existing.project == project) {
@@ -133,8 +134,7 @@ open class SettingsNonModalDialog @ApiStatus.Internal constructor(
           return existing
         }
         else {
-          existing.handleDifferentProject(project, configurable, filter)
-          return null  // new window will be created and shown asynchronously
+          return existing.handleDifferentProject(project, groups, configurable, filter, create)
         }
       }
       return create(project, groups, configurable, filter).also { ourInstance = it }
@@ -254,59 +254,41 @@ open class SettingsNonModalDialog @ApiStatus.Internal constructor(
     }, frameDisposable)
   }
 
-  // ── Different-project handling ────────────────────────────────────────────────
+  // ── Unsaved-changes resolution ────────────────────────────────────────────────
 
-  /**
-   * Prompts the user to save or discard changes, closes this window, and schedules
-   * opening a new window for [newProject] via [SettingsNonModalDialogFactory].
-   */
-  private fun handleDifferentProject(newProject: Project, toSelect: Configurable?, filter: String?) {
-    if (editor.isModified) {
-      val choice = Messages.showYesNoCancelDialog(
-        activeWindow,
-        ApplicationBundle.message("settings.switch.project.unsaved.message", project.name, newProject.name),
-        ApplicationBundle.message("settings.switch.project.unsaved.title"),
-        ApplicationBundle.message("settings.switch.project.button.apply"),
-        ApplicationBundle.message("settings.switch.project.button.dont.save"),
-        CommonBundle.getCancelButtonText(),
-        Messages.getWarningIcon(),
-      )
-      if (choice == Messages.CANCEL) return
-      if (choice == Messages.YES) {
-        if (!editor.apply()) return
-        SaveAndSyncHandler.getInstance().scheduleSave(SaveAndSyncHandler.SaveTask(null, true))
-      }
-      // Messages.NO → discard, fall through
-    }
-    // Clear the singleton now so dispose() doesn't race with the invokeLater below.
-    ourInstance = null
-    close()
-    EventQueue.invokeLater {
-      val newGroups = listOf(ConfigurableExtensionPointUtil.getConfigurableGroup(newProject, true))
-        .filter { it.configurables.isNotEmpty() }
-      // Route through the factory so the active service override (e.g., thin client) is used.
-      SettingsNonModalDialogFactory.getInstance().show(newProject, newGroups, toSelect, filter)
-    }
+  /** Outcome of [resolveUnsavedChanges]. */
+  private enum class UnsavedChangesResult {
+    /** No unsaved changes at all (includes plugin-only modifications, which are cleaned up internally). */
+    NOT_MODIFIED,
+    /** The user chose Apply and changes were saved successfully. */
+    APPLIED,
+    /** The user chose Don't Save; changes were discarded via [SettingsEditor.cancel]. */
+    DISCARDED,
+    /** Apply was requested but failed (e.g., validation error). */
+    APPLY_FAILED,
+    /** The user chose Cancel — the caller should abort. */
+    CANCELED,
   }
 
   /**
-   * Shows Apply / Don't Save / Cancel when there are unsaved settings.
-   * Returns true if safe to proceed (changes applied or discarded), false if the user canceled.
+   * Checks for unsaved changes and, when meaningful changes exist, shows an
+   * Apply / Don't Save / Cancel dialog. Plugin-only modifications are considered
+   * not meaningful because plugin state is managed by its own session.
+   *
+   * @return the user's choice as an [UnsavedChangesResult].
    */
-  private fun promptUnsavedChangesOrCancel(@NlsContexts.DialogMessage message: String): Boolean {
-    if (!editor.isModified) return true
-    val modified = editor.modifiedConfigurables
-    // If only the Plugins page is "modified", skip the prompt — plugin installs are
-    // committed by MyPluginModel via its own apply path, and the editor's "modified"
-    // state is an artifact of MyPluginModel.needRestart. There's no meaningful
-    // Apply/Don't Save action for plugin-only state
-    val hasNonPluginChanges = modified.any {
+  private fun resolveUnsavedChanges(@NlsContexts.DialogMessage message: String): UnsavedChangesResult {
+    if (!editor.isModified) return UnsavedChangesResult.NOT_MODIFIED
+
+    val hasNonPluginChanges = editor.modifiedConfigurables.any {
       ConfigurableWrapper.cast(PluginManagerConfigurable::class.java, it) == null
     }
     if (!hasNonPluginChanges) {
-      LOG.info("promptUnsavedChangesOrCancel: only PluginManagerConfigurable modified, skipping prompt")
-      return true
+      LOG.info("resolveUnsavedChanges: only PluginManagerConfigurable modified, skipping prompt")
+      editor.cancel(null)
+      return UnsavedChangesResult.NOT_MODIFIED
     }
+
     return when (Messages.showYesNoCancelDialog(
       activeWindow,
       message,
@@ -317,12 +299,52 @@ open class SettingsNonModalDialog @ApiStatus.Internal constructor(
       Messages.getWarningIcon(),
     )) {
       Messages.YES -> {
-        editor.apply()
+        if (!editor.apply()) return UnsavedChangesResult.APPLY_FAILED
         SaveAndSyncHandler.getInstance().scheduleSave(SaveAndSyncHandler.SaveTask(null, true))
-        true
+        UnsavedChangesResult.APPLIED
       }
-      Messages.NO -> { editor.cancel(null); true }
-      else -> {
+      Messages.NO -> {
+        editor.cancel(null)
+        UnsavedChangesResult.DISCARDED
+      }
+      else -> UnsavedChangesResult.CANCELED
+    }
+  }
+
+  // ── Different-project handling ────────────────────────────────────────────────
+
+  /**
+   * Prompts the user to save or discard changes, closes this window, and creates
+   * a new window for [newProject] via [create].
+   *
+   * If the user canceled or apply failed, returns this (existing) dialog unchanged.
+   */
+  private fun handleDifferentProject(
+    newProject: Project,
+    groups: List<ConfigurableGroup>,
+    toSelect: Configurable?,
+    filter: String?,
+    create: (Project, List<ConfigurableGroup>, Configurable?, String?) -> SettingsNonModalDialog,
+  ): SettingsNonModalDialog {
+    val result = resolveUnsavedChanges(
+      ApplicationBundle.message("settings.switch.project.unsaved.message", project.name, newProject.name))
+    if (result == UnsavedChangesResult.CANCELED || result == UnsavedChangesResult.APPLY_FAILED) return this
+
+    close()
+    return create(newProject, groups, toSelect, filter).also { ourInstance = it }
+  }
+
+  /**
+   * Shows Apply / Don't Save / Cancel when there are unsaved settings.
+   * Returns true if safe to proceed (changes applied or discarded), false if the user canceled.
+   */
+  private fun promptUnsavedChangesOrCancel(@NlsContexts.DialogMessage message: String): Boolean {
+    return when (resolveUnsavedChanges(message)) {
+      UnsavedChangesResult.NOT_MODIFIED,
+      UnsavedChangesResult.APPLIED,
+      UnsavedChangesResult.DISCARDED -> true
+      UnsavedChangesResult.APPLY_FAILED,
+      UnsavedChangesResult.CANCELED -> {
         // After Cancel the IDE-close veto returns; on Windows the IDE main frame reclaims
         // focus, hiding the independent Settings JFrame (Window mode). Restore it on top.
         EventQueue.invokeLater {

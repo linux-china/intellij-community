@@ -40,8 +40,10 @@ import com.intellij.agent.workbench.sessions.state.AgentSessionsStateStore
 import com.intellij.agent.workbench.sessions.state.InMemorySessionWarmState
 import com.intellij.agent.workbench.sessions.state.SessionWarmState
 import com.intellij.openapi.options.advanced.AdvancedSettingBean
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.replaceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -264,6 +266,7 @@ fun threadsChangedEvent(
   summaryActivityHintsByThreadId: Map<String, AgentThreadActivity?> = emptyMap(),
   activityHintPolicy: AgentSessionActivityHintPolicy = AgentSessionActivityHintPolicy.OPTIMISTIC,
   mayHaveChangedProjectFiles: Boolean = false,
+  changedProjectFilePaths: Set<String>? = null,
 ): AgentSessionSourceUpdateEvent {
   return AgentSessionSourceUpdateEvent(
     type = AgentSessionSourceUpdate.THREADS_CHANGED,
@@ -273,6 +276,7 @@ fun threadsChangedEvent(
     summaryActivityHintsByThreadId = summaryActivityHintsByThreadId,
     activityHintPolicy = activityHintPolicy,
     mayHaveChangedProjectFiles = mayHaveChangedProjectFiles,
+    changedProjectFilePaths = changedProjectFilePaths,
   )
 }
 
@@ -283,6 +287,7 @@ fun hintsChangedEvent(
   summaryActivityHintsByThreadId: Map<String, AgentThreadActivity?> = emptyMap(),
   activityHintPolicy: AgentSessionActivityHintPolicy = AgentSessionActivityHintPolicy.OPTIMISTIC,
   mayHaveChangedProjectFiles: Boolean = false,
+  changedProjectFilePaths: Set<String>? = null,
 ): AgentSessionSourceUpdateEvent {
   return AgentSessionSourceUpdateEvent(
     type = AgentSessionSourceUpdate.HINTS_CHANGED,
@@ -292,6 +297,7 @@ fun hintsChangedEvent(
     summaryActivityHintsByThreadId = summaryActivityHintsByThreadId,
     activityHintPolicy = activityHintPolicy,
     mayHaveChangedProjectFiles = mayHaveChangedProjectFiles,
+    changedProjectFilePaths = changedProjectFilePaths,
   )
 }
 
@@ -316,6 +322,47 @@ fun thread(
     subAgents = subAgents,
     cost = cost,
   )
+}
+
+suspend fun withRegisteredTestService(
+  parentDisposable: com.intellij.openapi.Disposable,
+  sessionSourcesProvider: () -> List<AgentSessionSource>,
+  projectEntriesProvider: suspend () -> List<TestProjectCatalogEntry>,
+  toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
+  action: suspend (AgentSessionStateSyncTestFacade) -> Unit,
+) {
+  val job = SupervisorJob()
+
+  @Suppress("RAW_SCOPE_CREATION")
+  val scope = CoroutineScope(job + Dispatchers.Default)
+  val stateStore = AgentSessionsStateStore()
+  val warmState = InMemorySessionWarmState()
+  val syncService = AgentSessionRefreshService(
+    serviceScope = scope,
+    sessionSourcesProvider = sessionSourcesProvider,
+    projectEntriesProvider = { projectEntriesProvider().map { it.toProjectEntry() } },
+    stateStore = stateStore,
+    warmState = warmState,
+    scheduleVfsRefresh = { _ -> },
+    openAgentChatSnapshotProvider = { buildOpenChatRefreshSnapshot() },
+    providerDescriptorProvider = { provider -> testIntegrationProviderDescriptor(provider) },
+    toolWindowVisibleFlow = toolWindowVisibleFlow,
+    subscribeToProjectLifecycle = false,
+  )
+  val app = ApplicationManager.getApplication()
+  app.replaceService(AgentSessionsStateStore::class.java, stateStore, parentDisposable)
+  app.replaceService(AgentSessionRefreshService::class.java, syncService, parentDisposable)
+  try {
+    action(
+      AgentSessionStateSyncTestFacade(
+        stateStore = stateStore,
+        syncService = syncService,
+      )
+    )
+  }
+  finally {
+    job.cancelAndJoin()
+  }
 }
 
 suspend fun withTestService(
@@ -353,6 +400,9 @@ internal suspend fun withTestServiceAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
+    error("Unexpected branch mismatch confirmation")
+  },
   action: suspend (AgentSessionStateSyncTestFacade, AgentSessionLaunchService) -> Unit,
 ) {
   withServiceAndLaunch(
@@ -369,6 +419,7 @@ internal suspend fun withTestServiceAndLaunch(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    branchMismatchConfirmation = branchMismatchConfirmation,
     action = action,
   )
 }
@@ -440,6 +491,9 @@ internal suspend fun withServiceAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
+    error("Unexpected branch mismatch confirmation")
+  },
   action: suspend (AgentSessionStateSyncTestFacade, AgentSessionLaunchService) -> Unit,
 ) {
   withServiceAndArchiveAndLaunch(
@@ -457,6 +511,7 @@ internal suspend fun withServiceAndLaunch(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    branchMismatchConfirmation = branchMismatchConfirmation,
   ) { service, _, launchService ->
     action(service, launchService)
   }
@@ -535,6 +590,9 @@ internal suspend fun withServiceAndArchiveAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
+    error("Unexpected branch mismatch confirmation")
+  },
   action: suspend (AgentSessionStateSyncTestFacade, AgentSessionArchiveService, AgentSessionLaunchService) -> Unit,
 ) {
   val job = SupervisorJob()
@@ -558,7 +616,7 @@ internal suspend fun withServiceAndArchiveAndLaunch(
       projectEntriesProvider = projectEntriesProvider,
       stateStore = stateStore,
       warmState = warmState,
-      scheduleVfsRefresh = {},
+      scheduleVfsRefresh = { _ -> },
       openAgentChatSnapshotProvider = {
         buildOpenChatRefreshSnapshot(
           pendingTabsByProvider = mapOf(
@@ -587,6 +645,7 @@ internal suspend fun withServiceAndArchiveAndLaunch(
         openPendingAgentChatTabsProvider = openPendingAgentChatTabsProvider,
         openAgentChatPendingTabsBinder = openAgentChatPendingTabsBinderWithProvider,
         archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
+        branchMismatchConfirmation = branchMismatchConfirmation,
       )
     }
     else {
@@ -599,6 +658,7 @@ internal suspend fun withServiceAndArchiveAndLaunch(
         openPendingAgentChatTabsProvider = openPendingAgentChatTabsProvider,
         openAgentChatPendingTabsBinder = openAgentChatPendingTabsBinderWithProvider,
         archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
+        branchMismatchConfirmation = branchMismatchConfirmation,
       )
     }
     val archiveService = AgentSessionArchiveService(

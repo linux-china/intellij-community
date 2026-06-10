@@ -186,6 +186,8 @@
     </experimentalFeature>
     <registryKey defaultValue="false" description="Show unhandled exceptions that were thrown during interactive operation"
                  key="ide.exceptions.show.interactive"/>
+    <registryKey key="ide.settings.external.change.conflict.show.notification" defaultValue="false" restartRequired="false"
+                 description="Show a warning notification for external change conflicts in non-modal settings dialog"/>
     <registryKey defaultValue="true" description="Refresh VFS periodically while there is no user activity in the IDE instead of when window is not focused.
 The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | System Settings -> Periodically when IDE is inactive (experimental)"
                  restartRequired="true"
@@ -228,10 +230,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <virtualFileSystem implementationClass="com.intellij.openapi.vfs.impl.local.AsyncableLocalFileSystemImpl" key="file" physical="true"/>
     <virtualFileSystem implementationClass="com.intellij.openapi.vfs.impl.jar.JarFileSystemImpl" key="jar" physical="true"/>
     <virtualFileSystem implementationClass="com.intellij.openapi.vfs.ex.temp.TempFileSystem" key="temp" physical="true"/>
-
-    <applicationService serviceImplementation="com.intellij.ui.jcef.JBCefStartup" preload="notHeadless" os="mac"/>
-    <cachesInvalidator implementation="com.intellij.ui.jcef.JBCefAppCacheInvalidator" order="last"/>
-    <cefNativeBundleProvider implementation="com.intellij.ui.jcef.JBCefDefaultNativeBundleProvider" order="first"/>
 
     <applicationService serviceInterface="com.intellij.ide.ui.IdeUiService"
                         serviceImplementation="com.intellij.openapi.fileEditor.impl.IdeUiServiceImpl"/>
@@ -428,7 +426,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <settingsController id="LoggingSettingsController" implementation="com.intellij.ide.actions.LoggingSettingsController"/>
 
     <fileEditorProvider implementation="com.intellij.diff.editor.DiffFileEditorProvider"/>
-    <fileEditorProvider implementation="com.intellij.ide.browsers.actions.WebPreviewEditorProvider"/>
     <fileEditorProvider implementation="com.intellij.ide.plugins.UIComponentEditorProvider"/>
     <fileIconProvider implementation="com.intellij.ide.plugins.UIComponentVirtualFile$UIComponentVirtualFileIconProvider"/>
 
@@ -493,7 +490,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
                  restartRequired="true"
                  description="Enable new dynamic plugin support implementation"/>
     <registryKey key="dynamic.plugins.support.await.classloader.unload.strategy"
-                 defaultValue="[beforeLoad|asyncPostTransition*]"
+                 defaultValue="[beforeLoad|asyncPostReconfiguration*]"
                  restartRequired="true"
                  description="Changes the way IDE waits for plugins to unload during dynamic plugin reconfiguration"/>
     <applicationService serviceInterface="com.intellij.codeInsight.hint.HintManager"
@@ -607,8 +604,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <applicationService serviceInterface="com.intellij.diagnostic.EventWatcher"
                         serviceImplementation="com.intellij.diagnostic.EventWatcherService" headlessImplementation=""
                         open="true"/>
-    <toolWindow id="Events Watcher" anchor="bottom" canCloseContents="false" doNotActivateOnStart="true"
-                factoryClass="com.intellij.diagnostic.ui.EventWatcherToolWindowFactory"/>
     <toolWindow factoryClass="com.intellij.internal.inspector.themePicker.UiThemeColorPickerToolWindowFactory"
                 id="UI Theme Color Picker" icon="AllIcons.Toolwindows.ToolWindowPalette"
                 anchor="right" canCloseContents="false" doNotActivateOnStart="true"/>
@@ -657,7 +652,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <projectService serviceInterface="com.intellij.openapi.project.BaseProjectDirectories" open="true"
                     serviceImplementation="com.intellij.ide.project.impl.BaseProjectDirectoriesImpl"/>
 
-    <projectService serviceImplementation="com.intellij.execution.testframework.export.ExportTestResultsConfiguration"/>
     <registryKey key="scroll.to.first.trace" defaultValue="true"
                  description="In tests view: if 'scrollToStackTrace' is enabled and node with multiple children is selected, scroll to the trace of the first child"/>
 
@@ -757,7 +751,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <applicationService serviceImplementation="com.intellij.ui.IdeUICustomization" open="true" preload="notHeadless"/>
 
     <!-- General -->
-    <applicationConfigurable groupId="appearance" groupWeight="120" key="title.general" bundle="messages.IdeBundle" id="preferences.general"
+    <projectConfigurable groupId="appearance" groupWeight="120" key="title.general" bundle="messages.IdeBundle" id="preferences.general"
                              instance="com.intellij.ide.GeneralSettingsConfigurable"/>
 
     <!-- Appearance -->
@@ -844,7 +838,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
                         preload="true"/>
     <applicationService serviceImplementation="com.intellij.ide.plugins.ExpiredPluginsState" preload="true"/>
 
-    <requiredForSmartModeStartupActivity implementation="com.intellij.externalDependencies.impl.CheckRequiredPluginsActivity"/>
+    <postStartupActivity implementation="com.intellij.externalDependencies.impl.CheckProjectRequiredPluginsActivity"/>
     <projectConfigurable groupId="appearance" provider="com.intellij.externalDependencies.impl.ExternalDependenciesConfigurableProvider"
                          id="preferences.externalDependencies"
                          bundle="messages.IdeBundle"
@@ -1060,9 +1054,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <statistics.counterUsagesCollector
       implementationClass="com.intellij.internal.statistic.eventLog.LogSystemCollector"/>
     <statistics.counterUsagesCollector
-      implementationClass="com.intellij.help.impl.HelpUsageCollector"/>
-    <statistics.validation.customValidationRule
-      implementation="com.intellij.help.impl.HelpTopicCustomValidationRule"/>
+      implementationClass="com.intellij.help.impl.JupyterHelpUsageCollector"/>
     <statistics.validation.customValidationRule
       implementation="com.intellij.internal.statistic.collectors.fus.fileTypes.FileNamePatternCustomValidationRule"/>
     <statistics.validation.customValidationRule
@@ -1243,7 +1235,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
 
     <fileEditorProvider implementation="com.intellij.openapi.wm.impl.tabInEditor.ToolWindowTabFileEditorProvider" id="ToolWindowTabFileEditor"/>
     <fileEditorProvider implementation="com.intellij.openapi.fileEditor.impl.text.LargeFileEditorProvider" id="LargeFileEditor"/>
-    <fileEditorProvider id="html-editor" implementation="com.intellij.openapi.fileEditor.impl.HTMLEditorProvider"/>
     <fileEditorProvider id="jcomponent-editor" implementation="com.intellij.openapi.fileEditor.impl.JComponentEditorProvider"/>
     <fileEditorProvider id="settingsWindow" implementation="com.intellij.openapi.options.newEditor.settings.SettingsFileEditorProvider"/>
     <vcs.fileStatusProvider implementation="com.intellij.openapi.options.newEditor.settings.SettingsFileEditorProvider"/>
@@ -1337,7 +1328,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
 
     <applicationService serviceImplementation="com.intellij.openapi.options.newEditor.SettingsDialogFactory" open="true"/>
     <applicationService serviceImplementation="com.intellij.openapi.options.newEditor.SettingsNonModalDialogFactory" open="true"/>
-    <applicationService serviceImplementation="com.intellij.openapi.options.newEditor.SettingsFrameFactory" open="true"/>
 
     <additionalTextAttributes scheme="Default" file="idea/FindViewColorsScheme.xml"/>
     <additionalTextAttributes scheme="Darcula" file="idea/FindViewColorsScheme.xml"/>
@@ -1627,6 +1617,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <notificationGroup id="URL does not respond notification" displayType="BALLOON" bundle="messages.IdeBundle"
                        key="browser.notification.timeout.group"/>
     <notificationGroup id="editor-rendering-benchmark" displayType="NONE" hideFromSettings="true"/>
+    <notificationGroup id="Clear IDE Statistics" displayType="BALLOON" hideFromSettings="true"/>
     <notificationGroup id="Error Report" displayType="BALLOON" isLogByDefault="false" bundle="messages.DiagnosticBundle"
                        key="notification.group.error.report"/>
     <notificationGroup id="Test ToolWindow Notification" displayType="TOOL_WINDOW" toolWindowId="TODO" hideFromSettings="true"/>
@@ -1702,6 +1693,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
                        key="notification.group.failed.to.generate.module.descriptors"/>
     <notificationGroup id="Ultimate Installed" displayType="BALLOON" bundle="messages.IdeBundle"
                        key="notification.group.advertiser.try.ultimate.installed"/>
+    <notificationGroup id="Settings External Change Conflict" displayType="STICKY_BALLOON" hideFromSettings="true"/>
     <notificationGroup id="code.style.cache.dump" displayType="BALLOON" hideFromSettings="true" isLogByDefault="false"/>
     <notificationGroup id="editor.state.dump" displayType="BALLOON" hideFromSettings="true" isLogByDefault="false"/>
     <notificationGroup id="proxy.auth.failed" displayType="STICKY_BALLOON" bundle="messages.UIBundle" key="proxy.auth.notification.title"/>
@@ -1732,6 +1724,7 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
                              bundle="messages.ApplicationBundle"
                              instance="com.intellij.openapi.options.advanced.AdvancedSettingsConfigurable"
                              groupId="root"/>
+    <findActionSearchableOptionsFilter implementation="com.intellij.openapi.options.advanced.AdvancedSettingsFindActionOptionsFilter"/>
 
     <advancedSetting id="ide.ui.native.file.chooser" default="true" groupKey="group.advanced.settings.ui"/>
     <advancedSetting id="merge.main.menu" default="true" groupKey="group.advanced.settings.ui" service="com.intellij.ide.ui.MergeMainMenuSettingProvider" property="mergeMainMenu"/>
@@ -2141,7 +2134,6 @@ The refresh itself is toggled by (Preferences | Appearance &amp; Behavior | Syst
     <applicationSettings service="com.intellij.util.net.HttpConfigurable"/>
     <applicationSettings service="com.intellij.openapi.keymap.NationalKeyboardSupport"/>
     <projectSettings service="com.intellij.openapi.ui.MasterDetailsStateService"/>
-    <projectSettings service="com.intellij.execution.testframework.export.ExportTestResultsConfiguration"/>
     <applicationSettings
       service="com.intellij.internal.statistic.eventLog.validator.storage.persistence.EventLogMetadataSettingsPersistence"/>
     <applicationSettings service="com.intellij.openapi.editor.ex.EditorSettingsExternalizable$OsSpecificState"/>

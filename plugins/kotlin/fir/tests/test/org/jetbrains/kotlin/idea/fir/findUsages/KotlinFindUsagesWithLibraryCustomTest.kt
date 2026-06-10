@@ -6,7 +6,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.findUsages.findUsages
-import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginMode
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
@@ -15,7 +14,6 @@ import org.junit.runner.RunWith
 
 @RunWith(JUnit38ClassRunner::class)
 class KotlinFindUsagesWithLibraryCustomTest : AbstractKotlinFindUsagesWithLibraryFirTest() {
-    override val pluginMode: KotlinPluginMode = KotlinPluginMode.K2
 
     override val isWithSourcesTestData = false
 
@@ -31,7 +29,7 @@ class KotlinFindUsagesWithLibraryCustomTest : AbstractKotlinFindUsagesWithLibrar
         val usages = findUsages(privateClass, null, false, project)
         assertEquals(
             listOf(
-                "PrivateLibraryClass (class org.jetbrains.kotlin.analysis.api.impl.base.references.KaBaseSimpleNameReference)",
+                "PrivateLibraryClass (class org.jetbrains.kotlin.idea.references.impl.KaBaseSimpleNameReference)",
                 "library.PrivateLibraryClass (class com.intellij.psi.impl.source.PsiJavaCodeReferenceElementImpl)",
             ),
             usages.map { it.toString() }.sorted(),

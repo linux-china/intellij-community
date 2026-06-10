@@ -18,7 +18,6 @@ import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryManager
-import com.intellij.platform.ide.impl.diagnostic.errorsDialog.ErrorMessageClustering
 import com.intellij.util.text.nullize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,13 +57,6 @@ object ExceptionAutoReportUtil {
     return isAutoReportAllowedByUser()
   }
 
-  suspend fun isAutoReportEnabledAsync(): Boolean {
-    if (!isAutoReportVisible()) return false
-    if (isDevelopmentEnvironment) return ENABLED_FOR_DEVELOPMENT
-
-    return isAutoReportAllowedByUser()
-  }
-
   @JvmStatic // may be called extremely early before IDE started!
   val isConsentAllowedToBeVisible: Boolean
     get() = isAutoReportVisibleBlocking() && !isAutoReportForced // do not show consents UI if level is forced
@@ -95,19 +87,6 @@ object ExceptionAutoReportUtil {
 
     val (consent, needsReconfirm) = getConsentAndNeedsReconfirm()
     return consent?.isAccepted == true && !needsReconfirm
-  }
-
-  suspend fun isAutoReportEnabledOrUndecidedAsync(): Boolean {
-    if (!isAutoReportVisible()) return false
-
-    if (isDevelopmentEnvironment) return ENABLED_FOR_DEVELOPMENT
-    if (isAutoReportForced) return true // set by provisioning
-    if (ConsentOptions.getInstance().isEAP) {
-      return ExceptionEAPAutoReportManager.getInstance().enabledInEAP
-    }
-
-    val (consent, needsReconfirm) = getConsentAndNeedsReconfirm()
-    return consent?.isAccepted == true || needsReconfirm
   }
 
   private suspend fun getConsentAndNeedsReconfirm(): Pair<Consent?, Boolean> {
@@ -195,8 +174,7 @@ object ExceptionAutoReportUtil {
   }
 
   fun isFreeze(throwable: Throwable): Boolean {
-    return throwable is Freeze
-           || throwable is RemoteSerializedThrowable && throwable.classFqn == Freeze::class.qualifiedName
+    return throwable.isInstance<Freeze>()
   }
 
   fun getThrowableFqn(throwable: Throwable): String? {

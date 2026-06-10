@@ -7,7 +7,6 @@ import com.intellij.modcommand.ActionContext
 import com.intellij.modcommand.ModCommandAction
 import com.intellij.modcommand.ModPsiUpdater
 import com.intellij.modcommand.Presentation
-import com.intellij.modcommand.PsiUpdateModCommandAction
 import com.intellij.psi.util.parentOfType
 import com.intellij.util.containers.addIfNotNull
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
@@ -42,6 +41,7 @@ import org.jetbrains.kotlin.analysis.api.types.KaType
 import org.jetbrains.kotlin.config.LanguageVersion
 import org.jetbrains.kotlin.idea.base.projectStructure.languageVersionSettings
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
+import org.jetbrains.kotlin.idea.codeinsight.api.applicable.intentions.KotlinPsiUpdateModCommandAction
 import org.jetbrains.kotlin.idea.codeinsight.api.applicators.fixes.KotlinQuickFixFactory
 import org.jetbrains.kotlin.idea.codeinsights.impl.base.CallableReturnTypeUpdaterUtils
 import org.jetbrains.kotlin.idea.codeinsights.impl.base.CallableReturnTypeUpdaterUtils.updateType
@@ -91,10 +91,10 @@ internal object ChangeTypeQuickFixFactories {
         target: E,
         private val targetType: TargetType,
         private val typeInfo: CallableReturnTypeUpdaterUtils.TypeInfo,
-    ) : PsiUpdateModCommandAction<E>(target) {
+    ) : KotlinPsiUpdateModCommandAction.ElementContextless<E>(target) {
         override fun getFamilyName(): String = KotlinBundle.message("fix.change.return.type.family")
 
-        override fun getPresentation(context: ActionContext, element: E): Presentation {
+        override fun getActionPresentation(context: ActionContext, element: E): Presentation {
             val name = getActionName(element, targetType, typeInfo)
             val priority =
                 when(targetType) {
@@ -320,7 +320,7 @@ internal object ChangeTypeQuickFixFactories {
             val declaration = returnExpr.resolveSymbol()?.psi as? KtCallableDeclaration
                 ?: return@ModCommandBased emptyList()
 
-            val withNullability = diagnostic.expectedType.withNullability(true)
+            val withNullability = diagnostic.expectedType.withNullability(isMarkedNullable = true)
             listOf(
                 UpdateTypeQuickFix(
                     declaration,
@@ -390,7 +390,7 @@ internal object ChangeTypeQuickFixFactories {
             }
 
             val actualType = getActualType(diagnostic.actualType, expression)
-            val type = if (declaration.initializer?.isNull() == true) actualType.withNullability(true) else actualType
+            val type = if (declaration.initializer?.isNull() == true) actualType.withNullability(isMarkedNullable = true) else actualType
             buildList {
                 if (declaration.typeReference == null) {
                     add(UpdateTypeQuickFix(declaration, TargetType.VARIABLE, createTypeInfo(declaration.returnType(type))))

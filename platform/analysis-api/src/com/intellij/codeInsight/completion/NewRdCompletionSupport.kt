@@ -2,7 +2,7 @@
 package com.intellij.codeInsight.completion
 
 import com.intellij.codeInsight.lookup.Lookup
-import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceOrNull
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -18,12 +18,15 @@ interface NewRdCompletionSupport {
    */
   fun scheduleAutopopupOnFrontend(project: Project, editor: Editor, completionType: CompletionType): Boolean
 
+  /**
+   * @return true if this a client process of a remoteDev session in IntelliJ IDEA specifically (and NOT another IDE like PyCharm, PhpStorm, etc.).
+   */
   fun isFrontendForIntelliJBackend(): Boolean
 
   /**
    * return true if this lookup is handled by new remdev logic
-   * - on the frontend side, it means that the lookup is created by fair completion machinery
-   * - on the backend side, it means that the lookup is created by BackendCompletionLookupMirror
+   * - on the frontend side, it is not supported atm, feel free to implement it if necessary
+   * - on the backend side, it means that the lookup is created by `BackendCompletionLookupMirror`
    */
   fun isNewFrontendLookup(lookup: Lookup): Boolean
 
@@ -36,22 +39,30 @@ interface NewRdCompletionSupport {
   fun noPsiAvailable(editor: Editor)
 
   companion object {
+    /**
+     * @return true if `remdev.completion.on.frontend` registry flag is enabled AND this is a host or a client of a remoteDev session.
+     */
     @JvmStatic
-    fun isFrontendRdCompletionOn(): Boolean = service<NewRdCompletionSupport>().isFrontendRdCompletionOnImpl()
+    fun isFrontendRdCompletionOn(): Boolean = getInstance().isFrontendRdCompletionOnImpl()
 
+    /**
+     * @return logs an error with a given [message] if `remdev.completion.on.frontend.report.suboptimal.usage` registry flag is enabled.
+     */
     @JvmStatic
     fun reportSuboptimalUsage(message: () -> String) {
-      if (Registry.`is`("remdev.completion.on.frontend.force.errors")) {
+      if (Registry.`is`("remdev.completion.on.frontend.report.suboptimal.usage")) {
         logger<NewRdCompletionSupport>().error(message())
       }
     }
 
     @JvmStatic
-    fun getInstance(): NewRdCompletionSupport = service<NewRdCompletionSupport>()
+    fun getInstance(): NewRdCompletionSupport {
+      return serviceOrNull<NewRdCompletionSupport>() ?: NoOpNewCompletionSupport
+    }
   }
 }
 
-internal class NoOpNewCompletionSupport : NewRdCompletionSupport {
+private object NoOpNewCompletionSupport : NewRdCompletionSupport {
   override fun isFrontendRdCompletionOnImpl(): Boolean = false
 
   override fun scheduleAutopopupOnFrontend(project: Project, editor: Editor, completionType: CompletionType) = false

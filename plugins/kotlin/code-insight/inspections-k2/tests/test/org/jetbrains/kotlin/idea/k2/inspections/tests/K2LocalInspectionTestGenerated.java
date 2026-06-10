@@ -3,7 +3,6 @@
 package org.jetbrains.kotlin.idea.k2.inspections.tests;
 
 import com.intellij.testFramework.TestDataPath;
-import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginMode;
 import org.jetbrains.kotlin.idea.base.test.TestRoot;
 import org.jetbrains.kotlin.idea.test.JUnit3RunnerWithInners;
 import org.jetbrains.kotlin.idea.test.KotlinTestUtils;
@@ -22,12 +21,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedVariable")
     public static class UnusedVariable extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -96,12 +89,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantVisibilityModifier")
     public static class RedundantVisibilityModifier extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -195,12 +182,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedEquals")
     public static class UnusedEquals extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -229,12 +210,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/recursiveEqualsCall")
     public static class RecursiveEqualsCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -293,12 +268,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantWith")
     public static class RedundantWith extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -467,12 +436,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/implicitThis")
     public static class ImplicitThis extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -551,12 +514,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantInnerClassModifier")
     public static class RedundantInnerClassModifier extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -775,12 +732,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/doubleBang")
     public static class DoubleBang extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -839,12 +790,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/doubleNegation")
     public static class DoubleNegation extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -873,12 +818,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/emptyRange")
     public static class EmptyRange extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -993,12 +932,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/removeExplicitSuperQualifier")
     public static class RemoveExplicitSuperQualifier extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1062,12 +995,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/destructuringInLambda")
     public static class DestructuringInLambda extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1206,12 +1133,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/destructuringVariables")
     public static class DestructuringVariables extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1275,12 +1196,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/iterationOverMap")
     public static class IterationOverMap extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1318,6 +1233,11 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @TestMetadata("DataClassLast.kt")
         public void testDataClassLast() throws Exception {
             runTest("../../../idea/tests/testData/intentions/iterationOverMap/DataClassLast.kt");
+        }
+
+        @TestMetadata("DataClassMethodCall.kt")
+        public void testDataClassMethodCall() throws Exception {
+            runTest("../../../idea/tests/testData/intentions/iterationOverMap/DataClassMethodCall.kt");
         }
 
         @TestMetadata("DataClassNameConflict.kt")
@@ -1499,12 +1419,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/removeSingleExpressionStringTemplate")
     public static class RemoveSingleExpressionStringTemplate extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1553,12 +1467,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/enumValuesSoftDeprecate")
     public static class EnumValuesSoftDeprecate extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -1757,12 +1665,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/branched/ifThenToElvis")
     public static class IfThenToElvis extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2066,12 +1968,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/branched/ifThenToSafeAccess")
     public static class IfThenToSafeAccess extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2525,12 +2421,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/conventionNameCalls/replaceGetOrSet")
     public static class ReplaceGetOrSet extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2694,12 +2584,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/cascadeIf")
     public static class CascadeIf extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2768,12 +2652,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nullChecksToSafeCall")
     public static class NullChecksToSafeCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2822,12 +2700,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nullableBooleanElvis")
     public static class NullableBooleanElvis extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2901,12 +2773,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nullableHashCode")
     public static class NullableHashCode extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -2960,12 +2826,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantElvisReturnNull")
     public static class RedundantElvisReturnNull extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3019,12 +2879,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceCollectionCountWithSize")
     public static class ReplaceCollectionCountWithSize extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3088,12 +2942,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nonNullableBooleanPropertyInExternalInterface")
     public static class NonNullableBooleanPropertyInExternalInterface extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3122,12 +2970,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nonExternalClassifierExtendingStateOrProps")
     public static class NonExternalClassifierExtendingStateOrProps extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3166,12 +3008,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nonVarPropertyInExternalInterface")
     public static class NonVarPropertyInExternalInterface extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3200,12 +3036,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeToStringInStringTemplate")
     public static class RemoveToStringInStringTemplate extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3250,12 +3080,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToAssignment/onlySingleStatement/false")
             public static class False extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -3269,12 +3093,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToAssignment/onlySingleStatement/true")
             public static class True extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -3294,12 +3112,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToAssignment")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -3494,12 +3306,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/tryToAssignment")
     public static class TryToAssignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3573,12 +3379,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/whenToAssignment")
     public static class WhenToAssignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3668,12 +3468,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToReturn/onlySingleStatement/false")
             public static class False extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -3687,12 +3481,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToReturn/onlySingleStatement/true")
             public static class True extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -3712,12 +3500,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/ifToReturn")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -3777,12 +3559,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/tryToReturn")
     public static class TryToReturn extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3836,12 +3612,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/liftOut/whenToReturn")
     public static class WhenToReturn extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -3928,12 +3698,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/inconsistentCommentForJavaParameter")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -3977,12 +3741,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/inconsistentCommentForJavaParameter/whitespace")
         public static class Whitespace extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4045,12 +3803,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/alsoToApply")
         public static class AlsoToApply extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4064,12 +3816,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/applyToAlso")
         public static class ApplyToAlso extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4133,12 +3879,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/letToRun")
         public static class LetToRun extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4192,12 +3932,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/letToWith")
         public static class LetToWith extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4246,12 +3980,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/runToLet")
         public static class RunToLet extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4275,12 +4003,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/runToWith")
         public static class RunToWith extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4294,12 +4016,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/withToLet")
         public static class WithToLet extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4323,12 +4039,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scopeFunctions/withToRun")
         public static class WithToRun extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4349,12 +4059,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/whenWithOnlyElse/subjectVariable/blockElse")
             public static class BlockElse extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -4383,12 +4087,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/whenWithOnlyElse/subjectVariable/blockElseUsedAsExpression")
             public static class BlockElseUsedAsExpression extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -4417,12 +4115,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/whenWithOnlyElse/subjectVariable/singleElse")
             public static class SingleElse extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -4471,12 +4163,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/whenWithOnlyElse/subjectVariable")
             public static class Uncategorized extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -4511,12 +4197,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/whenWithOnlyElse")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -4561,12 +4241,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantRequireNotNullCall")
     public static class RedundantRequireNotNullCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -4625,12 +4299,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/suspiciousCallOnCollectionToAddOrRemovePath")
     public static class SuspiciousCallOnCollectionToAddOrRemovePath extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -4804,12 +4472,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/arrayHashCode")
     public static class ArrayHashCode extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -4853,12 +4515,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/misorderedAssertEqualsArguments")
     public static class MisorderedAssertEqualsArguments extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -4897,12 +4553,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/arrayToString")
     public static class ArrayToString extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -5036,12 +4686,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/stringReferentialEquality")
     public static class StringReferentialEquality extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -5075,12 +4719,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/suspiciousCascadingIf")
     public static class SuspiciousCascadingIf extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -5184,12 +4822,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/equalsOrHashCode")
     public static class EqualsOrHashCode extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -5263,12 +4895,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeRedundantQualifierName")
     public static class RemoveRedundantQualifierName extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -5822,12 +5448,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantUnitExpression")
     public static class RedundantUnitExpression extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -6057,12 +5677,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/useExpressionBody/convertToExpressionBody/keepComments")
             public static class KeepComments extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -6101,12 +5715,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/useExpressionBody/convertToExpressionBody")
             public static class Uncategorized extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -6321,12 +5929,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/useExpressionBody")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -6381,12 +5983,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/suspiciousCallableReferenceInLambda")
     public static class SuspiciousCallableReferenceInLambda extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -6610,12 +6206,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/equalsBetweenInconvertibleTypes")
     public static class EqualsBetweenInconvertibleTypes extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -6734,12 +6324,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/covariantEquals")
     public static class CovariantEquals extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -6803,12 +6387,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/explicitThis")
     public static class ExplicitThis extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -6970,12 +6548,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantIf/comment")
         public static class Comment extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7024,12 +6596,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantIf/floatingPoint")
         public static class FloatingPoint extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7066,12 +6632,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantIf/ignoreChainedIf/false")
             public static class False extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -7085,12 +6645,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantIf/ignoreChainedIf/true")
             public static class True extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -7115,12 +6669,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantIf/invertEmptinessCheck")
         public static class InvertEmptinessCheck extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7145,12 +6693,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/convertTryFinallyToUseCall")
     public static class ConvertTryFinallyToUseCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -7229,12 +6771,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantLambdaArrow")
     public static class RedundantLambdaArrow extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -7426,12 +6962,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantLambdaOrAnonymousFunction/anonymousFunction")
         public static class AnonymousFunction extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7510,12 +7040,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantLambdaOrAnonymousFunction/lambdaExpression")
         public static class LambdaExpression extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7569,12 +7093,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantLambdaOrAnonymousFunction")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -7614,12 +7132,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/mayBeConstant")
     public static class MayBeConstant extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -7758,12 +7270,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/moveLambdaOutsideParentheses")
     public static class MoveLambdaOutsideParentheses extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -7922,12 +7428,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/foldInitializerAndIfToElvis")
     public static class FoldInitializerAndIfToElvis extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8106,12 +7606,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantElseInIf")
     public static class RedundantElseInIf extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8180,12 +7674,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/kdocMissingDocumentation")
     public static class KdocMissingDocumentation extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8209,12 +7697,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantExplicitType")
     public static class RedundantExplicitType extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8318,12 +7800,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/convertArgumentToSet")
     public static class ConvertArgumentToSet extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8447,12 +7923,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/replaceSizeCheckWithIsNotEmpty")
     public static class ReplaceSizeCheckWithIsNotEmpty extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8566,12 +8036,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/coroutines/redundantRunCatching")
     public static class RedundantRunCatching extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8620,12 +8084,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/coroutines/simplifiableFlowCallChain")
     public static class SimplifiableFlowCallChain extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8654,12 +8112,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/coroutines/simplifiableFlowCall")
     public static class SimplifiableFlowCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8713,12 +8165,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/coroutines/unusedFlow")
     public static class UnusedFlow extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8847,12 +8293,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/coroutines/uselessCallOnFlow")
     public static class UselessCallOnFlow extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -8897,12 +8337,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/joinDeclarationAndAssignment/reportWithComplexInitializationOfMemberProperties/default")
             public static class Default extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -8931,12 +8365,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/joinDeclarationAndAssignment/reportWithComplexInitializationOfMemberProperties/false")
             public static class False extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -8965,12 +8393,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/joinDeclarationAndAssignment/reportWithComplexInitializationOfMemberProperties/true")
             public static class True extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -9000,12 +8422,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/joinDeclarationAndAssignment")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -9245,12 +8661,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceArrayOfWithLiteral")
     public static class ReplaceArrayOfWithLiteral extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -9314,12 +8724,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/selfAssignment")
     public static class SelfAssignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -9551,12 +8955,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/collections")
         public static class Collections extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -9750,12 +9148,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/compare")
         public static class Compare extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -9804,12 +9196,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/io")
         public static class Io extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -9858,12 +9244,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/math")
         public static class Math extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10087,12 +9467,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/system")
         public static class System extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10106,12 +9480,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceJavaStaticMethodWithKotlinAnalog/toString")
         public static class ToString extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10226,12 +9594,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceManualRangeWithIndicesCalls")
     public static class ReplaceManualRangeWithIndicesCalls extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -10483,12 +9845,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/branched/introduceWhenSubject")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10587,12 +9943,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/branched/introduceWhenSubject/whenGuards")
         public static class WhenGuards extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10650,12 +10000,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/callableReferenceExpressions")
         public static class CallableReferenceExpressions extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10739,12 +10083,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/dotQualifiedExpressions")
         public static class DotQualifiedExpressions extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -10993,12 +10331,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/referenceExpression")
         public static class ReferenceExpression extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -11135,12 +10467,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/reportNonTrivialAccessors/default")
             public static class Default extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -11184,12 +10510,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/reportNonTrivialAccessors/false")
             public static class False extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -11233,12 +10553,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/usePropertyAccessSyntax/reportNonTrivialAccessors/true")
             public static class True extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -11289,12 +10603,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unlabeledReturnInsideLambda")
     public static class UnlabeledReturnInsideLambda extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -11323,12 +10631,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantUnitReturnType")
     public static class RedundantUnitReturnType extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -11382,12 +10684,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/suspiciousCollectionReassignment")
     public static class SuspiciousCollectionReassignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -11454,12 +10750,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unnecessaryVariable/reportImmediatelyReturnedVariables")
         public static class ReportImmediatelyReturnedVariables extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -11518,12 +10808,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unnecessaryVariable")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -11643,12 +10927,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/canBeParameter")
     public static class CanBeParameter extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -11852,12 +11130,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/arrayInDataClass")
     public static class ArrayInDataClass extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -11932,12 +11204,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/collectionsOperations/mapSumWithConstant")
             public static class MapSumWithConstant extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -12021,12 +11287,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/collectionsOperations")
             public static class Uncategorized extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -12566,12 +11826,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/primitiveArray")
         public static class PrimitiveArray extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -12638,12 +11892,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/sequencesOperations/mapSumWithConstant")
             public static class MapSumWithConstant extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -12727,12 +11975,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/sequencesOperations")
             public static class Uncategorized extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -13202,12 +12444,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCallChain/text")
         public static class Text extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -13252,12 +12488,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/redundantAsSequence")
     public static class RedundantAsSequence extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -13346,12 +12576,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/collections/simplifiableCall")
     public static class SimplifiableCall extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -13495,12 +12719,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/canSimplifyDollarLiteral")
     public static class CanSimplifyDollarLiteral extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -13734,12 +12952,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/canConvertToMultiDollarString")
     public static class CanConvertToMultiDollarString extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -13868,12 +13080,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/floatingPointLiteralPrecision")
     public static class FloatingPointLiteralPrecision extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -13990,12 +13196,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/canBePrimaryConstructorProperty")
         public static class CanBePrimaryConstructorProperty extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14037,14 +13237,51 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         }
 
         @RunWith(JUnit3RunnerWithInners.class)
-        @TestMetadata("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall")
-        public static class ConvertCollectionLiteralToFunctionCall extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
+        @TestMetadata("testData/inspectionsLocal/collapseCollectionLiteralChainCall")
+        public static class CollapseCollectionLiteralChainCall extends AbstractK2LocalInspectionTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
 
+            @TestMetadata("chainCall.kt")
+            public void testChainCall() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/chainCall.kt");
+            }
+
+            @TestMetadata("getter.kt")
+            public void testGetter() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/getter.kt");
+            }
+
+            @TestMetadata("parentheses.kt")
+            public void testParentheses() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/parentheses.kt");
+            }
+
+            @TestMetadata("toIntArray.kt")
+            public void testToIntArray() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/toIntArray.kt");
+            }
+
+            @TestMetadata("toMutableListOf.kt")
+            public void testToMutableListOf() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/toMutableListOf.kt");
+            }
+
+            @TestMetadata("toSetOf.kt")
+            public void testToSetOf() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/toSetOf.kt");
+            }
+
+            @TestMetadata("toTypedArray.kt")
+            public void testToTypedArray() throws Exception {
+                runTest("testData/inspectionsLocal/collapseCollectionLiteralChainCall/toTypedArray.kt");
+            }
+        }
+
+        @RunWith(JUnit3RunnerWithInners.class)
+        @TestMetadata("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall")
+        public static class ConvertCollectionLiteralToFunctionCall extends AbstractK2LocalInspectionTest {
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14094,6 +13331,11 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
                 runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/expressionBody.kt");
             }
 
+            @TestMetadata("getter.kt")
+            public void testGetter() throws Exception {
+                runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/getter.kt");
+            }
+
             @TestMetadata("inReturnExpression.kt")
             public void testInReturnExpression() throws Exception {
                 runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/inReturnExpression.kt");
@@ -14133,37 +13375,11 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             public void testSimple() throws Exception {
                 runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/simple.kt");
             }
-
-            @TestMetadata("toIntArray.kt")
-            public void testToIntArray() throws Exception {
-                runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/toIntArray.kt");
-            }
-
-            @TestMetadata("toMutableListOf.kt")
-            public void testToMutableListOf() throws Exception {
-                runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/toMutableListOf.kt");
-            }
-
-            @TestMetadata("toSetOf.kt")
-            public void testToSetOf() throws Exception {
-                runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/toSetOf.kt");
-            }
-
-            @TestMetadata("toTypedArray.kt")
-            public void testToTypedArray() throws Exception {
-                runTest("testData/inspectionsLocal/convertCollectionLiteralToFunctionCall/toTypedArray.kt");
-            }
         }
 
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertCollectionLiteralToTypeOfExpression")
         public static class ConvertCollectionLiteralToTypeOfExpression extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14237,12 +13453,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertSealedClassToSealedInterface")
         public static class ConvertSealedClassToSealedInterface extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14376,12 +13586,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertSealedInterfaceToSealedClass")
         public static class ConvertSealedInterfaceToSealedClass extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14495,12 +13699,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertToCollectionLiterals")
         public static class ConvertToCollectionLiterals extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14774,12 +13972,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertToExplicitBackingFields")
         public static class ConvertToExplicitBackingFields extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -14953,12 +14145,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/convertTypeOfToCollectionLiteral")
         public static class ConvertTypeOfToCollectionLiteral extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15052,12 +14238,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/enumValuesTopLevelFunctionSoftDeprecation")
         public static class EnumValuesTopLevelFunctionSoftDeprecation extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15151,12 +14331,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/hasPlatformType")
         public static class HasPlatformType extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15245,12 +14419,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/hasPlatformTypeWithSettings")
         public static class HasPlatformTypeWithSettings extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15307,12 +14475,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/javaDefaultMethodsNotOverriddenByDelegation/delegateToDelegateObject")
             public static class DelegateToDelegateObject extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15346,12 +14508,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/javaDefaultMethodsNotOverriddenByDelegation/delegateToSuperclass")
             public static class DelegateToSuperclass extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15385,12 +14541,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/javaDefaultMethodsNotOverriddenByDelegation/noProblem")
             public static class NoProblem extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15420,12 +14570,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/lazyWithoutDelegation")
         public static class LazyWithoutDelegation extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15522,12 +14666,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/liftOut/liftToAssignment")
             public static class LiftToAssignment extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15555,12 +14693,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/mainFunctionReturnUnit/insideClass")
             public static class InsideClass extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15574,12 +14706,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/mainFunctionReturnUnit/insideObject")
             public static class InsideObject extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15633,12 +14759,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/mainFunctionReturnUnit/topLevel")
             public static class TopLevel extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15708,12 +14828,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/redundantModalityModifier")
         public static class RedundantModalityModifier extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15812,12 +14926,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/redundantVisibilityModifierFir")
         public static class RedundantVisibilityModifierFir extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -15839,12 +14947,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/removeRedundantQualifierName/contextSensitiveResolution")
             public static class ContextSensitiveResolution extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15883,12 +14985,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             @RunWith(JUnit3RunnerWithInners.class)
             @TestMetadata("testData/inspectionsLocal/removeRedundantQualifierName")
             public static class Uncategorized extends AbstractK2LocalInspectionTest {
-                @java.lang.Override
-                @org.jetbrains.annotations.NotNull
-                public final KotlinPluginMode getPluginMode() {
-                    return KotlinPluginMode.K2;
-                }
-
                 private void runTest(String testDataFilePath) throws Exception {
                     KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
                 }
@@ -15958,12 +15054,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/replaceCallWithBinaryOperator")
         public static class ReplaceCallWithBinaryOperator extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16207,12 +15297,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/replaceContains")
         public static class ReplaceContains extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16331,12 +15415,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/replaceMapKeysCallChainWithKeys")
         public static class ReplaceMapKeysCallChainWithKeys extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16390,12 +15468,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/replaceSizeCheckWithIsNotEmpty")
         public static class ReplaceSizeCheckWithIsNotEmpty extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16524,12 +15596,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/replaceSizeZeroCheckWithIsEmpty")
         public static class ReplaceSizeZeroCheckWithIsEmpty extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16658,12 +15724,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/revertExplicitBackingFields")
         public static class RevertExplicitBackingFields extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -16827,12 +15887,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/uselessCallOnCollection")
         public static class UselessCallOnCollection extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17096,12 +16150,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/inspectionsLocal/uselessCallOnNotNull")
         public static class UselessCallOnNotNull extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17194,12 +16242,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/array")
         public static class Array extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17218,12 +16260,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/collection")
         public static class Collection extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17242,12 +16278,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/comments")
         public static class Comments extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17296,12 +16326,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/intArray")
         public static class IntArray extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17320,12 +16344,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/list")
         public static class List extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17344,12 +16362,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/map")
         public static class Map extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17368,12 +16380,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/set")
         public static class Set extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17392,12 +16398,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty/str")
         public static class Str extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17426,12 +16426,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIsEmptyWithIfEmpty")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17521,12 +16515,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/booleanLiteralArgument")
     public static class BooleanLiteralArgument extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -17608,12 +16596,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/array")
         public static class Array extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17627,12 +16609,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/arrayList")
         public static class ArrayList extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17646,12 +16622,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/collection")
         public static class Collection extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17670,12 +16640,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/complex")
         public static class Complex extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17709,12 +16673,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/custom")
         public static class Custom extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17743,12 +16701,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/hashSet")
         public static class HashSet extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17762,12 +16714,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/intArray")
         public static class IntArray extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17786,12 +16732,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/list")
         public static class List extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17835,12 +16775,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/map")
         public static class Map extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17854,12 +16788,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/receivers")
         public static class Receivers extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17898,12 +16826,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/set")
         public static class Set extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17917,12 +16839,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/str")
         public static class Str extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17951,12 +16867,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/verboseNullabilityAndEmptiness/wrapped")
         public static class Wrapped extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -17981,12 +16891,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/nestedLambdaShadowedImplicitParameter")
     public static class NestedLambdaShadowedImplicitParameter extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18130,12 +17034,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedReceiverParameter")
     public static class UnusedReceiverParameter extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18334,12 +17232,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/filterIsInstanceAlwaysEmpty")
     public static class FilterIsInstanceAlwaysEmpty extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18558,12 +17450,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/selfReferenceConstructorParameter")
     public static class SelfReferenceConstructorParameter extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18592,12 +17478,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/simplifyAssertNotNull")
     public static class SimplifyAssertNotNull extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18661,12 +17541,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/simplifyNestedEachInScope")
     public static class SimplifyNestedEachInScope extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18795,12 +17669,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/canBeVal")
     public static class CanBeVal extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18814,12 +17682,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/mapGetWithNotNullAssertionOperator")
     public static class MapGetWithNotNullAssertionOperator extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -18866,12 +17728,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceSubstring/withDropLast")
         public static class WithDropLast extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -18905,12 +17761,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceSubstring/withIndexingOperation")
         public static class WithIndexingOperation extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -18934,12 +17784,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceSubstring/withSubstringAfter")
         public static class WithSubstringAfter extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -18968,12 +17812,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceSubstring/withSubstringBefore")
         public static class WithSubstringBefore extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19007,12 +17845,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceSubstring/withTake")
         public static class WithTake extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19067,12 +17899,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceWithIgnoreCaseEquals")
     public static class ReplaceWithIgnoreCaseEquals extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19146,12 +17972,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceWithImportAlias")
     public static class ReplaceWithImportAlias extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19200,12 +18020,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceToWithInfixForm")
     public static class ReplaceToWithInfixForm extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19229,12 +18043,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/addOperatorModifier")
     public static class AddOperatorModifier extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19278,12 +18086,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/kotlinUnreachableCode")
     public static class KotlinUnreachableCode extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19327,12 +18129,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeRedundantLabel")
     public static class RemoveRedundantLabel extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19444,12 +18240,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/logging/loggerInitializedWithForeignClass/commons")
         public static class Commons extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19508,12 +18298,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/logging/loggerInitializedWithForeignClass/log4j")
         public static class Log4j extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19527,12 +18311,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/logging/loggerInitializedWithForeignClass/log4j2")
         public static class Log4j2 extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19546,12 +18324,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/logging/loggerInitializedWithForeignClass/slf4j")
         public static class Slf4j extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19565,12 +18337,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/logging/loggerInitializedWithForeignClass/util")
         public static class Util extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -19650,12 +18416,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/mainFunctionReturnUnit")
     public static class MainFunctionReturnUnit extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19709,12 +18469,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceIfExpressionWithFirstOrNull")
     public static class ReplaceIfExpressionWithFirstOrNull extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19875,12 +18629,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeExplicitTypeArguments")
     public static class RemoveExplicitTypeArguments extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -19989,12 +18737,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/defaultAnnotationTarget")
     public static class DefaultAnnotationTarget extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20063,12 +18805,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantEnumConstructorInvocation")
     public static class RedundantEnumConstructorInvocation extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20097,12 +18833,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantReturnKeyword")
     public static class RedundantReturnKeyword extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20261,12 +18991,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/orInWhenGuard")
     public static class OrInWhenGuard extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20335,12 +19059,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/customComponentDestructuringMigration")
     public static class CustomComponentDestructuringMigration extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20399,12 +19117,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertFromMultiDollarToRegularString")
     public static class ConvertFromMultiDollarToRegularString extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20523,12 +19235,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertExplicitContextArgumentToImplicit")
     public static class ConvertExplicitContextArgumentToImplicit extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20622,12 +19328,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertImplicitContextArgumentToExplicit")
     public static class ConvertImplicitContextArgumentToExplicit extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20681,12 +19381,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantCompanionReference")
     public static class RedundantCompanionReference extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -20985,12 +19679,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replacePutWithAssignment")
     public static class ReplacePutWithAssignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21084,12 +19772,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceRangeStartEndInclusiveWithFirstLast")
     public static class ReplaceRangeStartEndInclusiveWithFirstLast extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21133,12 +19815,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceStringFormatWithLiteral")
     public static class ReplaceStringFormatWithLiteral extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21195,14 +19871,61 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     }
 
     @RunWith(JUnit3RunnerWithInners.class)
-    @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeRedundantSpreadOperator")
-    public static class RemoveRedundantSpreadOperator extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
+    @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty")
+    public static class ReplaceNegatedIsEmptyWithIsNotEmpty extends AbstractK2LocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
 
+        @TestMetadata("call.kt")
+        public void testCall() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/call.kt");
+        }
+
+        @TestMetadata("notNegateBlank.kt")
+        public void testNotNegateBlank() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/notNegateBlank.kt");
+        }
+
+        @TestMetadata("notNegateEmpty.kt")
+        public void testNotNegateEmpty() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/notNegateEmpty.kt");
+        }
+
+        @TestMetadata("parenthesized.kt")
+        public void testParenthesized() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/parenthesized.kt");
+        }
+
+        @TestMetadata("simple.kt")
+        public void testSimple() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/simple.kt");
+        }
+
+        @TestMetadata("stringIsBlank.kt")
+        public void testStringIsBlank() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/stringIsBlank.kt");
+        }
+
+        @TestMetadata("stringIsEmpty.kt")
+        public void testStringIsEmpty() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/stringIsEmpty.kt");
+        }
+
+        @TestMetadata("stringIsNotBlank.kt")
+        public void testStringIsNotBlank() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/stringIsNotBlank.kt");
+        }
+
+        @TestMetadata("stringIsNotEmpty.kt")
+        public void testStringIsNotEmpty() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/replaceNegatedIsEmptyWithIsNotEmpty/stringIsNotEmpty.kt");
+        }
+    }
+
+    @RunWith(JUnit3RunnerWithInners.class)
+    @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeRedundantSpreadOperator")
+    public static class RemoveRedundantSpreadOperator extends AbstractK2LocalInspectionTest {
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21331,12 +20054,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertPairConstructorToToFunction")
     public static class ConvertPairConstructorToToFunction extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21355,12 +20072,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/removeEmptyParenthesesFromAnnotationEntry")
     public static class RemoveEmptyParenthesesFromAnnotationEntry extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21399,12 +20110,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/incompleteDestructuringInspection")
     public static class IncompleteDestructuringInspection extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21468,12 +20173,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantObjectTypeCheck")
     public static class RedundantObjectTypeCheck extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21522,12 +20221,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceWithOperatorAssignment")
     public static class ReplaceWithOperatorAssignment extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21616,12 +20309,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedLambdaExpressionBody")
     public static class UnusedLambdaExpressionBody extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21650,12 +20337,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/lateinitVarOverridesLateinitVar")
     public static class LateinitVarOverridesLateinitVar extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21679,12 +20360,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceNotNullAssertionWithElvisReturn")
     public static class ReplaceNotNullAssertionWithElvisReturn extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21761,12 +20436,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceGuardClauseWithFunctionCall/check")
         public static class Check extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -21780,12 +20449,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceGuardClauseWithFunctionCall/checkNotNull")
         public static class CheckNotNull extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -21799,12 +20462,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceGuardClauseWithFunctionCall/require")
         public static class Require extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -21858,12 +20515,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceGuardClauseWithFunctionCall/requireNotNull")
         public static class RequireNotNull extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -21882,12 +20533,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceGuardClauseWithFunctionCall")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -21912,12 +20557,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertNaNEquality")
     public static class ConvertNaNEquality extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -21961,12 +20600,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertLongToDuration")
     public static class ConvertLongToDuration extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22015,12 +20648,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceWithEnumMap")
     public static class ReplaceWithEnumMap extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22064,12 +20691,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/javaCollectionsWithNullableTypes")
     public static class JavaCollectionsWithNullableTypes extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22213,12 +20834,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/deprecatedCallableAddReplaceWith")
     public static class DeprecatedCallableAddReplaceWith extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22350,12 +20965,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantNullableReturnType/function")
         public static class Function extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22434,12 +21043,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/redundantNullableReturnType/property")
         public static class Property extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22494,12 +21097,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/copyWithoutNamedArguments")
     public static class CopyWithoutNamedArguments extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22536,12 +21133,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedUnaryOperator/moveToPrevLine")
         public static class MoveToPrevLine extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22575,12 +21166,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unusedUnaryOperator")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22680,12 +21265,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/javaMapForEach")
     public static class JavaMapForEach extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22739,12 +21318,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/mapToForEach")
     public static class MapToForEach extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -22826,12 +21399,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/functionWithLambdaExpressionBody/addArrow")
         public static class AddArrow extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22850,12 +21417,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/functionWithLambdaExpressionBody/removeBraces")
         public static class RemoveBraces extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22889,12 +21450,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/functionWithLambdaExpressionBody/specifyType")
         public static class SpecifyType extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22913,12 +21468,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/functionWithLambdaExpressionBody")
         public static class Uncategorized extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -22977,12 +21526,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("../../../idea/tests/testData/inspectionsLocal/functionWithLambdaExpressionBody/wrapRun")
         public static class WrapRun extends AbstractK2LocalInspectionTest {
-            @java.lang.Override
-            @org.jetbrains.annotations.NotNull
-            public final KotlinPluginMode getPluginMode() {
-                return KotlinPluginMode.K2;
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
             }
@@ -23022,12 +21565,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/convertSealedSubClassToObject")
     public static class ConvertSealedSubClassToObject extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23151,12 +21688,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceUntilWithRangeUntil")
     public static class ReplaceUntilWithRangeUntil extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23225,12 +21756,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/scriptExecutable")
     public static class ScriptExecutable extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23249,12 +21774,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/replaceAddAllWithMapTo")
     public static class ReplaceAddAllWithMapTo extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23323,12 +21842,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation")
     public static class UnnecessaryOptInAnnotation extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23687,12 +22200,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/removeExplicitTypeArguments")
     public static class RemoveExplicitTypeArgumentsFormerIntentionTest extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }
@@ -23941,12 +22448,6 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
     @RunWith(JUnit3RunnerWithInners.class)
     @TestMetadata("../../../idea/tests/testData/intentions/convertReferenceToLambda")
     public static class ConvertReferenceToLambda extends AbstractK2LocalInspectionTest {
-        @java.lang.Override
-        @org.jetbrains.annotations.NotNull
-        public final KotlinPluginMode getPluginMode() {
-            return KotlinPluginMode.K2;
-        }
-
         private void runTest(String testDataFilePath) throws Exception {
             KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
         }

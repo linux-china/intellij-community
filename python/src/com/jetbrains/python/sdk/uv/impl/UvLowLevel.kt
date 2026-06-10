@@ -42,7 +42,7 @@ private class UvLowLevelImpl<P : PathHolder>(
   private val uvCli: UvCli<P>,
   private val fileSystem: FileSystem<P>,
 ) : UvLowLevel<P> {
-  override suspend fun initializeEnvironment(init: Boolean, version: Version?): PyResult<P> {
+  override suspend fun initializeEnvironment(init: Boolean, version: Version?, clearExisting: Boolean): PyResult<P> {
     val addPythonArg: (MutableList<String>) -> Unit = { args ->
       version?.let {
         args.add("--python")
@@ -65,6 +65,9 @@ private class UvLowLevelImpl<P : PathHolder>(
 
     val venvArgs = mutableListOf("venv")
     venvPath?.also { venvArgs += it.toString() }
+    if (clearExisting) {
+      venvArgs.add("--clear")
+    }
     addPythonArg(venvArgs)
     uvCli.runUv(cwd, null, true, *venvArgs.toTypedArray())
       .getOr { return it }
@@ -312,13 +315,13 @@ private class UvLowLevelImpl<P : PathHolder>(
   }
 }
 
-fun createUvLowLevelLocal(cwd: Path, uvCli: UvCli<PathHolder.Eel>): UvLowLevel<PathHolder.Eel> =
+internal fun createUvLowLevelLocal(cwd: Path, uvCli: UvCli<PathHolder.Eel>): UvLowLevel<PathHolder.Eel> =
   createUvLowLevel(cwd, uvCli, EelFileSystem(localEel), null)
 
-fun <P : PathHolder> createUvLowLevel(cwd: Path, uvCli: UvCli<P>, fileSystem: FileSystem<P>, venvPath: P?): UvLowLevel<P> =
+internal fun <P : PathHolder> createUvLowLevel(cwd: Path, uvCli: UvCli<P>, fileSystem: FileSystem<P>, venvPath: P?): UvLowLevel<P> =
   UvLowLevelImpl(cwd, venvPath, uvCli, fileSystem)
 
-suspend fun createUvLowLevelLocal(cwd: Path): PyResult<UvLowLevel<PathHolder.Eel>> =
+internal suspend fun createUvLowLevelLocal(cwd: Path): PyResult<UvLowLevel<PathHolder.Eel>> =
   createUvCli(null, EelFileSystem(localEel)).mapSuccess { createUvLowLevelLocal(cwd, it) }
 
 private fun tryExtractStderr(err: PyError): String? =

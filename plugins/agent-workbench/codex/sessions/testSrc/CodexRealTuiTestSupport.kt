@@ -1,9 +1,11 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.codex.sessions
 
-import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonToken
+import com.intellij.agent.workbench.json.createJsonGenerator
+import com.intellij.agent.workbench.json.createJsonParser
+import tools.jackson.core.JsonGenerator
+import tools.jackson.core.JsonToken
+import tools.jackson.core.json.JsonFactory
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil
 import com.intellij.openapi.util.SystemInfo
 import com.pty4j.PtyProcess
@@ -50,20 +52,33 @@ internal class CodexRealTuiHarness(
   }
 
   fun start(prompt: String): RunningCodexTuiSession {
+    return start(prompt = prompt, extraConfigArgs = emptyList())
+  }
+
+  fun startInteractive(extraConfigArgs: List<String> = emptyList()): RunningCodexTuiSession {
+    return start(prompt = null, extraConfigArgs = extraConfigArgs)
+  }
+
+  private fun start(prompt: String?, extraConfigArgs: List<String>): RunningCodexTuiSession {
     val environment = HashMap(System.getenv())
     environment["CODEX_HOME"] = codexHome.toString()
     environment.putIfAbsent("TERM", "xterm-256color")
+    val command = buildList {
+      add(codexBinary)
+      add("--no-alt-screen")
+      add("-C")
+      add(projectDir.toString())
+      add("-c")
+      add("analytics.enabled=false")
+      extraConfigArgs.forEach { configArg ->
+        add("-c")
+        add(configArg)
+      }
+      prompt?.let(::add)
+    }
 
     val process = PtyProcessBuilder(
-      arrayOf(
-        codexBinary,
-        "--no-alt-screen",
-        "-C",
-        projectDir.toString(),
-        "-c",
-        "analytics.enabled=false",
-        prompt,
-      )
+      command.toTypedArray()
     )
       .setConsole(true)
       .setDirectory(projectDir.toString())
@@ -143,6 +158,27 @@ internal class RunningCodexTuiSession(
     } ?: error("Timed out waiting for real Codex rollout session id.\n${diagnostics()}")
   }
 
+  suspend fun awaitTerminalTitleContaining(expectedText: String, timeout: Duration = 20.seconds): String {
+    return eventually(timeout = timeout) {
+      terminalTitles().firstOrNull { title -> expectedText in title }
+    } ?: error("Timed out waiting for terminal title containing '$expectedText'.\n${diagnostics()}")
+  }
+
+  suspend fun awaitTerminalThreadId(timeout: Duration = 20.seconds): String {
+    return eventually(timeout = timeout) {
+      terminalTitles()
+        .firstNotNullOfOrNull { title -> CODEX_THREAD_ID_IN_TERMINAL_TITLE_REGEX.find(title)?.value?.lowercase() }
+    } ?: error("Timed out waiting for terminal title thread id.\n${diagnostics()}")
+  }
+
+  fun submitPrompt(prompt: String) {
+    val bytes = (BRACKETED_PASTE_START + prompt + BRACKETED_PASTE_END + "\r").toByteArray(StandardCharsets.UTF_8)
+    process.outputStream.write(bytes)
+    process.outputStream.flush()
+  }
+
+  fun requests(): List<String> = responsesServer.requests()
+
   fun diagnostics(): String {
     val rollout = currentRolloutSnapshot()
     val rolloutDetails = if (rollout == null) {
@@ -165,10 +201,33 @@ internal class RunningCodexTuiSession(
   }
 
   fun outputTail(maxChars: Int = 4000): String {
+    val text = outputText()
+    return if (text.length <= maxChars) text else text.takeLast(maxChars)
+  }
+
+  private fun outputText(): String {
     return outputLock.withLock {
-      val text = output.toString()
-      if (text.length <= maxChars) text else text.takeLast(maxChars)
+      output.toString()
     }
+  }
+
+  private fun terminalTitles(): List<String> {
+    val text = outputText()
+    val titles = ArrayList<String>()
+    var index = 0
+    while (index < text.length) {
+      val oscStart = text.indexOf(OSC, startIndex = index)
+      if (oscStart < 0) break
+      val titleStart = text.indexOf(';', startIndex = oscStart + OSC.length)
+      if (titleStart < 0) break
+      val bellEnd = text.indexOf(BEL, startIndex = titleStart + 1)
+      val stEnd = text.indexOf(STRING_TERMINATOR, startIndex = titleStart + 1)
+      val titleEnd = minPositive(bellEnd, stEnd)
+      if (titleEnd < 0) break
+      titles.add(text.substring(titleStart + 1, titleEnd))
+      index = titleEnd + if (titleEnd == stEnd) STRING_TERMINATOR.length else 1
+    }
+    return titles
   }
 
   fun isAlive(): Boolean = process.isAlive
@@ -217,7 +276,9 @@ internal class RunningCodexTuiSession(
     var latestSnapshot: RolloutSnapshot? = null
     Files.walk(sessionsDir).use { paths ->
       paths
-        .filter { path -> Files.isRegularFile(path) && path.fileName.toString().startsWith("rollout-") && path.fileName.toString().endsWith(".jsonl") }
+        .filter { path ->
+          Files.isRegularFile(path) && path.fileName.toString().startsWith("rollout-") && path.fileName.toString().endsWith(".jsonl")
+        }
         .forEach { path ->
           val snapshot = readRolloutSnapshot(path) ?: return@forEach
           if (snapshot.cwd != projectDir.normalize()) {
@@ -323,7 +384,8 @@ internal class MockResponsesPlan private constructor(
 
   companion object {
     fun completedAssistantMessage(message: String): MockResponsesPlan {
-      return MockResponsesPlan(body = sse(responseCreatedEvent(), assistantMessageEvent(message), responseCompletedEvent()), holdOpen = false)
+      return MockResponsesPlan(body = sse(responseCreatedEvent(), assistantMessageEvent(message), responseCompletedEvent()),
+                               holdOpen = false)
     }
 
     fun inProgressAssistantMessage(message: String): MockResponsesPlan {
@@ -435,7 +497,7 @@ private data class SseEvent(
 )
 
 private fun parseSessionMetaLine(path: Path, line: String): RolloutSnapshot? {
-  JSON_FACTORY.createParser(line).use { parser ->
+  JSON_FACTORY.createJsonParser(line).use { parser ->
     if (parser.nextToken() != JsonToken.START_OBJECT) {
       return null
     }
@@ -447,7 +509,7 @@ private fun parseSessionMetaLine(path: Path, line: String): RolloutSnapshot? {
       val fieldName = parser.currentName()
       val valueToken = parser.nextToken()
       when (fieldName) {
-        "type" -> recordType = parser.valueAsString
+        "type" -> recordType = parser.string
         "payload" -> {
           if (valueToken != JsonToken.START_OBJECT) {
             parser.skipChildren()
@@ -458,8 +520,8 @@ private fun parseSessionMetaLine(path: Path, line: String): RolloutSnapshot? {
             val payloadField = parser.currentName()
             parser.nextToken()
             when (payloadField) {
-              "id" -> threadId = parser.valueAsString
-              "cwd" -> cwd = parser.valueAsString
+              "id" -> threadId = parser.string
+              "cwd" -> cwd = parser.string
               else -> parser.skipChildren()
             }
           }
@@ -573,8 +635,28 @@ private fun jsonEvent(type: String, body: (JsonGenerator) -> Unit): SseEvent {
 
 private fun jsonString(write: (JsonGenerator) -> Unit): String {
   val writer = StringWriter()
-  JSON_FACTORY.createGenerator(writer).use(write)
+  JSON_FACTORY.createJsonGenerator(writer).use(write)
   return writer.toString()
+}
+
+private fun JsonGenerator.writeObjectFieldStart(name: String) {
+  writeObjectPropertyStart(name)
+}
+
+private fun JsonGenerator.writeArrayFieldStart(name: String) {
+  writeArrayPropertyStart(name)
+}
+
+private fun JsonGenerator.writeStringField(name: String, value: String?) {
+  writeStringProperty(name, value)
+}
+
+private fun JsonGenerator.writeNumberField(name: String, value: Int) {
+  writeNumberProperty(name, value)
+}
+
+private fun JsonGenerator.writeNullField(name: String) {
+  writeNullProperty(name)
 }
 
 private fun tomlString(value: String): String {
@@ -603,3 +685,19 @@ private val JSON_FACTORY = JsonFactory()
 private val CURSOR_QUERY = byteArrayOf(0x1B, '['.code.toByte(), '6'.code.toByte(), 'n'.code.toByte())
 private val CURSOR_POSITION_RESPONSE = "\u001B[1;1R".toByteArray(StandardCharsets.UTF_8)
 private val CTRL_C = byteArrayOf(3)
+private const val BRACKETED_PASTE_START: String = "\u001B[200~"
+private const val BRACKETED_PASTE_END: String = "\u001B[201~"
+private const val OSC: String = "\u001B]"
+private const val BEL: Char = '\u0007'
+private const val STRING_TERMINATOR: String = "\u001B\\"
+private val CODEX_THREAD_ID_IN_TERMINAL_TITLE_REGEX = Regex(
+  "\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b"
+)
+
+private fun minPositive(first: Int, second: Int): Int {
+  return when {
+    first < 0 -> second
+    second < 0 -> first
+    else -> minOf(first, second)
+  }
+}

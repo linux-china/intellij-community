@@ -11,7 +11,6 @@ import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.prompt.core.AgentPromptReusableSourceEntry
 import com.intellij.agent.workbench.prompt.core.AgentPromptReusableSourceKind
-import com.intellij.agent.workbench.sessions.core.providers.AGENT_PROMPT_PLAN_MODE_COMMAND
 import com.intellij.agent.workbench.sessions.core.providers.AGENT_PROMPT_PROVIDER_PLAN_MODE_OPTION
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchCompletionPolicy
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchStep
@@ -22,9 +21,9 @@ import com.intellij.agent.workbench.sessions.core.providers.AgentPromptProviderO
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
-import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameContext
-import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameHandler
+import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameAction
 import com.intellij.agent.workbench.sessions.core.providers.buildPlanModeInitialMessagePlan
+import com.intellij.agent.workbench.sessions.core.providers.buildTerminalPlanModePostStartDispatchSteps
 import com.intellij.openapi.components.serviceAsync
 import java.nio.file.Path
 import javax.swing.Icon
@@ -109,14 +108,9 @@ internal class CodexAgentSessionProviderDescriptor(
   override val pendingSessionLaunchYoloMarker: String
     get() = "--yolo"
 
-  override val threadRenameHandler: AgentThreadRenameHandler = object : AgentThreadRenameHandler.Backend {
-    override val supportedContexts: Set<AgentThreadRenameContext>
-      get() = setOf(AgentThreadRenameContext.TREE_POPUP, AgentThreadRenameContext.EDITOR_TAB)
-
-    override suspend fun execute(path: String, threadId: String, normalizedName: String): Boolean {
-      threadMutationBackend.setThreadName(path, threadId, normalizedName)
-      return true
-    }
+  override val threadRenameAction: AgentThreadRenameAction = { path, threadId, normalizedName ->
+    threadMutationBackend.setThreadName(path, threadId, normalizedName)
+    true
   }
 
   override suspend fun isCliAvailable(): Boolean = cliAvailableProbe()
@@ -193,14 +187,9 @@ internal class CodexAgentSessionProviderDescriptor(
       return super.buildPostStartDispatchSteps(initialMessagePlan)
     }
 
-    val message = initialMessagePlan.message ?: return emptyList()
-    val planCommand = if (message.isEmpty()) AGENT_PROMPT_PLAN_MODE_COMMAND else "$AGENT_PROMPT_PLAN_MODE_COMMAND $message"
-    return listOf(
-      AgentInitialMessageDispatchStep(
-        text = planCommand,
-        timeoutPolicy = initialMessagePlan.timeoutPolicy,
-        completionPolicy = AgentInitialMessageDispatchCompletionPolicy.RETRY_ON_CODEX_PLAN_BUSY,
-      )
+    return buildTerminalPlanModePostStartDispatchSteps(
+      initialMessagePlan = initialMessagePlan,
+      completionPolicy = AgentInitialMessageDispatchCompletionPolicy.RETRY_ON_CODEX_PLAN_BUSY,
     )
   }
 
@@ -252,6 +241,6 @@ private fun buildCodexBaseCommand(executable: String): List<String> {
 }
 
 private const val CODEX_AUTO_UPDATE_CONFIG: String = "check_for_update_on_startup=false"
-// Codex writes the concrete thread id into the terminal title. Agent Chat uses it as an early rebind signal before
-// app-server refresh can reliably read the thread.
-private const val CODEX_TERMINAL_TITLE_CONFIG: String = "tui.terminal_title=[\"thread\"]"
+
+// The dedicated thread-id title item is the stable UUID signal. The thread item keeps the human title/fallback visible.
+private const val CODEX_TERMINAL_TITLE_CONFIG: String = "tui.terminal_title=[\"thread-id\",\"thread\"]"

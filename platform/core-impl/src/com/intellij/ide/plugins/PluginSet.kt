@@ -3,14 +3,12 @@
 package com.intellij.ide.plugins
 
 import com.intellij.openapi.extensions.PluginId
-import com.intellij.openapi.util.IntellijInternalApi
 import com.intellij.util.containers.Java11Shim
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.TestOnly
 import java.util.Collections
 
 @ApiStatus.Internal
-@IntellijInternalApi
 class PluginSubsystemInput(
   val initContext: PluginInitializationContext,
   val discoveryResult: PluginsDiscoveryResult,
@@ -88,7 +86,7 @@ class PluginSet internal constructor(
     // FIXME this method loses information (takes only currently loaded plugins)
     val newUnambiguousPluginSet = UnambiguousPluginSet.tryBuild(unsortedPlugins.toList())
                                   ?: return null
-    return PluginSetBuilder(ProductPluginInitContext(), newUnambiguousPluginSet, newDiscoveryResult)
+    return PluginSetBuilder(PluginInitContextFactory.getInstance().createActualContext(), newUnambiguousPluginSet, newDiscoveryResult)
   }
 
   fun withoutPlugin(plugin: PluginMainDescriptor, disable: Boolean = true): PluginSetBuilder {
@@ -109,7 +107,7 @@ class PluginSet internal constructor(
       )
     }
     val newUnambiguousPluginSet = UnambiguousPluginSet.tryBuild(newAllPlugins.toList())!!
-    return PluginSetBuilder(ProductPluginInitContext(), newUnambiguousPluginSet, newDiscoveryResult)
+    return PluginSetBuilder(PluginInitContextFactory.getInstance().createActualContext(), newUnambiguousPluginSet, newDiscoveryResult)
   }
 
   /**

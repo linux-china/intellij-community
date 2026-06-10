@@ -20,7 +20,6 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.openapi.util.IntellijInternalApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,7 +33,6 @@ import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.measureTimedValue
 
 @ApiStatus.Internal
-@IntellijInternalApi
 @Service(Service.Level.APP)
 class DynamicPaidPluginsService(private val cs: CoroutineScope) {
   internal class LoadPaidPluginsProjectActivity : ProjectActivity {
@@ -180,12 +178,18 @@ class DynamicPaidPluginsService(private val cs: CoroutineScope) {
    * @param this The list of plugins to analyze for determining loadability without requiring a restart.
    * Acts as a context in [DynamicPlugins.allowLoadUnloadWithoutRestart]
    */
-  private fun List<IdeaPluginDescriptorImpl>.splitPlugins(): Pair<List<IdeaPluginDescriptorImpl>, List<IdeaPluginDescriptorImpl>> {
+  private suspend fun List<PluginMainDescriptor>.splitPlugins(): Pair<List<PluginMainDescriptor>, List<PluginMainDescriptor>> {
+    if (DynamicPluginsSupport.getInstance() != null) {
+      val loadablePluginIds = DynamicPlugins.findMaxLoadableSubsetApproximation(this.map { it.pluginId }).toSet()
+      val (loadablePlugins, requireRestart) = this.partition { it.pluginId in loadablePluginIds }
+      return loadablePlugins to requireRestart
+    }
+
     tailrec fun doSplit(
-      pluginsToLoad: List<IdeaPluginDescriptorImpl>,
-      loadablePlugins: List<IdeaPluginDescriptorImpl>,
-      requireRestartPlugins: List<IdeaPluginDescriptorImpl>,
-    ): Pair<List<IdeaPluginDescriptorImpl>, List<IdeaPluginDescriptorImpl>> {
+      pluginsToLoad: List<PluginMainDescriptor>,
+      loadablePlugins: List<PluginMainDescriptor>,
+      requireRestartPlugins: List<PluginMainDescriptor>,
+    ): Pair<List<PluginMainDescriptor>, List<PluginMainDescriptor>> {
       if (pluginsToLoad.isEmpty()) return loadablePlugins to requireRestartPlugins
 
       val (loadable, requireRestart) = pluginsToLoad.partition {

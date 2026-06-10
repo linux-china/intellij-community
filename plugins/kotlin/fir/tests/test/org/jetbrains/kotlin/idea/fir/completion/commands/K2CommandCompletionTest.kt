@@ -1,4 +1,4 @@
-// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.kotlin.idea.fir.completion.commands
 
 import com.intellij.codeInsight.completion.CompletionType
@@ -18,11 +18,9 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
 import org.jetbrains.kotlin.idea.KotlinFileType
-import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginMode
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 
 class K2CommandCompletionTest : KotlinLightCodeInsightFixtureTestCase() {
-    override val pluginMode = KotlinPluginMode.K2
 
     override fun setUp() {
         super.setUp()
@@ -356,12 +354,14 @@ class K2CommandCompletionTest : KotlinLightCodeInsightFixtureTestCase() {
         val elements = myFixture.completeBasic()
         selectItem(myFixture, elements.first { element -> element.lookupString.contains("Introduce parameter", ignoreCase = true) })
         NonBlockingReadActionImpl.waitForAsyncTaskCompletion()
-        myFixture.performEditorAction(IdeActions.ACTION_EDITOR_PASTE)
+        myFixture.performEditorAction(IdeActions.ACTION_EDITOR_ENTER)
+        NonBlockingReadActionImpl.waitForAsyncTaskCompletion()
         myFixture.checkResult(
             """
             fun foo(string: String) {
-            
+
                 val a = string
+                
             }""".trimIndent()
         )
     }

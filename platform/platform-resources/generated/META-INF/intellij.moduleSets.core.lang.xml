@@ -93,6 +93,7 @@
     <module name="intellij.libraries.protobuf" loading="embedded"/>
     <module name="intellij.libraries.proxy.vole" loading="embedded"/>
     <module name="intellij.libraries.rhino" loading="embedded"/>
+    <module name="intellij.libraries.semver" loading="embedded"/>
     <module name="intellij.libraries.snakeyaml" loading="embedded"/>
     <module name="intellij.libraries.snakeyaml.engine" loading="embedded"/>
     <module name="intellij.libraries.stream" loading="embedded"/>
@@ -114,6 +115,7 @@
     <module name="fleet.fastutil" loading="embedded"/>
     <module name="fleet.kernel" loading="embedded"/>
     <module name="fleet.multiplatform.shims" loading="embedded"/>
+    <module name="fleet.openmap" loading="embedded"/>
     <module name="fleet.radixTrie" loading="embedded"/>
     <module name="fleet.reporting.api" loading="embedded"/>
     <module name="fleet.reporting.shared" loading="embedded"/>
@@ -162,7 +164,6 @@
     <!-- endregion -->
 
     <!-- region nested: core.ide > libraries.ide -->
-    <module name="intellij.libraries.jcef" loading="embedded"/>
     <module name="intellij.libraries.jediterm.core" loading="embedded"/>
     <module name="intellij.libraries.jediterm.ui" loading="embedded"/>
     <module name="intellij.libraries.jgoodies.common" loading="embedded"/>
@@ -188,16 +189,9 @@
     <!-- endregion -->
     <!-- endregion -->
 
-    <!-- region nested: libraries.temporaryBundled -->
-    <module name="intellij.libraries.jettison" loading="embedded"/>
-    <module name="intellij.libraries.xstream" loading="embedded"/>
-    <module name="intellij.libraries.commons.text"/>
-    <!-- endregion -->
-
     <!-- region direct modules -->
     <module name="intellij.platform.macro" loading="embedded"/>
     <module name="intellij.platform.usageView.impl" loading="embedded"/>
-    <module name="intellij.platform.testRunner" loading="embedded"/>
     <module name="intellij.platform.execution" loading="embedded"/>
     <module name="intellij.platform.execution.impl" loading="embedded"/>
     <module name="intellij.platform.lvcs" loading="embedded"/>
@@ -221,6 +215,7 @@
     <module name="intellij.platform.backend.workspace.impl"/>
     <module name="intellij.platform.ide.concurrency" loading="embedded"/>
     <module name="intellij.platform.builtInServer" loading="embedded"/>
+    <module name="intellij.platform.discoverability" loading="embedded"/>
     <module name="intellij.platform.externalSystem" loading="embedded"/>
     <module name="intellij.platform.eel.impl" loading="embedded"/>
     <module name="intellij.platform.eel.nioFs.impl" loading="embedded"/>

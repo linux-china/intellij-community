@@ -4,13 +4,13 @@
     <facet type="kotlin-language" name="Kotlin">
       <configuration version="5" platform="JVM 25" allPlatforms="JVM [25]" useProjectSettings="false">
         <compilerSettings>
-          <option name="additionalArguments" value="-Xjvm-default=all -opt-in=com.intellij.openapi.util.IntellijInternalApi -XXLanguage:+AllowEagerSupertypeAccessibilityChecks -progressive" />
+          <option name="additionalArguments" value="-Xjvm-default=all -XXLanguage:+AllowEagerSupertypeAccessibilityChecks -progressive" />
         </compilerSettings>
         <compilerArguments>
           <stringArguments>
             <stringArg name="jvmTarget" arg="25" />
-            <stringArg name="apiVersion" arg="2.3" />
-            <stringArg name="languageVersion" arg="2.3" />
+            <stringArg name="apiVersion" arg="2.4" />
+            <stringArg name="languageVersion" arg="2.4" />
           </stringArguments>
           <arrayArguments>
             <arrayArg name="pluginClasspaths">
@@ -84,6 +84,7 @@
     <orderEntry type="module" module-name="intellij.platform.instanceContainer" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.serviceContainer" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.jcef" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.jcef.plugin" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.platform.statistics" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.asm" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.jsoup" scope="TEST" />
@@ -146,6 +147,7 @@
     <orderEntry type="module" module-name="intellij.platform.project" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.jbr" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.ui.jcef" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.platform.ide.impl.jcef" scope="RUNTIME" />
     <orderEntry type="module" module-name="fleet.util.core" scope="TEST" />
     <orderEntry type="module" module-name="fleet.andel" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.eel.provider" scope="TEST" />

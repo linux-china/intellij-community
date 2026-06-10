@@ -13,6 +13,7 @@
     <module name="intellij.platform.ide"/>
     <module name="intellij.platform.ide.core"/>
     <module name="intellij.platform.ide.impl"/>
+    <module name="intellij.platform.kernel"/>
     <module name="intellij.platform.lang.core"/>
     <module name="intellij.platform.lang.impl"/>
     <module name="intellij.platform.projectModel"/>
@@ -34,7 +35,8 @@
   <extensions defaultExtensionNs="com.intellij">
     <projectService serviceInterface="com.intellij.openapi.wm.ex.WelcomeScreenTabService"
                     serviceImplementation="com.intellij.platform.ide.nonModalWelcomeScreen.WelcomeScreenTabServiceImpl"
-                    overrides="true"/>
+                    overrides="true"
+                    open="true"/>
     <projectFrameCapabilitiesProvider
       implementation="com.intellij.platform.ide.nonModalWelcomeScreen.NonModalWelcomeScreenProjectFrameCapabilitiesProvider"/>
     <postStartupActivity implementation="com.intellij.platform.ide.nonModalWelcomeScreen.WelcomeScreenProjectActivity"/>

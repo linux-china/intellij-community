@@ -10,6 +10,7 @@ import org.jetbrains.idea.devkit.DevKitBundle.message
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.BACKEND_PLATFORM_MODULE_BASE_NAME
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.FRONTEND_PLATFORM_MODULE_BASE_NAME
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeDescriptorDependencyAnalyzer
+import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeQodanaInspectionScopeLimiter
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.resolveDependencyKind
 
 internal class MissingFrontendOrBackendRuntimeDependencyInspection : DevKitPluginXmlInspectionBase() {
@@ -20,6 +21,11 @@ internal class MissingFrontendOrBackendRuntimeDependencyInspection : DevKitPlugi
   )
 
   private val coreModuleNames = moduleNameSuffixToRequiredRuntimeDependency.map { it.second }
+
+  override fun isAllowed(holder: DomElementAnnotationHolder): Boolean {
+    return super.isAllowed(holder)
+           && SplitModeQodanaInspectionScopeLimiter.getInstance().shouldInspectFileInQodanaMode(holder.fileElement.file)
+  }
 
   override fun checkDomElement(element: DomElement, holder: DomElementAnnotationHolder, helper: DomHighlightingHelper) {
     if (element !is IdeaPlugin) return
@@ -38,16 +44,30 @@ internal class MissingFrontendOrBackendRuntimeDependencyInspection : DevKitPlugi
           val requiredModuleKind = resolveDependencyKind(requiredRuntimeDependency)
                                    ?: error("Unsupported split-mode runtime dependency: $requiredRuntimeDependency")
           val reportedElement = if (dependencies.exists()) dependencies else element
+          val reportedXmlElement = reportedElement.xmlElement ?: return
+          val currentXmlFile = holder.fileElement.file
+          if (SplitModeInspectionExclusionsService.getInstance(currentXmlFile.project).isExcluded(reportedXmlElement,
+                                                                                                  MISSING_RUNTIME_DEPENDENCY_SHORT_NAME)) {
+            return
+          }
+          val regularFixes = arrayOf(
+            SplitModeDependencyQuickFixes.createAddExplicitDependencyFix(
+              currentModuleName,
+              requiredModuleKind,
+            )
+          )
+          val suppressionFix = SplitModeInspectionExclusionsService.getInstance(currentXmlFile.project).createSuppressionFixIfApplicable(
+            reportedXmlElement,
+            MISSING_RUNTIME_DEPENDENCY_SHORT_NAME,
+          )
+          val fixes = if (suppressionFix != null) regularFixes + suppressionFix else regularFixes
           holder.createProblem(
             reportedElement,
             message(
               "inspection.remote.dev.missing.runtime.dependency.message",
               currentModuleName, moduleNameSuffix, requiredRuntimeDependency
             ),
-            SplitModeDependencyQuickFixes.createAddExplicitDependencyFix(
-              currentModuleName,
-              requiredModuleKind,
-            )
+            *fixes
           )
         }
         return // only one module name suffix can be matched, so don't check more

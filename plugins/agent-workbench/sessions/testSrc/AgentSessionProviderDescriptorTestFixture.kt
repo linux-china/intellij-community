@@ -7,10 +7,11 @@ import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
 import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessagePlan
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderCliVisibilityPolicy
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
-import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameHandler
+import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameAction
 import com.intellij.openapi.project.Project
 import javax.swing.Icon
 
@@ -27,7 +28,7 @@ class TestAgentSessionProviderDescriptor(
   override val supportsPendingEditorTabRebind: Boolean = false,
   override val supportsNewThreadRebind: Boolean = false,
   override val supportsPromptLaunch: Boolean = true,
-  private val threadRenameHandlerOverride: AgentThreadRenameHandler? = null,
+  private val threadRenameActionOverride: AgentThreadRenameAction? = null,
   override val emitsScopedRefreshSignals: Boolean = false,
   override val refreshPathAfterCreateNewSession: Boolean = false,
   override val archiveRefreshDelayMs: Long = 0L,
@@ -38,6 +39,7 @@ class TestAgentSessionProviderDescriptor(
   override val quickStartActionTextKey: String = "action.AgentWorkbenchSessions.NewThreadQuick.text",
   override val quickStartActionDescriptionKey: String = "action.AgentWorkbenchSessions.NewThreadQuick.description",
   override val quickStartActionTargetDescriptionKey: String? = null,
+  override val cliVisibilityPolicy: AgentSessionProviderCliVisibilityPolicy = AgentSessionProviderCliVisibilityPolicy.PROMINENT,
   private val onCliAvailable: () -> Unit = {},
   private val newSessionLaunchSpecProvider: suspend (AgentSessionLaunchMode) -> AgentSessionTerminalLaunchSpec = { mode ->
     AgentSessionTerminalLaunchSpec(command = listOf("test", "new", mode.name))
@@ -101,6 +103,6 @@ class TestAgentSessionProviderDescriptor(
     return unarchiveThreadHandler(path, threadId)
   }
 
-  override val threadRenameHandler: AgentThreadRenameHandler?
-    get() = threadRenameHandlerOverride
+  override val threadRenameAction: AgentThreadRenameAction?
+    get() = threadRenameActionOverride
 }

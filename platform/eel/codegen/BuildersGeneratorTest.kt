@@ -88,7 +88,6 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget.PROP
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget.PROPERTY_SETTER
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget.RECEIVER
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget.SETTER_PARAMETER
-import org.jetbrains.kotlin.idea.test.UseK2PluginMode
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc
 import org.jetbrains.kotlin.psi.KtAnnotated
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
@@ -128,7 +127,7 @@ import kotlin.jvm.optionals.getOrNull
  * Remember to commit new builders.
  */
 @TestFixtures
-@UseK2PluginMode
+
 class BuildersGeneratorTest {
   companion object {
     private var oldInitInspections = false
@@ -767,6 +766,11 @@ private suspend fun writeBuilderFiles(
           else -> null
         }
 
+        val ownedBuilderClass = when (val o = builderRequest.ownership) {
+          is Ownership.ExtensionFunction -> "com.intellij.platform.eel.EelOwnedBuilder"
+          is Ownership.Method -> "com.intellij.platform.eel.EelOwnedBuilder"
+          else -> "com.intellij.platform.eel.OwnedBuilder"
+        }
         text += """
         /**
          * Create it via [${ownerForKdoc?.plus(".").orEmpty()}${builderRequest.methodName}]. 
@@ -778,7 +782,7 @@ private suspend fun writeBuilderFiles(
             "\nprivate var ${prop.name}: ${prop.typeFqn},"
           }
         }
-        ) : com.intellij.platform.eel.OwnedBuilder<${builderRequest.returnTypeFqn}> {
+        ) : $ownedBuilderClass<${builderRequest.returnTypeFqn}> {
         ${
           argsInterfaceInfo.optionalArguments.joinToString("\n\n") { prop ->
             "private var ${prop.name}: ${prop.typeFqn} = ${prop.body}"
@@ -806,6 +810,9 @@ private suspend fun writeBuilderFiles(
           argsInterfaceInfo.properties.map { it.name }.joinToString("\n") { name -> "$name = $name," }
         })
             )
+          ${if (ownerForPropertyType != null) {
+            "override val eelDescriptor: EelDescriptor get() = owner.descriptor".trimIndent()
+          } else ""}
         }
         """
       }

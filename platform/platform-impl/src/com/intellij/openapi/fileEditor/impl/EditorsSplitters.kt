@@ -1043,7 +1043,7 @@ private class UiBuilder(private val splitters: EditorsSplitters, private val isL
       val leaf = state.leaf
       val files = leaf?.files ?: emptyList()
       val trimmedFiles: List<FileEntry>
-      var toRemove = files.size - EditorWindow.tabLimit
+      var toRemove = files.count { !it.isExcludedFromTabLimit } - EditorWindow.tabLimit
       if (toRemove <= 0) {
         trimmedFiles = files
       }
@@ -1051,7 +1051,7 @@ private class UiBuilder(private val splitters: EditorsSplitters, private val isL
         trimmedFiles = ArrayList(files.size)
         // trim to EDITOR_TAB_LIMIT, ignoring CLOSE_NON_MODIFIED_FILES_FIRST policy
         for (fileElement in files) {
-          if (toRemove <= 0 || fileElement.pinned) {
+          if (toRemove <= 0 || fileElement.pinned || fileElement.isExcludedFromTabLimit) {
             trimmedFiles.add(fileElement)
           }
           else {
@@ -1247,7 +1247,8 @@ private fun computeFileEntry(
                       hint)
 }
 
-private fun setupFileTab(
+@Internal
+fun setupFileTab(
   compositeCoroutineScope: CoroutineScope,
   fileEditorManager: FileEditorManagerImpl,
   fileDeferred: Deferred<VirtualFile>,
@@ -1391,7 +1392,8 @@ private fun setupFileTab(
   )
 }
 
-internal data class FileToOpen(
+@Internal
+data class FileToOpen(
   @JvmField val file: VirtualFile,
   @JvmField val hint: FileEditorOpenOptionsHint?,
   @JvmField val fileEntry: FileEntry,

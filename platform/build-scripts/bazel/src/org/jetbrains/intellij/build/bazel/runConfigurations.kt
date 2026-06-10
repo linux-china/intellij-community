@@ -9,7 +9,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.text.Normalizer
 import java.util.stream.Collectors
-import kotlin.collections.mapValues
 import kotlin.io.path.name
 
 // Lightweight model of an IntelliJ Run Configuration as stored under .idea/runConfigurations/*.xml
@@ -176,7 +175,7 @@ internal class RunConfigurationsFile : BuildFile() {
   override fun render(existingLoads: Map<String, Set<String>>): String {
     return "def dev_server_run_configurations():\n" +
         super.render(existingLoads).lines().joinToString("\n") { line ->
-          if (line.isNotEmpty()) "  $line" else line
+          if (line.isNotEmpty()) "$INDENT$line" else line
         }.let { it + if (!it.endsWith("\n")) "\n" else "" }   // preserve trailing newline
   }
 
@@ -189,7 +188,7 @@ internal class RunConfigurationsFile : BuildFile() {
       val prefix = runConfiguration.vmOptions.properties["idea.platform.prefix"]
                    ?: error("idea.platform.prefix not found in VM options")
       option("platform_prefix", prefix)
-      if (prefix.startsWith("IntelliJServer") || prefix == "KotlinServer") {
+      if (prefix.startsWith("IntelliJServer") || prefix == "KotlinServer" || prefix == "DataGripServer") {
         option("data", listOf("//language-server/build:filewatcher_jni_all_platforms"))
       }
 
@@ -205,7 +204,7 @@ internal class RunConfigurationsFile : BuildFile() {
       option("jvm_flags",
              (runConfigurationProperties + envsWithProjectDir)
                .map { (k, v) -> "-D$k=${v.projectDirToBazelWorkspace(generatedName)}" }
-               .plus(runConfiguration.vmOptions.jvmFlags)
+               .plus(runConfiguration.vmOptions.jvmFlags).sorted()
       )
       runConfiguration.env.filterNot { (_, v) -> v.contains(projectDirVar)}.also { env ->
         if (env.isNotEmpty()) {

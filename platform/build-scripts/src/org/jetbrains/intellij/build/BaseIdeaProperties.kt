@@ -43,9 +43,9 @@ val IDEA_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + per
   "intellij.java.coverage",
   "intellij.java.decompiler",
   "intellij.eclipse",
-  "intellij.java.debugger.streams",
   "intellij.sh.plugin",
   "intellij.markdown",
+  "intellij.mermaid",
   "intellij.mcpserver",
   "intellij.webp",
   "intellij.grazie",
@@ -57,7 +57,6 @@ val IDEA_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + per
   "intellij.keymap.netbeans",
   "intellij.performanceTesting",
   "intellij.compose.ide.plugin",
-  "intellij.moduleSet.plugin.debugger.streams",
 )
 
 val CE_CLASS_VERSIONS: Map<String, String> = mapOf(

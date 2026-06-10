@@ -19,9 +19,7 @@ import com.intellij.openapi.extensions.PluginDescriptor
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.BuildNumber
-import com.intellij.openapi.util.IntellijInternalApi
 import com.intellij.openapi.util.NlsSafe
-import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.util.PlatformUtils
 import com.intellij.util.lang.ZipEntryResolverPool
 import com.intellij.util.system.CpuArch
@@ -107,8 +105,7 @@ object PluginManagerCore {
      * When we update a bundled plugin, it becomes non-bundled, so it is more challenging for analytics to use that data.
      */
     var shadowedBundledPlugins: Set<PluginId> = emptySet()
-    @Volatile
-    var thirdPartyPluginsNoteAccepted: Boolean? = null
+
     @Volatile
     var initFuture: Deferred<PluginSet>? = null
 
@@ -565,19 +562,10 @@ object PluginManagerCore {
         .apply { pluginNonLoadReasons[CORE_ID]?.let { addSuppressed(Exception(it.logMessage)) } }
     }
 
-    if (initContext is ProductPluginInitContext) {
-      initStagesActivity = initStagesActivity?.endAndStart("third-party privacy consent")
-      // TODO: this `if` should not exist and third party plugins without consent should be excluded by [PluginInitializationContext.provideModuleExclusionsImposedByProductRules]
-      val checkResult = initContext.checkThirdPartyPluginsPrivacyConsent(parentActivity, pluginsToLoad)
-      if (checkResult != null) {
-        pluginsState.thirdPartyPluginsNoteAccepted = checkResult.privacyNoteAccepted
-        for (pluginToExclude in checkResult.pluginsToExcludeFromLoading) {
-          pluginToExclude.isMarkedForLoading = false
-        }
-      }
-    }
-    initStagesActivity = initStagesActivity?.endAndStart("third-party privacy consent")
+    initStagesActivity = initStagesActivity?.endAndStart("initContext startup configuration")
+    initContext.runConfigurationDuringStartup(totalPluginSet)
 
+    initStagesActivity = initStagesActivity?.endAndStart("resolveConstraints")
     val pluginsToDisable = HashMap<PluginId, PluginStateChangeData>()
     val pluginsToEnable = HashMap<PluginId, PluginStateChangeData>()
 
@@ -595,9 +583,8 @@ object PluginManagerCore {
       }
     }
 
-    initStagesActivity = initStagesActivity?.endAndStart("resolveConstraints")
     val resolvedPluginSet = initContext.resolveConstraints(pluginsToLoad)
-    PluginInitializationDiagnosticUtils.logExclusionTree(resolvedPluginSet, incompletePlugins)
+    PluginInitializationDiagnosticUtils.logExclusionTree(logger, resolvedPluginSet, incompletePlugins)
     val (pluginSet, cycleErrors) = adaptResolvedPluginSetAsOldPluginSet(
       input = PluginSubsystemInput(initContext, discoveredPlugins),
       resolvedPluginSet = resolvedPluginSet,
@@ -630,7 +617,6 @@ object PluginManagerCore {
   }
 
   @ApiStatus.Internal
-  @IntellijInternalApi
   fun adaptResolvedPluginSetAsOldPluginSet(
     input: PluginSubsystemInput,
     resolvedPluginSet: ResolvedPluginSet,
@@ -840,13 +826,6 @@ object PluginManagerCore {
     }
   }
 
-  @ApiStatus.Internal
-  fun consumeThirdPartyPluginsNoteAcceptedFlag(): Boolean? {
-    val result = pluginsState.thirdPartyPluginsNoteAccepted
-    pluginsState.thirdPartyPluginsNoteAccepted = null
-    return result
-  }
-
   @JvmStatic
   fun getPluginNameAndVendor(descriptor: IdeaPluginDescriptor): @Nls String {
     val vendor = descriptor.vendor ?: descriptor.organization
@@ -999,7 +978,7 @@ object PluginManagerCore {
   fun isRequiredForEssentialPlugin(pluginDescriptor: PluginMainDescriptor): Boolean {
     // FIXME id map building should be lifted out (likewise in other methods too)
     //  this method should actually be an extension on ActivePluginSet or something
-    val initContext = ProductPluginInitContext()
+    val initContext = PluginInitContextFactory.getInstance().createActualContext()
     val pluginIdMap = buildPluginIdMap()
     val contentModuleIdMap = getPluginSet().buildContentModuleIdMap()
     for (essentialPluginId in initContext.essentialPlugins) {
@@ -1037,6 +1016,7 @@ object PluginManagerCore {
   fun getStartupActionsPluginsToEnableDisable(): Pair<List<PluginStateChangeData>, List<PluginStateChangeData>> = pluginsState.getStartupActionsPluginsToEnableDisable()
 
   //<editor-fold desc="Deprecated stuff.">
+  @ApiStatus.ScheduledForRemoval
   @Deprecated("The platform code should use [JAVA_PLUGIN_ALIAS_ID] instead, plugins aren't supposed to use this", level = DeprecationLevel.ERROR)
   @JvmField val JAVA_MODULE_ID: PluginId = JAVA_PLUGIN_ALIAS_ID
 
@@ -1115,6 +1095,9 @@ object PluginManagerCore {
   }
 }
 
+/**
+ * @see com.intellij.openapi.application.PluginPathManager instead
+ */
 @ApiStatus.Internal
 fun getPluginDistDirByClass(aClass: Class<*>): Path? {
   val pluginDir = (aClass.classLoader as? PluginAwareClassLoader)?.pluginDescriptor?.pluginPath
@@ -1188,7 +1171,6 @@ fun pluginRequiresUltimatePlugin(
  * Checks if the class is a part of the platform or included in a built-in plugin provided by the JetBrains vendor.
  */
 @ApiStatus.Internal
-@IntellijInternalApi
 fun isPlatformOrJetBrainsDistributionPlugin(aClass: Class<*>): Boolean {
   val classLoader = aClass.classLoader
   return when {

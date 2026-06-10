@@ -42,10 +42,10 @@ import com.intellij.platform.eel.EelOsFamily
 import com.intellij.platform.eel.EelPathBoundDescriptor
 import com.intellij.platform.eel.path.EelPath
 import com.intellij.platform.eel.path.EelPathException
-import com.intellij.platform.eel.provider.LocalEelDescriptor
 import com.intellij.platform.eel.provider.asEelPath
 import com.intellij.platform.eel.provider.asNioPath
 import com.intellij.platform.eel.provider.getEelDescriptor
+import com.intellij.platform.ide.productMode.IdeProductMode
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import com.intellij.terminal.TerminalUiSettingsManager
 import com.intellij.ui.DocumentAdapter
@@ -116,7 +116,6 @@ import org.jetbrains.plugins.terminal.block.ui.TerminalContrastRatio
 import org.jetbrains.plugins.terminal.runner.LocalShellIntegrationInjector
 import org.jetbrains.plugins.terminal.runner.LocalTerminalStartCommandBuilder
 import org.jetbrains.plugins.terminal.settings.TerminalApplicationTitleShowingMode
-import org.jetbrains.plugins.terminal.settings.TerminalSettingsProvider
 import org.jetbrains.plugins.terminal.shellDetection.TerminalShellsDetectionService
 import org.jetbrains.plugins.terminal.util.updateActionShortcut
 import java.awt.Color
@@ -573,13 +572,14 @@ private fun Panel.workingDirectoryField(project: Project) {
 }
 
 /**
- * Applicable only to the remote EEL scenario - we need to limit the file lookup to the remote environment.
- * Do not add any filter in the local scenario.
+ * Required for the RemDev scenario: we need to prohibit selecting paths from the local frontend machine.
+ * In RemDev, the terminal process is supposed to be started only on the backend,
+ * so all file paths suggested in the File Chooser should be restricted to the remote environment.
  */
 @RequiresReadLockAbsence
 @RequiresBackgroundThread
 private fun FileChooserDescriptor.withEelRoot(eelDescriptor: EelDescriptor): FileChooserDescriptor {
-  if (eelDescriptor == LocalEelDescriptor) {
+  if (!IdeProductMode.isFrontend) {
     return this
   }
   return if (eelDescriptor is EelPathBoundDescriptor) {

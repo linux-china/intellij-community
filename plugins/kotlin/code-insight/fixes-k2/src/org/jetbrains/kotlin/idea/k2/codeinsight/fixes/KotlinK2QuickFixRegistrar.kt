@@ -487,6 +487,7 @@ class KotlinK2QuickFixRegistrar : KotlinQuickFixRegistrar() {
         registerFactory(AddToStringFixFactories.assignmentTypeMismatch)
         registerFactory(AddToStringFixFactories.returnTypeMismatch)
         registerFactory(AddToStringFixFactories.initializerTypeMismatch)
+        registerFactory(AddToStringFixFactories.incompatibleTypes)
 
         registerFactory(MakeUpperBoundNotNullFixFactories.argumentTypeMismatch)
         registerFactory(MakeUpperBoundNotNullFixFactories.nothingToOverride)
@@ -637,6 +638,9 @@ class KotlinK2QuickFixRegistrar : KotlinQuickFixRegistrar() {
         registerFactory(ReceiverShadowedByContextParameterFactory.addReceiverFactory)
 
         registerFactory(AddReflectionQuickFixFactory.addReflectionQuickFixFactory)
+
+        registerFactory(ConvertToAnonymousObjectFixFactories.fixFactory)
+        registerFactory(MapPlatformClassToKotlinFixFactories.fixFactory)
     }
 
     private val optIn = KtQuickFixesListBuilder.registerPsiQuickFix {

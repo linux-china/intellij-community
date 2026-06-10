@@ -32,20 +32,21 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
 
 internal class ModuleBasedProductLoadingStrategy(internal val moduleRepository: RuntimeModuleRepository) : ProductLoadingStrategy() {
-  private val currentMode by lazy {
-    val currentModeId = System.getProperty(PLATFORM_PRODUCT_MODE_PROPERTY, ProductMode.MONOLITH.id)
-    val currentMode = ProductMode.findById(currentModeId)
-    if (currentMode == null) {
-      error("Unknown mode '$currentModeId' specified in '$PLATFORM_PRODUCT_MODE_PROPERTY' system property")
-    }
-    currentMode
-  }
-  
+  private val currentMode: MutableStateFlow<String> by lazy { MutableStateFlow(computeInitialModeId()) }
+
+  override val currentModeId: String
+    get() = currentMode.value
+
+  override val currentModeIdFlow: StateFlow<String>
+    get() = currentMode
+
   private val productModules by lazy {
     val rootModuleId = System.getProperty(PLATFORM_ROOT_MODULE_PROPERTY)
     if (rootModuleId == null) {
@@ -61,8 +62,22 @@ internal class ModuleBasedProductLoadingStrategy(internal val moduleRepository: 
     ProductModulesSerialization.loadProductModules(moduleGroupStream, productModulesPath, moduleRepository)
   }
 
-  override val currentModeId: String
-    get() = currentMode.id
+  private fun computeInitialModeId(): String {
+    val initialModeId = if (AppMode.isIjLight()) ProductMode.LIGHT.id
+                        else System.getProperty(PLATFORM_PRODUCT_MODE_PROPERTY, ProductMode.MONOLITH.id)
+    if (ProductMode.findById(initialModeId) == null) {
+      error("Unknown mode '$initialModeId' specified in '$PLATFORM_PRODUCT_MODE_PROPERTY' system property")
+    }
+    return initialModeId
+  }
+
+  override fun advanceToLightWithRdConnectionMode(): Boolean {
+    return currentMode.compareAndSet(ProductMode.LIGHT.id, ProductMode.LIGHT_WITH_RD_CONNECTION.id)
+  }
+
+  override fun advanceToFrontendMode(): Boolean {
+    return currentMode.compareAndSet(ProductMode.LIGHT_WITH_RD_CONNECTION.id, ProductMode.FRONTEND.id)
+  }
 
   override fun addMainModuleGroupToClassPath(bootstrapClassLoader: ClassLoader) {
     val logger = logger<ModuleBasedProductLoadingStrategy>()

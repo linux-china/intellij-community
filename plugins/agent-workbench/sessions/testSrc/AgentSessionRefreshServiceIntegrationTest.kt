@@ -15,6 +15,7 @@ import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshT
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
 import com.intellij.agent.workbench.sessions.core.providers.UNKNOWN_AGENT_SESSION_REFRESH_THREAD_UPDATED_AT
+import com.intellij.agent.workbench.sessions.model.AgentSessionProviderLoadState
 import com.intellij.agent.workbench.sessions.state.AgentSessionWarmPathSnapshot
 import com.intellij.agent.workbench.sessions.state.AgentSessionWarmStateService
 import com.intellij.agent.workbench.sessions.state.DEFAULT_VISIBLE_THREAD_COUNT
@@ -169,7 +170,8 @@ class AgentSessionRefreshServiceIntegrationTest {
       nowMs += 1_000L
       service.refresh()
       waitForCondition {
-        val thread = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }
+        val thread = service.state.value.projects
+          .firstOrNull { it.path == PROJECT_PATH }
           ?.threads
           ?.singleOrNull() ?: return@waitForCondition false
         thread.updatedAt == 200L && thread.cost?.amountUsd == BigDecimal.valueOf(2)
@@ -195,7 +197,7 @@ class AgentSessionRefreshServiceIntegrationTest {
             ),
           )
         ),
-        hasUnknownThreadCount = false,
+        providerLoadStates = loadedProviderStates(AgentSessionProvider.CLAUDE),
         updatedAt = 100L,
       ),
     )
@@ -227,7 +229,8 @@ class AgentSessionRefreshServiceIntegrationTest {
 
       waitForCondition {
         val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
-        !project.isLoading && project.threads.singleOrNull()?.cost?.amountUsd == BigDecimal("1.50")
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED &&
+        project.threads.singleOrNull()?.cost?.amountUsd == BigDecimal("1.50")
       }
 
       delay(300.milliseconds)
@@ -290,6 +293,128 @@ class AgentSessionRefreshServiceIntegrationTest {
   }
 
   @Test
+  fun costHydrationWaitsForWorkingThreadToSettle() = runBlocking(Dispatchers.Default) {
+    val costLoadRequests = CopyOnWriteArrayList<List<String>>()
+    var activity = AgentThreadActivity.PROCESSING
+    var updatedAt = 100L
+
+    withService(
+      sessionSourcesProvider = {
+        listOf(
+          ScriptedSessionSource(
+            provider = AgentSessionProvider.CODEX,
+            listFromOpenProject = { _, _ ->
+              listOf(
+                thread(
+                  id = "codex-1",
+                  updatedAt = updatedAt,
+                  provider = AgentSessionProvider.CODEX,
+                  activity = activity,
+                )
+              )
+            },
+            loadThreadCostsProvider = { _, requestedThreads ->
+              costLoadRequests += requestedThreads.map { thread -> thread.id }
+              requestedThreads.associate { thread ->
+                thread.id to AgentSessionCost(
+                  amountUsd = BigDecimal.ONE,
+                  kind = AgentSessionCostKind.ESTIMATED,
+                )
+              }
+            },
+          )
+        )
+      },
+      projectEntriesProvider = {
+        listOf(openProjectEntry(PROJECT_PATH, "Project A"))
+      },
+    ) { service ->
+      service.refresh()
+
+      waitForCondition {
+        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }
+          ?.threads
+          ?.singleOrNull()
+          ?.activity == AgentThreadActivity.PROCESSING
+      }
+      delay(1_000.milliseconds)
+
+      assertThat(costLoadRequests).isEmpty()
+
+      activity = AgentThreadActivity.READY
+      updatedAt = 200L
+      service.refresh()
+
+      waitForCondition {
+        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }
+          ?.threads
+          ?.singleOrNull()
+          ?.cost
+          ?.amountUsd == BigDecimal.ONE
+      }
+
+      assertThat(costLoadRequests).containsExactly(listOf("codex-1"))
+    }
+  }
+
+  @Test
+  fun costHydrationSkipsPendingThreadIds() = runBlocking(Dispatchers.Default) {
+    val codexUpdates = MutableSharedFlow<AgentSessionSourceUpdateEvent>(replay = 1, extraBufferCapacity = 1)
+    val costLoadCount = AtomicInteger(0)
+
+    withService(
+      sessionSourcesProvider = {
+        listOf(
+          ScriptedSessionSource(
+            provider = AgentSessionProvider.CODEX,
+            supportsUpdates = true,
+            updateEvents = codexUpdates,
+            listFromOpenProject = { _, _ -> emptyList() },
+            loadThreadCostsProvider = { _, _ ->
+              costLoadCount.incrementAndGet()
+              emptyMap()
+            },
+          )
+        )
+      },
+      projectEntriesProvider = {
+        listOf(openProjectEntry(PROJECT_PATH, "Project A"))
+      },
+      openPendingCodexTabsProvider = {
+        mapOf(
+          PROJECT_PATH to listOf(
+            AgentChatPendingTabSnapshot(
+              projectPath = PROJECT_PATH,
+              pendingTabKey = "pending-codex:new-cost",
+              pendingThreadIdentity = "codex:new-cost",
+              pendingCreatedAtMs = 200L,
+              pendingFirstInputAtMs = null,
+              pendingLaunchMode = null,
+            )
+          )
+        )
+      },
+    ) { service ->
+      service.refresh()
+      waitForCondition {
+        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.isOpen == true
+      }
+
+      codexUpdates.emit(threadsChangedEvent())
+
+      waitForCondition {
+        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }
+          ?.threads
+          ?.singleOrNull()
+          ?.id == "new-cost"
+      }
+      delay(300.milliseconds)
+
+      assertThat(costLoadCount.get()).isZero()
+    }
+  }
+
+  @Test
   fun refreshShowsWarmSnapshotThreadsBeforeProviderLoadCompletes() = runBlocking(Dispatchers.Default) {
     val started = CompletableDeferred<Unit>()
     val release = CompletableDeferred<Unit>()
@@ -300,7 +425,7 @@ class AgentSessionRefreshServiceIntegrationTest {
         threads = listOf(
           thread(id = "cached-1", updatedAt = 100, title = "Cached", provider = AgentSessionProvider.CLAUDE)
         ),
-        hasUnknownThreadCount = false,
+        providerLoadStates = loadedProviderStates(AgentSessionProvider.CLAUDE),
         updatedAt = 100,
       ),
     )
@@ -333,7 +458,8 @@ class AgentSessionRefreshServiceIntegrationTest {
 
       waitForCondition {
         val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
-        project.hasLoaded && project.threads.map { it.id } == listOf("cached-1")
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADING &&
+        project.threads.map { it.id } == listOf("cached-1")
       }
 
       release.complete(Unit)
@@ -393,14 +519,18 @@ class AgentSessionRefreshServiceIntegrationTest {
 
       waitForCondition {
         val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
-        project.isLoading && project.threads.map { it.id } == listOf("codex-1")
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADING &&
+        project.threads.map { it.id } == listOf("codex-1")
       }
 
       releaseClaude.complete(Unit)
 
       waitForCondition {
         val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
-        !project.isLoading && project.threads.map { it.id } == listOf("codex-1", "claude-1")
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED &&
+        project.threads.map { it.id } == listOf("codex-1", "claude-1")
       }
     }
   }
@@ -467,7 +597,7 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        service.state.value.lastUpdatedAt != null
       }
 
       entries = listOf(
@@ -478,7 +608,8 @@ class AgentSessionRefreshServiceIntegrationTest {
       service.refreshCatalogAndLoadNewlyOpened()
 
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == secondProjectPath }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == secondProjectPath } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED
       }
 
       assertThat(openLoadCounts[PROJECT_PATH]?.get()).isEqualTo(1)
@@ -531,7 +662,8 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED
       }
 
       entries = listOf(closedProjectEntry(PROJECT_PATH, "Project A"))
@@ -574,7 +706,9 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED
       }
 
       val project = service.state.value.projects.single { it.path == PROJECT_PATH }
@@ -610,7 +744,9 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.FAILED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED
       }
 
       val project = service.state.value.projects.single { it.path == PROJECT_PATH }
@@ -644,7 +780,9 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.FAILED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.FAILED
       }
 
       val project = service.state.value.projects.single { it.path == PROJECT_PATH }
@@ -680,7 +818,9 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.FAILED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED
       }
 
       val project = service.state.value.projects.single { it.path == PROJECT_PATH }
@@ -782,7 +922,9 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED &&
+        project.providerLoadStates[AgentSessionProvider.CLAUDE] == AgentSessionProviderLoadState.LOADED
       }
 
       codexUpdatedAt = 300L
@@ -837,9 +979,6 @@ class AgentSessionRefreshServiceIntegrationTest {
       },
     ) { service ->
       service.refresh()
-      waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
-      }
 
       sessionSources = listOf(codexSource)
       service.refresh()
@@ -1128,7 +1267,7 @@ class AgentSessionRefreshServiceIntegrationTest {
       PROJECT_PATH,
       AgentSessionWarmPathSnapshot(
         threads = listOf(thread(id = "cached-1", updatedAt = 100, provider = AgentSessionProvider.CLAUDE)),
-        hasUnknownThreadCount = false,
+        providerLoadStates = loadedProviderStates(AgentSessionProvider.CLAUDE),
         updatedAt = 100,
       ),
     )
@@ -1237,7 +1376,8 @@ class AgentSessionRefreshServiceIntegrationTest {
     ) { service ->
       service.refresh()
       waitForCondition {
-        service.state.value.projects.firstOrNull { it.path == PROJECT_PATH }?.hasLoaded == true
+        val project = service.state.value.projects.firstOrNull { it.path == PROJECT_PATH } ?: return@waitForCondition false
+        project.providerLoadStates[AgentSessionProvider.CODEX] == AgentSessionProviderLoadState.LOADED
       }
 
       codexUpdates.emit(threadsChangedEvent())

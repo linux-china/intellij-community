@@ -5,8 +5,10 @@ import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.modcommand.ActionContext
 import com.intellij.modcommand.ModPsiUpdater
 import com.intellij.modcommand.Presentation
-import com.intellij.modcommand.PsiUpdateModCommandAction
+import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.idea.base.projectStructure.languageVersionSettings
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
+import org.jetbrains.kotlin.idea.codeinsight.api.applicable.intentions.KotlinPsiUpdateModCommandAction
 import org.jetbrains.kotlin.idea.codeinsights.impl.base.intentions.SpecifyRemainingArgumentsByNameUtil
 import org.jetbrains.kotlin.idea.codeinsights.impl.base.intentions.SpecifyRemainingArgumentsByNameUtil.RemainingArgumentsData
 import org.jetbrains.kotlin.name.Name
@@ -17,7 +19,7 @@ sealed class SpecifyRemainingArgumentsByNameFix(
     private val remainingValueArguments: List<Name>,
     private val remainingContextArguments: List<Name> = emptyList(),
     private val allContextParameterNames: Set<Name> = emptySet(),
-) : PsiUpdateModCommandAction<KtValueArgumentList>(element) {
+) : KotlinPsiUpdateModCommandAction.ElementContextless<KtValueArgumentList>(element) {
     companion object {
         fun createAvailableQuickFixes(
             argumentList: KtValueArgumentList,
@@ -27,14 +29,20 @@ sealed class SpecifyRemainingArgumentsByNameFix(
                 val remainingValueArguments = remainingArguments.allValueRemainingArguments
                 val remainingRequiredArguments = remainingArguments.remainingRequiredArguments
 
-                add(
-                    SpecifyAllRemainingArgumentsByNameFix(
-                        argumentList,
-                        remainingValueArguments,
-                        remainingArguments.allContextRemainingArguments,
-                        remainingArguments.allContextParameterNames
+                if (
+                    remainingValueArguments.isNotEmpty() ||
+                    argumentList.languageVersionSettings.supportsFeature(LanguageFeature.ExplicitContextArguments)
+                ) {
+                    add(
+                        SpecifyAllRemainingArgumentsByNameFix(
+                            argumentList,
+                            remainingValueArguments,
+                            remainingArguments.allContextRemainingArguments,
+                            remainingArguments.allContextParameterNames
+                        )
                     )
-                )
+                }
+
                 if (remainingRequiredArguments.isNotEmpty() &&
                     remainingRequiredArguments != remainingValueArguments
                 ) {
@@ -44,13 +52,13 @@ sealed class SpecifyRemainingArgumentsByNameFix(
         }
     }
 
-    override fun getPresentation(context: ActionContext, element: KtValueArgumentList): Presentation? {
-        return super.getPresentation(context, element)?.withPriority(PriorityAction.Priority.HIGH)
+    override fun getActionPresentation(context: ActionContext, element: KtValueArgumentList): Presentation? {
+        return super.getActionPresentation(context, element)?.withPriority(PriorityAction.Priority.HIGH)
     }
 
-    override fun invoke(actionContext: ActionContext, element: KtValueArgumentList, updater: ModPsiUpdater) {
+    override fun invoke(context: ActionContext, element: KtValueArgumentList, updater: ModPsiUpdater) {
         SpecifyRemainingArgumentsByNameUtil.applyFix(
-            actionContext.project,
+            context.project,
             element,
             remainingValueArguments,
             remainingContextArguments,

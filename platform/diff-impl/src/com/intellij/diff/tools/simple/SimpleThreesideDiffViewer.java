@@ -82,26 +82,24 @@ public class SimpleThreesideDiffViewer extends ThreesideTextDiffViewerEx {
     diffGroup.add(new TextShowPartialDiffAction(PartialDiffMode.MIDDLE_LEFT, false));
     diffGroup.add(new TextShowPartialDiffAction(PartialDiffMode.MIDDLE_RIGHT, false));
     diffGroup.add(new TextShowPartialDiffAction(PartialDiffMode.LEFT_RIGHT, false));
+
     group.add(diffGroup);
     group.add(Separator.getInstance());
-
-    List<AnAction> gutterActions = new ArrayList<>();
-    gutterActions.add(new MyToggleExpandByDefaultAction());
-    gutterActions.add(new MyToggleAutoScrollAction());
-
-    List<AnAction> diffActions = new ArrayList<>();
-    diffActions.add(new MyToggleAutoScrollAction());
-    diffActions.addAll(myTextDiffProvider.getDiffSettingsActions());
-    myEditorSettingsAction.setDiffActions(gutterActions, diffActions);
-
     group.add(new MyToggleExpandByDefaultAction());
     group.add(new MyEditorReadOnlyLockAction());
-    group.add(myEditorSettingsAction);
-
     group.add(Separator.getInstance());
     group.addAll(super.createToolbarActions());
 
     return group;
+  }
+
+  @Override
+  protected @NotNull List<AnAction> createRightToolbarActions() {
+    List<AnAction> diffActions = new ArrayList<>();
+    diffActions.add(new MyToggleAutoScrollAction());
+    myEditorSettingsAction.setSettingsActions(diffActions, myTextDiffProvider.getDiffSettingsActions());
+
+    return List.of(myEditorSettingsAction);
   }
 
   @Override

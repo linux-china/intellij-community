@@ -18,7 +18,6 @@ import org.jetbrains.kotlin.analysis.api.symbols.KaNamedClassSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaSymbolModality
 import org.jetbrains.kotlin.analysis.api.symbols.KaSymbolVisibility.PRIVATE
 import org.jetbrains.kotlin.analysis.api.symbols.KaSymbolVisibility.PUBLIC
-import org.jetbrains.kotlin.analysis.api.types.KaTypeNullability
 import org.jetbrains.kotlin.builtins.StandardNames.EQUALS_NAME
 import org.jetbrains.kotlin.builtins.StandardNames.HASHCODE_NAME
 import org.jetbrains.kotlin.builtins.StandardNames.TO_STRING_NAME
@@ -26,6 +25,7 @@ import org.jetbrains.kotlin.idea.base.analysis.api.utils.allOverriddenSymbolsWit
 import org.jetbrains.kotlin.idea.base.analysis.api.utils.isJavaSourceOrLibrary
 import org.jetbrains.kotlin.idea.base.psi.KotlinPsiHeuristics
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
+import org.jetbrains.kotlin.idea.codeInsight.inspections.shared.utils.AccessorUtils.canBePropertyAccessor
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinApplicableInspectionBase
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinModCommandQuickFix
 import org.jetbrains.kotlin.idea.codeinsight.api.applicators.ApplicabilityRange
@@ -47,7 +47,6 @@ import org.jetbrains.kotlin.psi.KtVisitor
 import org.jetbrains.kotlin.psi.namedFunctionVisitor
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 import org.jetbrains.kotlin.psi.psiUtil.getCallNameExpression
-import org.jetbrains.kotlin.synthetic.canBePropertyAccessor
 
 internal class KotlinRedundantOverrideInspection : KotlinApplicableInspectionBase.Simple<KtNamedFunction, Unit>(), CleanupLocalInspectionTool {
     override fun getProblemDescription(element: KtNamedFunction, context: Unit): @InspectionMessage String =
@@ -182,11 +181,11 @@ internal class KotlinRedundantOverrideInspection : KotlinApplicableInspectionBas
         val singleValueParameter = valueParameters.singleOrNull()
         if (isSetter && singleValueParameter == null || !isSetter && valueParameters.isNotEmpty()) return false
         val propertyType = if (isSetter) singleValueParameter!!.returnType else functionType
-        val nonNullablePropertyType = propertyType.withNullability(KaTypeNullability.NON_NULLABLE)
+        val nonNullablePropertyType = propertyType.withNullability(isMarkedNullable = false)
         return propertyNamesByAccessorName(functionName).any {
             val propertyName = it.asString()
             function.containingClassOrObject?.declarations?.find { d ->
-                d is KtProperty && d.name == propertyName && d.returnType.withNullability(KaTypeNullability.NON_NULLABLE)
+                d is KtProperty && d.name == propertyName && d.returnType.withNullability(isMarkedNullable = false)
                     .semanticallyEquals(nonNullablePropertyType)
             } != null
         }

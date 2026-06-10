@@ -5,7 +5,6 @@ package org.jetbrains.intellij.build.productLayout
 
 import org.jetbrains.intellij.build.productLayout.CoreModuleSets.coreLang
 import org.jetbrains.intellij.build.productLayout.CoreModuleSets.librariesKtor
-import org.jetbrains.intellij.build.productLayout.CoreModuleSets.librariesMisc
 import org.jetbrains.intellij.build.productLayout.CoreModuleSets.rpcBackend
 
 /**
@@ -81,7 +80,6 @@ object CommunityModuleSets {
     moduleSet(librariesKtor())  // For RPC/Remote Dev
     embeddedModule("intellij.libraries.teamcity.service.messages")
     module("intellij.platform.buildScripts.downloader")
-    moduleSet(librariesMisc())  // For specialized uses (XML-RPC, CSV, document store)
 
     embeddedModule("intellij.platform.credentialStore.ui")
     embeddedModule("intellij.platform.credentialStore.impl")
@@ -162,12 +160,10 @@ object CommunityModuleSets {
     // Platform language modules (moved from platformLangBase for consolidation)
     // These provide core IDE functionality needed by all full IDE products
     embeddedModule("intellij.platform.builtInServer.impl")
-    embeddedModule("intellij.platform.smRunner")
     embeddedModule("intellij.platform.externalSystem.dependencyUpdater")
     embeddedModule("intellij.platform.externalSystem.impl")
     embeddedModule("intellij.platform.externalProcessAuthHelper")
 
-    module("intellij.java.aetherDependencyResolver")
     module("intellij.platform.util.commonsLangV2Shim")
   }
 
@@ -350,13 +346,21 @@ object CommunityModuleSets {
   // endregion
 
   /**
-   * Remote development common modules.
+   * RD (Rider and Remote development) common modules.
+   * Included in all IDEs
    */
   fun rdCommon(): ModuleSet = moduleSet("rd.common") {
     module("intellij.rd.ide.model.generated")
     module("intellij.rd.platform")
     module("intellij.rd.ui")
     module("intellij.platform.split.protocol")
+
+    // These modules are included in all IDEs.
+    // However, they are due to intellij.rd.client -> intellij.rd.client.base -> com.intellij.rd.client.capable alias,
+    // Those modules are loaded only: in JetBrains Client, Rider and an IDE if a Radler is installed.
+    // Packaging of those modules to the all IDEs is required to load a JetBrains Client from the big IDE distribution.
+    module("intellij.rd.client")
+    module("intellij.rd.client.base")
   }
 
   /**
@@ -369,7 +373,6 @@ object CommunityModuleSets {
 
     // Additional IDE-specific modules
     module("intellij.platform.lvcs.impl")
-    module("intellij.platform.smRunner.vcs")
     module("intellij.platform.collaborationTools")
     module("intellij.platform.collaborationTools.auth")
     module("intellij.platform.collaborationTools.auth.base")
@@ -383,7 +386,6 @@ object CommunityModuleSets {
 
     module("intellij.libraries.microba")
     module("intellij.platform.diagnostic.freezeAnalyzer")
-    module("intellij.platform.diagnostic.freezes")
     module("intellij.platform.warmup")
     module("intellij.platform.inspect")
     module("intellij.settingsSync.core")

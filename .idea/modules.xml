@@ -28,6 +28,8 @@
       <module fileurl="file://$PROJECT_DIR$/fleet/lsp.protocol/test/fleet.lsp.protocol.test.iml" filepath="$PROJECT_DIR$/fleet/lsp.protocol/test/fleet.lsp.protocol.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/modules/api/fleet.modules.api.iml" filepath="$PROJECT_DIR$/fleet/modules/api/fleet.modules.api.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/multiplatform.shims/fleet.multiplatform.shims.iml" filepath="$PROJECT_DIR$/fleet/multiplatform.shims/fleet.multiplatform.shims.iml" />
+      <module fileurl="file://$PROJECT_DIR$/fleet/openmap/fleet.openmap.iml" filepath="$PROJECT_DIR$/fleet/openmap/fleet.openmap.iml" />
+      <module fileurl="file://$PROJECT_DIR$/fleet/openmap/test/fleet.openmap.test.iml" filepath="$PROJECT_DIR$/fleet/openmap/test/fleet.openmap.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/radixTrie/fleet.radixTrie.iml" filepath="$PROJECT_DIR$/fleet/radixTrie/fleet.radixTrie.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/radixTrie/test/fleet.radixTrie.test.iml" filepath="$PROJECT_DIR$/fleet/radixTrie/test/fleet.radixTrie.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/reporting/api/fleet.reporting.api.iml" filepath="$PROJECT_DIR$/fleet/reporting/api/fleet.reporting.api.iml" />
@@ -59,7 +61,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/codex/sessions/intellij.agent.workbench.codex.sessions.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/codex/sessions/intellij.agent.workbench.codex.sessions.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/common/intellij.agent.workbench.common.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/common/intellij.agent.workbench.common.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/common/intellij.agent.workbench.common.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/common/intellij.agent.workbench.common.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/discoverability/intellij.agent.workbench.discoverability.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/discoverability/intellij.agent.workbench.discoverability.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/filewatch/intellij.agent.workbench.filewatch.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/filewatch/intellij.agent.workbench.filewatch.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/filewatch/intellij.agent.workbench.filewatch.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/filewatch/intellij.agent.workbench.filewatch.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/json/intellij.agent.workbench.json.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/json/intellij.agent.workbench.json.iml" />
@@ -67,6 +68,8 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/junie/common/intellij.agent.workbench.junie.common.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/junie/common/intellij.agent.workbench.junie.common.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/junie/sessions/intellij.agent.workbench.junie.sessions.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/junie/sessions/intellij.agent.workbench.junie.sessions.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/junie/sessions/intellij.agent.workbench.junie.sessions.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/junie/sessions/intellij.agent.workbench.junie.sessions.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/pi/sessions/intellij.agent.workbench.pi.sessions.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/pi/sessions/intellij.agent.workbench.pi.sessions.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/pi/sessions/intellij.agent.workbench.pi.sessions.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/pi/sessions/intellij.agent.workbench.pi.sessions.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/plugin/intellij.agent.workbench.plugin.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/plugin/intellij.agent.workbench.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/plugin/intellij.agent.workbench.plugin.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/plugin/intellij.agent.workbench.plugin.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/prompt/context/intellij.agent.workbench.prompt.context.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/prompt/context/intellij.agent.workbench.prompt.context.iml" />
@@ -83,6 +86,8 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-actions/intellij.agent.workbench.sessions.actions.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-actions/intellij.agent.workbench.sessions.actions.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-actions/intellij.agent.workbench.sessions.actions.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-actions/intellij.agent.workbench.sessions.actions.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-core/intellij.agent.workbench.sessions.core.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-core/intellij.agent.workbench.sessions.core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-jbcentral/intellij.agent.workbench.sessions.jbcentral.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-jbcentral/intellij.agent.workbench.sessions.jbcentral.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-jbcentral/intellij.agent.workbench.sessions.jbcentral.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-jbcentral/intellij.agent.workbench.sessions.jbcentral.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-launch-config/backend/intellij.agent.workbench.sessions.launch.config.backend.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-launch-config/backend/intellij.agent.workbench.sessions.launch.config.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions-launch-config/backend/intellij.agent.workbench.sessions.launch.config.backend.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions-launch-config/backend/intellij.agent.workbench.sessions.launch.config.backend.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/agent-workbench/sessions/intellij.agent.workbench.sessions.tests.iml" filepath="$PROJECT_DIR$/plugins/agent-workbench/sessions/intellij.agent.workbench.sessions.tests.iml" />
@@ -405,8 +410,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/completion-ml-ranking-models/intellij.completionMlRankingModels.tests.iml" filepath="$PROJECT_DIR$/plugins/completion-ml-ranking-models/intellij.completionMlRankingModels.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.gradleTooling/intellij.compose.ide.plugin.gradleTooling.rt.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.gradleTooling/intellij.compose.ide.plugin.gradleTooling.rt.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k1/intellij.compose.ide.plugin.k1.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k1/intellij.compose.ide.plugin.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k1/intellij.compose.ide.plugin.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k1/intellij.compose.ide.plugin.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k2/intellij.compose.ide.plugin.k2.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k2/intellij.compose.ide.plugin.k2.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k2/intellij.compose.ide.plugin.k2.tests.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.k2/intellij.compose.ide.plugin.k2.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.projectStructureTests/intellij.compose.ide.plugin.projectStructureTests.iml" filepath="$PROJECT_DIR$/plugins/compose/intellij.compose.ide.plugin.projectStructureTests/intellij.compose.ide.plugin.projectStructureTests.iml" />
@@ -426,10 +429,12 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/cucumber-jvm-formatter4/intellij.cucumber.jvmFormatter4.iml" filepath="$PROJECT_DIR$/plugins/cucumber-jvm-formatter4/intellij.cucumber.jvmFormatter4.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/cucumber-jvm-formatter5/intellij.cucumber.jvmFormatter5.iml" filepath="$PROJECT_DIR$/plugins/cucumber-jvm-formatter5/intellij.cucumber.jvmFormatter5.iml" />
       <module fileurl="file://$PROJECT_DIR$/build/cucumber-test-runner/intellij.cucumber.testRunner.iml" filepath="$PROJECT_DIR$/build/cucumber-test-runner/intellij.cucumber.testRunner.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.backend/intellij.debugger.streams.backend.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.backend/intellij.debugger.streams.backend.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.core.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger-core/testFramework/intellij.debugger.streams.core.testFramework.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger-core/testFramework/intellij.debugger.streams.core.testFramework.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.shared/intellij.debugger.streams.shared.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger-core/intellij.debugger.streams.shared/intellij.debugger.streams.shared.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/backend/intellij.debugger.streams.backend.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/backend/intellij.debugger.streams.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/core/intellij.debugger.streams.core.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/core/intellij.debugger.streams.core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/java/intellij.debugger.streams.java.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/java/intellij.debugger.streams.java.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/intellij.debugger.streams.plugin.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/intellij.debugger.streams.plugin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/shared/intellij.debugger.streams.shared.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/shared/intellij.debugger.streams.shared.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/testFramework/intellij.debugger.streams.testFramework.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/testFramework/intellij.debugger.streams.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/testUtil/debugger.ui.test.util/intellij.debugger.ui.test.util.iml" filepath="$PROJECT_DIR$/tools/testUtil/debugger.ui.test.util/intellij.debugger.ui.test.util.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/dev/intellij.dev/intellij.dev.iml" filepath="$PROJECT_DIR$/plugins/dev/intellij.dev/intellij.dev.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/dev/intellij.dev.codeInsight/intellij.dev.codeInsight.iml" filepath="$PROJECT_DIR$/plugins/dev/intellij.dev.codeInsight/intellij.dev.codeInsight.iml" />
@@ -468,8 +473,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.uiDesigner/intellij.devkit.uiDesigner.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.uiDesigner/intellij.devkit.uiDesigner.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.uiDsl/intellij.devkit.uiDsl.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.uiDsl/intellij.devkit.uiDsl.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/intellij.devkit.workspaceModel.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/intellij.devkit.workspaceModel.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k1/intellij.devkit.workspaceModel.k1.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k1/intellij.devkit.workspaceModel.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k1/intellij.devkit.workspaceModel.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k1/intellij.devkit.workspaceModel.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k2/intellij.devkit.workspaceModel.k2.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k2/intellij.devkit.workspaceModel.k2.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k2/intellij.devkit.workspaceModel.k2.tests.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/k2/intellij.devkit.workspaceModel.k2.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/tests/intellij.devkit.workspaceModel.tests.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.devkit.workspaceModel/tests/intellij.devkit.workspaceModel.tests.iml" />
@@ -567,6 +570,7 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/grazie/yaml/intellij.grazie.yaml.iml" filepath="$PROJECT_DIR$/plugins/grazie/yaml/intellij.grazie.yaml.iml" />
       <module fileurl="file://$PROJECT_DIR$/grid/api/intellij.grid.iml" filepath="$PROJECT_DIR$/grid/api/intellij.grid.iml" />
       <module fileurl="file://$PROJECT_DIR$/grid/core-impl/intellij.grid.core.impl.iml" filepath="$PROJECT_DIR$/grid/core-impl/intellij.grid.core.impl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/grid/plugin/intellij.grid.core.plugin.iml" filepath="$PROJECT_DIR$/grid/plugin/intellij.grid.core.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/grid/csv/intellij.grid.csv.core.impl.iml" filepath="$PROJECT_DIR$/grid/csv/intellij.grid.csv.core.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/grid/images/intellij.grid.images.impl.iml" filepath="$PROJECT_DIR$/grid/images/intellij.grid.images.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/grid/impl/intellij.grid.impl.iml" filepath="$PROJECT_DIR$/grid/impl/intellij.grid.impl.iml" />
@@ -613,8 +617,10 @@
       <module fileurl="file://$PROJECT_DIR$/idea/customization/base/intellij.idea.customization.base.iml" filepath="$PROJECT_DIR$/idea/customization/base/intellij.idea.customization.base.iml" />
       <module fileurl="file://$PROJECT_DIR$/build/launch/intellij.idea.tools.launch.iml" filepath="$PROJECT_DIR$/build/launch/intellij.idea.tools.launch.iml" />
       <module fileurl="file://$PROJECT_DIR$/build/launch/intellij.idea.tools.launch.tests.iml" filepath="$PROJECT_DIR$/build/launch/intellij.idea.tools.launch.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/internal/jcef/intellij.internal.jcef.iml" filepath="$PROJECT_DIR$/platform/platform-impl/internal/jcef/intellij.internal.jcef.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/openapi/intellij.java.iml" filepath="$PROJECT_DIR$/java/openapi/intellij.java.iml" />
       <module fileurl="file://$PROJECT_DIR$/aether-dependency-resolver/intellij.java.aetherDependencyResolver.iml" filepath="$PROJECT_DIR$/aether-dependency-resolver/intellij.java.aetherDependencyResolver.iml" />
+      <module fileurl="file://$PROJECT_DIR$/aether-dependency-resolver/plugin/intellij.java.aetherDependencyResolver.plugin.iml" filepath="$PROJECT_DIR$/aether-dependency-resolver/plugin/intellij.java.aetherDependencyResolver.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/aether-dependency-resolver/intellij.java.aetherDependencyResolver.tests.iml" filepath="$PROJECT_DIR$/aether-dependency-resolver/intellij.java.aetherDependencyResolver.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/java-analysis-api/intellij.java.analysis.iml" filepath="$PROJECT_DIR$/java/java-analysis-api/intellij.java.analysis.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/java-analysis-impl/intellij.java.analysis.impl.iml" filepath="$PROJECT_DIR$/java/java-analysis-impl/intellij.java.analysis.impl.iml" />
@@ -642,7 +648,6 @@
       <module fileurl="file://$PROJECT_DIR$/java/debugger/frontend/intellij.java.debugger.impl.frontend.iml" filepath="$PROJECT_DIR$/java/debugger/frontend/intellij.java.debugger.impl.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/debugger/shared/intellij.java.debugger.impl.shared.iml" filepath="$PROJECT_DIR$/java/debugger/shared/intellij.java.debugger.impl.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/debugger/memory-agent/intellij.java.debugger.memory.agent.iml" filepath="$PROJECT_DIR$/java/debugger/memory-agent/intellij.java.debugger.memory.agent.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/intellij.java.debugger.streams.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/intellij.java.debugger.streams.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/stream-debugger/intellij.java.debugger.streams.tests.iml" filepath="$PROJECT_DIR$/plugins/stream-debugger/intellij.java.debugger.streams.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/java-decompiler/plugin/intellij.java.decompiler.iml" filepath="$PROJECT_DIR$/plugins/java-decompiler/plugin/intellij.java.decompiler.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/java-decompiler/engine/intellij.java.decompiler.engine.iml" filepath="$PROJECT_DIR$/plugins/java-decompiler/engine/intellij.java.decompiler.engine.iml" />
@@ -703,8 +708,10 @@
       <module fileurl="file://$PROJECT_DIR$/java/structuralsearch-java/intellij.java.structuralSearch.tests.iml" filepath="$PROJECT_DIR$/java/structuralsearch-java/intellij.java.structuralSearch.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/java-structure-view/intellij.java.structureView.iml" filepath="$PROJECT_DIR$/java/java-structure-view/intellij.java.structureView.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/java-syntax/intellij.java.syntax.iml" filepath="$PROJECT_DIR$/java/java-syntax/intellij.java.syntax.iml" />
-      <module fileurl="file://$PROJECT_DIR$/java/java-terminal/intellij.java.terminal.iml" filepath="$PROJECT_DIR$/java/java-terminal/intellij.java.terminal.iml" />
-      <module fileurl="file://$PROJECT_DIR$/java/java-terminal/intellij.java.terminal.tests.iml" filepath="$PROJECT_DIR$/java/java-terminal/intellij.java.terminal.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/terminal/backend/intellij.java.terminal.backend.iml" filepath="$PROJECT_DIR$/java/terminal/backend/intellij.java.terminal.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/terminal/frontend/intellij.java.terminal.frontend.iml" filepath="$PROJECT_DIR$/java/terminal/frontend/intellij.java.terminal.frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/terminal/shared/intellij.java.terminal.shared.iml" filepath="$PROJECT_DIR$/java/terminal/shared/intellij.java.terminal.shared.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/terminal/intellij.java.terminal.tests.iml" filepath="$PROJECT_DIR$/java/terminal/intellij.java.terminal.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/testFramework/intellij.java.testFramework.iml" filepath="$PROJECT_DIR$/java/testFramework/intellij.java.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/testFramework/backend/intellij.java.testFramework.backend.iml" filepath="$PROJECT_DIR$/java/testFramework/backend/intellij.java.testFramework.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/testFramework/shared/intellij.java.testFramework.shared.iml" filepath="$PROJECT_DIR$/java/testFramework/shared/intellij.java.testFramework.shared.iml" />
@@ -719,6 +726,7 @@
       <module fileurl="file://$PROJECT_DIR$/java/idea-ui/intellij.java.ui.tests.iml" filepath="$PROJECT_DIR$/java/idea-ui/intellij.java.ui.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/unscramble/intellij.java.unscramble.iml" filepath="$PROJECT_DIR$/java/unscramble/intellij.java.unscramble.iml" />
       <module fileurl="file://$PROJECT_DIR$/java/vcs/intellij.java.vcs.iml" filepath="$PROJECT_DIR$/java/vcs/intellij.java.vcs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/xml.dom.impl/intellij.java.xml.dom.impl.iml" filepath="$PROJECT_DIR$/java/xml.dom.impl/intellij.java.xml.dom.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/javaFX/intellij.javaFX.iml" filepath="$PROJECT_DIR$/plugins/javaFX/intellij.javaFX.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/javaFX/common/intellij.javaFX.common.iml" filepath="$PROJECT_DIR$/plugins/javaFX/common/intellij.javaFX.common.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/javaFX/community/intellij.javaFX.community.iml" filepath="$PROJECT_DIR$/plugins/javaFX/community/intellij.javaFX.community.iml" />
@@ -744,7 +752,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/junit/intellij.junit.iml" filepath="$PROJECT_DIR$/plugins/junit/intellij.junit.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/junit/groovy-tests/intellij.junit.groovy.tests.iml" filepath="$PROJECT_DIR$/plugins/junit/groovy-tests/intellij.junit.groovy.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/junit/java-tests/intellij.junit.java.tests.iml" filepath="$PROJECT_DIR$/plugins/junit/java-tests/intellij.junit.java.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/junit/kotlin-tests-k1/intellij.junit.kotlin.tests.k1.iml" filepath="$PROJECT_DIR$/plugins/junit/kotlin-tests-k1/intellij.junit.kotlin.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/junit/kotlin-tests-k2/intellij.junit.kotlin.tests.k2.iml" filepath="$PROJECT_DIR$/plugins/junit/kotlin-tests-k2/intellij.junit.kotlin.tests.k2.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/junit/kotlin-tests-shared/intellij.junit.kotlin.tests.shared.iml" filepath="$PROJECT_DIR$/plugins/junit/kotlin-tests-shared/intellij.junit.kotlin.tests.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/junit_rt/intellij.junit.rt.iml" filepath="$PROJECT_DIR$/plugins/junit_rt/intellij.junit.rt.iml" />
@@ -758,7 +765,6 @@
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-impl/intellij.jvm.analysis.impl.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-impl/intellij.jvm.analysis.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-internal-testFramework/intellij.jvm.analysis.internal.testFramework.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-internal-testFramework/intellij.jvm.analysis.internal.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-java-tests/intellij.jvm.analysis.java.tests.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-java-tests/intellij.jvm.analysis.java.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-k1/intellij.jvm.analysis.kotlin.tests.k1.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-k1/intellij.jvm.analysis.kotlin.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-k2/intellij.jvm.analysis.kotlin.tests.k2.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-k2/intellij.jvm.analysis.kotlin.tests.k2.iml" />
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-shared/intellij.jvm.analysis.kotlin.tests.shared.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-kotlin-tests-shared/intellij.jvm.analysis.kotlin.tests.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/jvm/jvm-analysis-quickFix/intellij.jvm.analysis.quickFix.iml" filepath="$PROJECT_DIR$/jvm/jvm-analysis-quickFix/intellij.jvm.analysis.quickFix.iml" />
@@ -778,7 +784,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fir/analysis-api-platform/intellij.kotlin.analysis.platform.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fir/analysis-api-platform/intellij.kotlin.analysis.platform.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/analysis/intellij.kotlin.base.analysis.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/analysis/intellij.kotlin.base.analysis.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/analysis-api-platform/intellij.kotlin.base.analysis.platform.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/analysis-api-platform/intellij.kotlin.base.analysis.platform.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/analysis/tests/intellij.kotlin.base.analysis.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/analysis/tests/intellij.kotlin.base.analysis.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/analysis-api/analysis-api-utils/intellij.kotlin.base.analysis.utils.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/analysis-api/analysis-api-utils/intellij.kotlin.base.analysis.utils.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/code-insight/intellij.kotlin.base.codeInsight.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/code-insight/intellij.kotlin.base.codeInsight.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/code-insight/minimal/intellij.kotlin.base.codeInsight.minimal.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/code-insight/minimal/intellij.kotlin.base.codeInsight.minimal.iml" />
@@ -872,8 +877,6 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/coverage/tests/intellij.kotlin.coverage.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/coverage/tests/intellij.kotlin.coverage.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/dev/intellij.kotlin.dev/intellij.kotlin.dev.iml" filepath="$PROJECT_DIR$/plugins/dev/intellij.kotlin.dev/intellij.kotlin.dev.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/intellij.kotlin.devkit.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/intellij.kotlin.devkit.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k1/intellij.kotlin.devkit.k1.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k1/intellij.kotlin.devkit.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k1/intellij.kotlin.devkit.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k1/intellij.kotlin.devkit.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k2/intellij.kotlin.devkit.k2.iml" filepath="$PROJECT_DIR$/plugins/devkit/intellij.kotlin.devkit/k2/intellij.kotlin.devkit.k2.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/features-trainer/intellij.kotlin.featuresTrainer.iml" filepath="$PROJECT_DIR$/plugins/kotlin/features-trainer/intellij.kotlin.featuresTrainer.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/features-trainer/tests/intellij.kotlin.featuresTrainer.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/features-trainer/tests/intellij.kotlin.featuresTrainer.tests.iml" />
@@ -996,6 +999,8 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/blockmap/intellij.libraries.blockmap.iml" filepath="$PROJECT_DIR$/libraries/blockmap/intellij.libraries.blockmap.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/bouncy-castle-pgp/intellij.libraries.bouncy.castle.pgp.iml" filepath="$PROJECT_DIR$/libraries/bouncy-castle-pgp/intellij.libraries.bouncy.castle.pgp.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/bouncy-castle-provider/intellij.libraries.bouncy.castle.provider.iml" filepath="$PROJECT_DIR$/libraries/bouncy-castle-provider/intellij.libraries.bouncy.castle.provider.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/byte-buddy/intellij.libraries.byte.buddy.iml" filepath="$PROJECT_DIR$/libraries/byte-buddy/intellij.libraries.byte.buddy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/byte-buddy/agent/intellij.libraries.byte.buddy.agent.iml" filepath="$PROJECT_DIR$/libraries/byte-buddy/agent/intellij.libraries.byte.buddy.agent.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/caffeine/intellij.libraries.caffeine.iml" filepath="$PROJECT_DIR$/libraries/caffeine/intellij.libraries.caffeine.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/libraries/cglib/intellij.libraries.cglib.iml" filepath="$PROJECT_DIR$/platform/libraries/cglib/intellij.libraries.cglib.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/classgraph/intellij.libraries.classgraph.iml" filepath="$PROJECT_DIR$/libraries/classgraph/intellij.libraries.classgraph.iml" />
@@ -1012,7 +1017,6 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/compose-foundation-desktop/intellij.libraries.compose.foundation.desktop.iml" filepath="$PROJECT_DIR$/libraries/compose-foundation-desktop/intellij.libraries.compose.foundation.desktop.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/compose-foundation-desktop-junit/intellij.libraries.compose.foundation.desktop.junit.iml" filepath="$PROJECT_DIR$/libraries/compose-foundation-desktop-junit/intellij.libraries.compose.foundation.desktop.junit.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/compose-runtime-desktop/intellij.libraries.compose.runtime.desktop.iml" filepath="$PROJECT_DIR$/libraries/compose-runtime-desktop/intellij.libraries.compose.runtime.desktop.iml" />
-      <module fileurl="file://$PROJECT_DIR$/libraries/detekt-compose-rules/intellij.libraries.detekt.compose.rules.iml" filepath="$PROJECT_DIR$/libraries/detekt-compose-rules/intellij.libraries.detekt.compose.rules.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/dokka/intellij.libraries.dokka.iml" filepath="$PROJECT_DIR$/libraries/dokka/intellij.libraries.dokka.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/download-pgp-verifier/intellij.libraries.download.pgp.verifier.iml" filepath="$PROJECT_DIR$/libraries/download-pgp-verifier/intellij.libraries.download.pgp.verifier.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/fastutil/intellij.libraries.fastutil.iml" filepath="$PROJECT_DIR$/libraries/fastutil/intellij.libraries.fastutil.iml" />
@@ -1077,7 +1081,11 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/junit5-launcher/intellij.libraries.junit5.launcher.iml" filepath="$PROJECT_DIR$/libraries/junit5-launcher/intellij.libraries.junit5.launcher.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/junit5-params/intellij.libraries.junit5.params.iml" filepath="$PROJECT_DIR$/libraries/junit5-params/intellij.libraries.junit5.params.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/junit5-pioneer/intellij.libraries.junit5.pioneer.iml" filepath="$PROJECT_DIR$/libraries/junit5-pioneer/intellij.libraries.junit5.pioneer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/junit5-suites/intellij.libraries.junit5.suites.iml" filepath="$PROJECT_DIR$/libraries/junit5-suites/intellij.libraries.junit5.suites.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/junit5-vintage/intellij.libraries.junit5.vintage.iml" filepath="$PROJECT_DIR$/libraries/junit5-vintage/intellij.libraries.junit5.vintage.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/junit6/intellij.libraries.junit6.iml" filepath="$PROJECT_DIR$/libraries/junit6/intellij.libraries.junit6.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/junit6-launcher/intellij.libraries.junit6.launcher.iml" filepath="$PROJECT_DIR$/libraries/junit6-launcher/intellij.libraries.junit6.launcher.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/junit6-params/intellij.libraries.junit6.params.iml" filepath="$PROJECT_DIR$/libraries/junit6-params/intellij.libraries.junit6.params.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/jvm-native-trusted-roots/intellij.libraries.jvm.native.trusted.roots.iml" filepath="$PROJECT_DIR$/libraries/jvm-native-trusted-roots/intellij.libraries.jvm.native.trusted.roots.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/jzlib/intellij.libraries.jzlib.iml" filepath="$PROJECT_DIR$/libraries/jzlib/intellij.libraries.jzlib.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/kotlin/reflect/intellij.libraries.kotlin.reflect.iml" filepath="$PROJECT_DIR$/libraries/kotlin/reflect/intellij.libraries.kotlin.reflect.iml" />
@@ -1110,13 +1118,17 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/maven-resolver-provider/intellij.libraries.maven.resolver.provider.iml" filepath="$PROJECT_DIR$/libraries/maven-resolver-provider/intellij.libraries.maven.resolver.provider.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/microba/intellij.libraries.microba.iml" filepath="$PROJECT_DIR$/libraries/microba/intellij.libraries.microba.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/miglayout-swing/intellij.libraries.miglayout.swing.iml" filepath="$PROJECT_DIR$/libraries/miglayout-swing/intellij.libraries.miglayout.swing.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/misc/plugin/intellij.libraries.misc.plugin.iml" filepath="$PROJECT_DIR$/libraries/misc/plugin/intellij.libraries.misc.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/mockito/intellij.libraries.mockito.iml" filepath="$PROJECT_DIR$/libraries/mockito/intellij.libraries.mockito.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/mockk/intellij.libraries.mockk.iml" filepath="$PROJECT_DIR$/libraries/mockk/intellij.libraries.mockk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/mockk/jvm/intellij.libraries.mockk.jvm.iml" filepath="$PROJECT_DIR$/libraries/mockk/jvm/intellij.libraries.mockk.jvm.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/mvstore/intellij.libraries.mvstore.iml" filepath="$PROJECT_DIR$/libraries/mvstore/intellij.libraries.mvstore.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/netty/buffer/intellij.libraries.netty.buffer.iml" filepath="$PROJECT_DIR$/libraries/netty/buffer/intellij.libraries.netty.buffer.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/netty/codec-compression/intellij.libraries.netty.codec.compression.iml" filepath="$PROJECT_DIR$/libraries/netty/codec-compression/intellij.libraries.netty.codec.compression.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/netty/codec-http/intellij.libraries.netty.codec.http.iml" filepath="$PROJECT_DIR$/libraries/netty/codec-http/intellij.libraries.netty.codec.http.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/netty/handler-proxy/intellij.libraries.netty.handler.proxy.iml" filepath="$PROJECT_DIR$/libraries/netty/handler-proxy/intellij.libraries.netty.handler.proxy.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/netty/tcnative-boringssl/intellij.libraries.netty.tcnative.boringssl.iml" filepath="$PROJECT_DIR$/libraries/netty/tcnative-boringssl/intellij.libraries.netty.tcnative.boringssl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/objenesis/intellij.libraries.objenesis.iml" filepath="$PROJECT_DIR$/libraries/objenesis/intellij.libraries.objenesis.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/opencsv/intellij.libraries.opencsv.iml" filepath="$PROJECT_DIR$/libraries/opencsv/intellij.libraries.opencsv.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/opentelemetry/intellij.libraries.opentelemetry.iml" filepath="$PROJECT_DIR$/libraries/opentelemetry/intellij.libraries.opentelemetry.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/opentelemetry-exporter-otlp/intellij.libraries.opentelemetry.exporter.otlp.iml" filepath="$PROJECT_DIR$/libraries/opentelemetry-exporter-otlp/intellij.libraries.opentelemetry.exporter.otlp.iml" />
@@ -1135,6 +1147,7 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/rd/swing/intellij.libraries.rd.swing.iml" filepath="$PROJECT_DIR$/libraries/rd/swing/intellij.libraries.rd.swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/rd/text/intellij.libraries.rd.text.iml" filepath="$PROJECT_DIR$/libraries/rd/text/intellij.libraries.rd.text.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/rhino/intellij.libraries.rhino.iml" filepath="$PROJECT_DIR$/libraries/rhino/intellij.libraries.rhino.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/semver/intellij.libraries.semver.iml" filepath="$PROJECT_DIR$/libraries/semver/intellij.libraries.semver.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/skiko/intellij.libraries.skiko.iml" filepath="$PROJECT_DIR$/libraries/skiko/intellij.libraries.skiko.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/snakeyaml/intellij.libraries.snakeyaml.iml" filepath="$PROJECT_DIR$/libraries/snakeyaml/intellij.libraries.snakeyaml.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/snakeyaml-engine/intellij.libraries.snakeyaml.engine.iml" filepath="$PROJECT_DIR$/libraries/snakeyaml-engine/intellij.libraries.snakeyaml.engine.iml" />
@@ -1146,6 +1159,7 @@
       <module fileurl="file://$PROJECT_DIR$/libraries/teamcity/service-messages/intellij.libraries.teamcity.service.messages.iml" filepath="$PROJECT_DIR$/libraries/teamcity/service-messages/intellij.libraries.teamcity.service.messages.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/testcontainers/intellij.libraries.testcontainers.iml" filepath="$PROJECT_DIR$/libraries/testcontainers/intellij.libraries.testcontainers.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/testng/intellij.libraries.testng.iml" filepath="$PROJECT_DIR$/libraries/testng/intellij.libraries.testng.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libraries/tuweni/toml/intellij.libraries.tuweni.toml.iml" filepath="$PROJECT_DIR$/libraries/tuweni/toml/intellij.libraries.tuweni.toml.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/velocity/intellij.libraries.velocity.iml" filepath="$PROJECT_DIR$/libraries/velocity/intellij.libraries.velocity.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/winp/intellij.libraries.winp.iml" filepath="$PROJECT_DIR$/libraries/winp/intellij.libraries.winp.iml" />
       <module fileurl="file://$PROJECT_DIR$/libraries/xerces/intellij.libraries.xerces.iml" filepath="$PROJECT_DIR$/libraries/xerces/intellij.libraries.xerces.iml" />
@@ -1161,6 +1175,7 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/core/backend/intellij.markdown.backend.iml" filepath="$PROJECT_DIR$/plugins/markdown/core/backend/intellij.markdown.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/compose/intellij.markdown.compose.preview.iml" filepath="$PROJECT_DIR$/plugins/markdown/compose/intellij.markdown.compose.preview.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/fenceInjection/intellij.markdown.fenceInjection.iml" filepath="$PROJECT_DIR$/plugins/markdown/fenceInjection/intellij.markdown.fenceInjection.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/markdown/textMate/intellij.markdown.fenceInjector.textMate.iml" filepath="$PROJECT_DIR$/plugins/markdown/textMate/intellij.markdown.fenceInjector.textMate.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/core/frontend/intellij.markdown.frontend.iml" filepath="$PROJECT_DIR$/plugins/markdown/core/frontend/intellij.markdown.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/frontmatter/intellij.markdown.frontmatter.iml" filepath="$PROJECT_DIR$/plugins/markdown/frontmatter/intellij.markdown.frontmatter.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/markdown/frontmatter/toml/intellij.markdown.frontmatter.toml.iml" filepath="$PROJECT_DIR$/plugins/markdown/frontmatter/toml/intellij.markdown.frontmatter.toml.iml" />
@@ -1210,17 +1225,12 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/mcp-server/tests/intellij.mcpserver.tests.iml" filepath="$PROJECT_DIR$/plugins/mcp-server/tests/intellij.mcpserver.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/mcp-server/tests/plugin/intellij.mcpserver.tests.plugin.iml" filepath="$PROJECT_DIR$/plugins/mcp-server/tests/plugin/intellij.mcpserver.tests.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/mcp-server/mcpserver.vcs/intellij.mcpserver.vcs.iml" filepath="$PROJECT_DIR$/plugins/mcp-server/mcpserver.vcs/intellij.mcpserver.vcs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/mermaid/intellij.mermaid.iml" filepath="$PROJECT_DIR$/plugins/mermaid/intellij.mermaid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/mermaid/markdown/intellij.mermaid.markdown.iml" filepath="$PROJECT_DIR$/plugins/mermaid/markdown/intellij.mermaid.markdown.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/mermaid/intellij.mermaid.tests.iml" filepath="$PROJECT_DIR$/plugins/mermaid/intellij.mermaid.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/ml-local-models/intellij.ml.models.local.iml" filepath="$PROJECT_DIR$/plugins/ml-local-models/intellij.ml.models.local.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/ml-local-models/java/intellij.ml.models.local.java.iml" filepath="$PROJECT_DIR$/plugins/ml-local-models/java/intellij.ml.models.local.java.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.debugger.streams/intellij.moduleSet.plugin.debugger.streams.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.debugger.streams/intellij.moduleSet.plugin.debugger.streams.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.grid.core/intellij.moduleSet.plugin.grid.core.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.grid.core/intellij.moduleSet.plugin.grid.core.iml" />
       <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.main/intellij.moduleSet.plugin.main.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.main/intellij.moduleSet.plugin.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.recentFiles/intellij.moduleSet.plugin.recentFiles.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.recentFiles/intellij.moduleSet.plugin.recentFiles.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.servicesView/intellij.moduleSet.plugin.servicesView.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.servicesView/intellij.moduleSet.plugin.servicesView.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.structuralSearch/intellij.moduleSet.plugin.structuralSearch.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.structuralSearch/intellij.moduleSet.plugin.structuralSearch.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.structureView/intellij.moduleSet.plugin.structureView.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.structureView/intellij.moduleSet.plugin.structureView.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.todoView/intellij.moduleSet.plugin.todoView.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.todoView/intellij.moduleSet.plugin.todoView.iml" />
-      <module fileurl="file://$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.vcs.frontend/intellij.moduleSet.plugin.vcs.frontend.iml" filepath="$PROJECT_DIR$/module-set-plugins/generated/intellij.moduleSet.plugin.vcs.frontend/intellij.moduleSet.plugin.vcs.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/mps/build/intellij.mps.build.iml" filepath="$PROJECT_DIR$/mps/build/intellij.mps.build.iml" />
       <module fileurl="file://$PROJECT_DIR$/mps/build/intellij.mps.build.tests.iml" filepath="$PROJECT_DIR$/mps/build/intellij.mps.build.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/mps/build/intellij.mps.resources/intellij.mps.resources.iml" filepath="$PROJECT_DIR$/mps/build/intellij.mps.resources/intellij.mps.resources.iml" />
@@ -1231,9 +1241,11 @@
       <module fileurl="file://$PROJECT_DIR$/notebooks/visualization/intellij.notebooks.visualization.tests.iml" filepath="$PROJECT_DIR$/notebooks/visualization/intellij.notebooks.visualization.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/core/intellij.performanceTesting.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/core/intellij.performanceTesting.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/backend/intellij.performanceTesting.backend.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/backend/intellij.performanceTesting.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/freezes/intellij.performanceTesting.freezes.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/freezes/intellij.performanceTesting.freezes.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/frontend/intellij.performanceTesting.frontend.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/frontend/intellij.performanceTesting.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/remote-driver/intellij.performanceTesting.remoteDriver.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/remote-driver/intellij.performanceTesting.remoteDriver.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/remote-driver.compose/intellij.performanceTesting.remoteDriver.compose.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/remote-driver.compose/intellij.performanceTesting.remoteDriver.compose.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/remote-driver.jcef/intellij.performanceTesting.remoteDriver.jcef.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/remote-driver.jcef/intellij.performanceTesting.remoteDriver.jcef.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/core/intellij.performanceTesting.tests.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/core/intellij.performanceTesting.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/scripts-ui/intellij.performanceTesting.ui.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/scripts-ui/intellij.performanceTesting.ui.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/performanceTesting/scripts-ui/intellij.performanceTesting.ui.tests.iml" filepath="$PROJECT_DIR$/plugins/performanceTesting/scripts-ui/intellij.performanceTesting.ui.tests.iml" />
@@ -1329,7 +1341,6 @@
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/intellij.platform.diagnostic.iml" filepath="$PROJECT_DIR$/platform/diagnostic/intellij.platform.diagnostic.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/freezeAnalyzer/intellij.platform.diagnostic.freezeAnalyzer.iml" filepath="$PROJECT_DIR$/platform/diagnostic/freezeAnalyzer/intellij.platform.diagnostic.freezeAnalyzer.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/freezeAnalyzer/intellij.platform.diagnostic.freezeAnalyzer.tests.iml" filepath="$PROJECT_DIR$/platform/diagnostic/freezeAnalyzer/intellij.platform.diagnostic.freezeAnalyzer.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/freezeInPluginNotifier/intellij.platform.diagnostic.freezes.iml" filepath="$PROJECT_DIR$/platform/diagnostic/freezeInPluginNotifier/intellij.platform.diagnostic.freezes.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/startUpPerformanceReporter/intellij.platform.diagnostic.startUpPerformanceReporter.iml" filepath="$PROJECT_DIR$/platform/diagnostic/startUpPerformanceReporter/intellij.platform.diagnostic.startUpPerformanceReporter.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/telemetry/intellij.platform.diagnostic.telemetry.iml" filepath="$PROJECT_DIR$/platform/diagnostic/telemetry/intellij.platform.diagnostic.telemetry.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diagnostic/telemetry/agent-extension/intellij.platform.diagnostic.telemetry.agent.extension.iml" filepath="$PROJECT_DIR$/platform/diagnostic/telemetry/agent-extension/intellij.platform.diagnostic.telemetry.agent.extension.iml" />
@@ -1342,6 +1353,8 @@
       <module fileurl="file://$PROJECT_DIR$/platform/diff-api/intellij.platform.diff.iml" filepath="$PROJECT_DIR$/platform/diff-api/intellij.platform.diff.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diff-impl/intellij.platform.diff.impl.iml" filepath="$PROJECT_DIR$/platform/diff-impl/intellij.platform.diff.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/diff-impl/tests/intellij.platform.diff.tests.iml" filepath="$PROJECT_DIR$/platform/diff-impl/tests/intellij.platform.diff.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/discoverability/intellij.platform.discoverability.iml" filepath="$PROJECT_DIR$/platform/discoverability/intellij.platform.discoverability.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/discoverability/intellij.platform.discoverability.tests.iml" filepath="$PROJECT_DIR$/platform/discoverability/intellij.platform.discoverability.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/distribution-content/intellij.platform.distributionContent.testFramework.iml" filepath="$PROJECT_DIR$/platform/distribution-content/intellij.platform.distributionContent.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/duplicates-analysis/intellij.platform.duplicates.analysis.iml" filepath="$PROJECT_DIR$/platform/duplicates-analysis/intellij.platform.duplicates.analysis.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-tests/durability/intellij.platform.durability.iml" filepath="$PROJECT_DIR$/platform/platform-tests/durability/intellij.platform.durability.iml" />
@@ -1370,6 +1383,7 @@
       <module fileurl="file://$PROJECT_DIR$/platform/execution.serviceView/intellij.platform.execution.serviceView.iml" filepath="$PROJECT_DIR$/platform/execution.serviceView/intellij.platform.execution.serviceView.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/execution.serviceView/backend/intellij.platform.execution.serviceView.backend.iml" filepath="$PROJECT_DIR$/platform/execution.serviceView/backend/intellij.platform.execution.serviceView.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/execution.serviceView/frontend/intellij.platform.execution.serviceView.frontend.iml" filepath="$PROJECT_DIR$/platform/execution.serviceView/frontend/intellij.platform.execution.serviceView.frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/execution.serviceView/plugin/intellij.platform.execution.serviceView.plugin.iml" filepath="$PROJECT_DIR$/platform/execution.serviceView/plugin/intellij.platform.execution.serviceView.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/execution-impl/intellij.platform.execution.tests.iml" filepath="$PROJECT_DIR$/platform/execution-impl/intellij.platform.execution.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/experiment/intellij.platform.experiment.iml" filepath="$PROJECT_DIR$/platform/experiment/intellij.platform.experiment.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/experiment/intellij.platform.experiment.tests.iml" filepath="$PROJECT_DIR$/platform/experiment/intellij.platform.experiment.tests.iml" />
@@ -1410,11 +1424,13 @@
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/designer/intellij.platform.ide.designer.iml" filepath="$PROJECT_DIR$/platform/platform-impl/designer/intellij.platform.ide.designer.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/favoritesTreeView/intellij.platform.ide.favoritesTreeView.iml" filepath="$PROJECT_DIR$/platform/favoritesTreeView/intellij.platform.ide.favoritesTreeView.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/intellij.platform.ide.impl.iml" filepath="$PROJECT_DIR$/platform/platform-impl/intellij.platform.ide.impl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/jcef/intellij.platform.ide.impl.jcef.iml" filepath="$PROJECT_DIR$/platform/platform-impl/jcef/intellij.platform.ide.impl.jcef.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/intellij.platform.ide.impl.tests.iml" filepath="$PROJECT_DIR$/platform/platform-impl/intellij.platform.ide.impl.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/eel/intellij.platform.ide.impl.wsl.iml" filepath="$PROJECT_DIR$/platform/platform-impl/eel/intellij.platform.ide.impl.wsl.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/initial-config-import/intellij.platform.ide.initialConfigImport.iml" filepath="$PROJECT_DIR$/platform/platform-impl/initial-config-import/intellij.platform.ide.initialConfigImport.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-impl/internal/intellij.platform.ide.internal.iml" filepath="$PROJECT_DIR$/platform/platform-impl/internal/intellij.platform.ide.internal.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/new-ui-onboarding/intellij.platform.ide.newUiOnboarding.iml" filepath="$PROJECT_DIR$/platform/new-ui-onboarding/intellij.platform.ide.newUiOnboarding.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/new-ui-onboarding/jcef/intellij.platform.ide.newUiOnboarding.jcef.iml" filepath="$PROJECT_DIR$/platform/new-ui-onboarding/jcef/intellij.platform.ide.newUiOnboarding.jcef.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/new-users-onboarding/intellij.platform.ide.newUsersOnboarding.iml" filepath="$PROJECT_DIR$/platform/new-users-onboarding/intellij.platform.ide.newUsersOnboarding.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/non-modal-welcome-screen/intellij.platform.ide.nonModalWelcomeScreen.iml" filepath="$PROJECT_DIR$/platform/non-modal-welcome-screen/intellij.platform.ide.nonModalWelcomeScreen.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/non-modal-welcome-screen/backend/intellij.platform.ide.nonModalWelcomeScreen.backend.iml" filepath="$PROJECT_DIR$/platform/non-modal-welcome-screen/backend/intellij.platform.ide.nonModalWelcomeScreen.backend.iml" />
@@ -1454,8 +1470,6 @@
       <module fileurl="file://$PROJECT_DIR$/platform/jbr/intellij.platform.jbr.iml" filepath="$PROJECT_DIR$/platform/jbr/intellij.platform.jbr.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/jewel/decorated-window/intellij.platform.jewel.decoratedWindow.iml" filepath="$PROJECT_DIR$/platform/jewel/decorated-window/intellij.platform.jewel.decoratedWindow.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/jewel/decorated-window/intellij.platform.jewel.decoratedWindow.tests.iml" filepath="$PROJECT_DIR$/platform/jewel/decorated-window/intellij.platform.jewel.decoratedWindow.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/platform/jewel/detekt-plugin/intellij.platform.jewel.detektPlugin.iml" filepath="$PROJECT_DIR$/platform/jewel/detekt-plugin/intellij.platform.jewel.detektPlugin.iml" />
-      <module fileurl="file://$PROJECT_DIR$/platform/jewel/detekt-plugin/intellij.platform.jewel.detektPlugin.tests.iml" filepath="$PROJECT_DIR$/platform/jewel/detekt-plugin/intellij.platform.jewel.detektPlugin.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/jewel/foundation/intellij.platform.jewel.foundation.iml" filepath="$PROJECT_DIR$/platform/jewel/foundation/intellij.platform.jewel.foundation.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/jewel/foundation/intellij.platform.jewel.foundation.tests.iml" filepath="$PROJECT_DIR$/platform/jewel/foundation/intellij.platform.jewel.foundation.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/jewel/ide-laf-bridge/intellij.platform.jewel.ideLafBridge.iml" filepath="$PROJECT_DIR$/platform/jewel/ide-laf-bridge/intellij.platform.jewel.ideLafBridge.iml" />
@@ -1564,6 +1578,7 @@
       <module fileurl="file://$PROJECT_DIR$/platform/recentFiles/shared/intellij.platform.recentFiles.iml" filepath="$PROJECT_DIR$/platform/recentFiles/shared/intellij.platform.recentFiles.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/recentFiles/backend/intellij.platform.recentFiles.backend.iml" filepath="$PROJECT_DIR$/platform/recentFiles/backend/intellij.platform.recentFiles.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/recentFiles/frontend/intellij.platform.recentFiles.frontend.iml" filepath="$PROJECT_DIR$/platform/recentFiles/frontend/intellij.platform.recentFiles.frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/recentFiles/plugin/intellij.platform.recentFiles.plugin.iml" filepath="$PROJECT_DIR$/platform/recentFiles/plugin/intellij.platform.recentFiles.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/refactoring/intellij.platform.refactoring.iml" filepath="$PROJECT_DIR$/platform/refactoring/intellij.platform.refactoring.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/remote-core/intellij.platform.remote.core.iml" filepath="$PROJECT_DIR$/platform/remote-core/intellij.platform.remote.core.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/remote-servers/api/intellij.platform.remoteServers.iml" filepath="$PROJECT_DIR$/platform/remote-servers/api/intellij.platform.remoteServers.iml" />
@@ -1612,10 +1627,13 @@
       <module fileurl="file://$PROJECT_DIR$/platform/statistics/intellij.platform.statistics.tests.iml" filepath="$PROJECT_DIR$/platform/statistics/intellij.platform.statistics.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/statistics/uploader/intellij.platform.statistics.uploader.iml" filepath="$PROJECT_DIR$/platform/statistics/uploader/intellij.platform.statistics.uploader.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/structuralsearch/intellij.platform.structuralSearch.iml" filepath="$PROJECT_DIR$/platform/structuralsearch/intellij.platform.structuralSearch.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/structuralsearch/plugin/intellij.platform.structuralSearch.plugin.iml" filepath="$PROJECT_DIR$/platform/structuralsearch/plugin/intellij.platform.structuralSearch.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/structuralsearch/intellij.platform.structuralSearch.tests.iml" filepath="$PROJECT_DIR$/platform/structuralsearch/intellij.platform.structuralSearch.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/backend/intellij.platform.structureView.backend.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/backend/intellij.platform.structureView.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/frontend/intellij.platform.structureView.frontend.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/frontend/intellij.platform.structureView.frontend.iml" />
-      <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.impl.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.impl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.impl/intellij.platform.structureView.impl.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/intellij.platform.structureView.impl/intellij.platform.structureView.impl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/structure-view-impl/plugin/intellij.platform.structureView.plugin.iml" filepath="$PROJECT_DIR$/platform/structure-view-impl/plugin/intellij.platform.structureView.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/syntax/syntax-api/intellij.platform.syntax.iml" filepath="$PROJECT_DIR$/platform/syntax/syntax-api/intellij.platform.syntax.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/syntax/syntax-extensions/intellij.platform.syntax.extensions.iml" filepath="$PROJECT_DIR$/platform/syntax/syntax-extensions/intellij.platform.syntax.extensions.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/syntax/syntax-extensions/intellij.platform.syntax.extensions.tests.iml" filepath="$PROJECT_DIR$/platform/syntax/syntax-extensions/intellij.platform.syntax.extensions.tests.iml" />
@@ -1653,6 +1671,7 @@
       <module fileurl="file://$PROJECT_DIR$/platform/testFramework/teamCity/intellij.platform.testFramework.teamCity.iml" filepath="$PROJECT_DIR$/platform/testFramework/teamCity/intellij.platform.testFramework.teamCity.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/testFramework/intellij.platform.testFramework.tests.iml" filepath="$PROJECT_DIR$/platform/testFramework/intellij.platform.testFramework.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/testRunner/intellij.platform.testRunner.iml" filepath="$PROJECT_DIR$/platform/testRunner/intellij.platform.testRunner.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/testRunner/plugin/intellij.platform.testRunner.plugin.iml" filepath="$PROJECT_DIR$/platform/testRunner/plugin/intellij.platform.testRunner.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/testRunner/intellij.platform.testRunner.tests.iml" filepath="$PROJECT_DIR$/platform/testRunner/intellij.platform.testRunner.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/platform-tests/intellij.platform.tests.iml" filepath="$PROJECT_DIR$/platform/platform-tests/intellij.platform.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/threadDumpParser/intellij.platform.threadDumpParser.iml" filepath="$PROJECT_DIR$/platform/threadDumpParser/intellij.platform.threadDumpParser.iml" />
@@ -1660,6 +1679,7 @@
       <module fileurl="file://$PROJECT_DIR$/platform/tips-of-the-day/intellij.platform.tips.iml" filepath="$PROJECT_DIR$/platform/tips-of-the-day/intellij.platform.tips.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/todo/intellij.platform.todo.iml" filepath="$PROJECT_DIR$/platform/todo/intellij.platform.todo.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/todo/backend/intellij.platform.todo.backend.iml" filepath="$PROJECT_DIR$/platform/todo/backend/intellij.platform.todo.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/todo/plugin/intellij.platform.todo.plugin.iml" filepath="$PROJECT_DIR$/platform/todo/plugin/intellij.platform.todo.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/tracing-ide/intellij.platform.tracing.ide.iml" filepath="$PROJECT_DIR$/platform/tracing-ide/intellij.platform.tracing.ide.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/tracing/intellij.platform.tracing.rt.iml" filepath="$PROJECT_DIR$/platform/tracing/intellij.platform.tracing.rt.iml" />
       <module fileurl="file://$PROJECT_DIR$/uast/uast-common/intellij.platform.uast.iml" filepath="$PROJECT_DIR$/uast/uast-common/intellij.platform.uast.iml" />
@@ -1704,6 +1724,7 @@
       <module fileurl="file://$PROJECT_DIR$/platform/dvcs-impl/intellij.platform.vcs.dvcs.impl.iml" filepath="$PROJECT_DIR$/platform/dvcs-impl/intellij.platform.vcs.dvcs.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/dvcs-impl/shared/intellij.platform.vcs.dvcs.impl.shared.iml" filepath="$PROJECT_DIR$/platform/dvcs-impl/shared/intellij.platform.vcs.dvcs.impl.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/dvcs-impl/intellij.platform.vcs.dvcs.impl.tests.iml" filepath="$PROJECT_DIR$/platform/dvcs-impl/intellij.platform.vcs.dvcs.impl.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/platform/vcs-impl/plugin/intellij.platform.vcs.frontend.plugin.iml" filepath="$PROJECT_DIR$/platform/vcs-impl/plugin/intellij.platform.vcs.frontend.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/vcs-impl/intellij.platform.vcs.impl.iml" filepath="$PROJECT_DIR$/platform/vcs-impl/intellij.platform.vcs.impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/vcs-impl/debugger/intellij.platform.vcs.impl.debugger.iml" filepath="$PROJECT_DIR$/platform/vcs-impl/debugger/intellij.platform.vcs.impl.debugger.iml" />
       <module fileurl="file://$PROJECT_DIR$/platform/vcs-impl/exec/intellij.platform.vcs.impl.exec.iml" filepath="$PROJECT_DIR$/platform/vcs-impl/exec/intellij.platform.vcs.impl.exec.iml" />
@@ -1817,6 +1838,7 @@
       <module fileurl="file://$PROJECT_DIR$/python/python-pyproject/intellij.python.pyproject.iml" filepath="$PROJECT_DIR$/python/python-pyproject/intellij.python.pyproject.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-pyproject/intellij.python.pyproject.tests.iml" filepath="$PROJECT_DIR$/python/python-pyproject/intellij.python.pyproject.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-pytools/intellij.python.pytools.iml" filepath="$PROJECT_DIR$/python/python-pytools/intellij.python.pytools.iml" />
+      <module fileurl="file://$PROJECT_DIR$/python/python-pytools/tests/intellij.python.pytools.tests.iml" filepath="$PROJECT_DIR$/python/python-pytools/tests/intellij.python.pytools.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-pytools-ui/intellij.python.pytools.ui.iml" filepath="$PROJECT_DIR$/python/python-pytools-ui/intellij.python.pytools.ui.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-requirements/intellij.python.requirements.iml" filepath="$PROJECT_DIR$/python/python-requirements/intellij.python.requirements.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-sdk/intellij.python.sdk.iml" filepath="$PROJECT_DIR$/python/python-sdk/intellij.python.sdk.iml" />
@@ -1827,8 +1849,10 @@
       <module fileurl="file://$PROJECT_DIR$/python/python-sdk-configurator/frontend/intellij.python.sdkConfigurator.frontend.iml" filepath="$PROJECT_DIR$/python/python-sdk-configurator/frontend/intellij.python.sdkConfigurator.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-syntax/intellij.python.syntax.iml" filepath="$PROJECT_DIR$/python/python-syntax/intellij.python.syntax.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-syntax-core/intellij.python.syntax.core.iml" filepath="$PROJECT_DIR$/python/python-syntax-core/intellij.python.syntax.core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/python/python-terminal/intellij.python.terminal.iml" filepath="$PROJECT_DIR$/python/python-terminal/intellij.python.terminal.iml" />
-      <module fileurl="file://$PROJECT_DIR$/python/python-terminal/intellij.python.terminal.tests.iml" filepath="$PROJECT_DIR$/python/python-terminal/intellij.python.terminal.tests.iml" />
+      <module fileurl="file://$PROJECT_DIR$/python/terminal/backend/intellij.python.terminal.backend.iml" filepath="$PROJECT_DIR$/python/terminal/backend/intellij.python.terminal.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/python/terminal/frontend/intellij.python.terminal.frontend.iml" filepath="$PROJECT_DIR$/python/terminal/frontend/intellij.python.terminal.frontend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/python/terminal/shared/intellij.python.terminal.shared.iml" filepath="$PROJECT_DIR$/python/terminal/shared/intellij.python.terminal.shared.iml" />
+      <module fileurl="file://$PROJECT_DIR$/python/terminal/intellij.python.terminal.tests.iml" filepath="$PROJECT_DIR$/python/terminal/intellij.python.terminal.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-test-env/common/intellij.python.test.env.common.iml" filepath="$PROJECT_DIR$/python/python-test-env/common/intellij.python.test.env.common.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-test-env/conda/intellij.python.test.env.conda.iml" filepath="$PROJECT_DIR$/python/python-test-env/conda/intellij.python.test.env.conda.iml" />
       <module fileurl="file://$PROJECT_DIR$/python/python-test-env/core/intellij.python.test.env.core.iml" filepath="$PROJECT_DIR$/python/python-test-env/core/intellij.python.test.env.core.iml" />
@@ -1852,7 +1876,6 @@
       <module fileurl="file://$PROJECT_DIR$/platform/remoteDev-util/intellij.remoteDev.util.tests.iml" filepath="$PROJECT_DIR$/platform/remoteDev-util/intellij.remoteDev.util.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/repository-search/intellij.repository.search.iml" filepath="$PROJECT_DIR$/plugins/repository-search/intellij.repository.search.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/repository-search/common/intellij.repository.search.common.iml" filepath="$PROJECT_DIR$/plugins/repository-search/common/intellij.repository.search.common.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/repository-search/common/intellij.repository.search.common.tests.iml" filepath="$PROJECT_DIR$/plugins/repository-search/common/intellij.repository.search.common.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/repository-search/completion/intellij.repository.search.completion.iml" filepath="$PROJECT_DIR$/plugins/repository-search/completion/intellij.repository.search.completion.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/repository-search/completion/intellij.repository.search.completion.tests.iml" filepath="$PROJECT_DIR$/plugins/repository-search/completion/intellij.repository.search.completion.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/restructuredtext/intellij.restructuredtext.iml" filepath="$PROJECT_DIR$/plugins/restructuredtext/intellij.restructuredtext.iml" />
@@ -1954,7 +1977,6 @@
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.aqua/intellij.tools.ide.starter.product.aqua.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.aqua/intellij.tools.ide.starter.product.aqua.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.clion/intellij.tools.ide.starter.product.clion.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.clion/intellij.tools.ide.starter.product.clion.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.datagrip/intellij.tools.ide.starter.product.datagrip.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.datagrip/intellij.tools.ide.starter.product.datagrip.iml" />
-      <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.dataspell/intellij.tools.ide.starter.product.dataspell.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.dataspell/intellij.tools.ide.starter.product.dataspell.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.gateway/intellij.tools.ide.starter.product.gateway.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.gateway/intellij.tools.ide.starter.product.gateway.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.goland/intellij.tools.ide.starter.product.goland.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.goland/intellij.tools.ide.starter.product.goland.iml" />
       <module fileurl="file://$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.idea.community/intellij.tools.ide.starter.product.idea.community.iml" filepath="$PROJECT_DIR$/tools/intellij.tools.ide.starter.product.idea.community/intellij.tools.ide.starter.product.idea.community.iml" />
@@ -1975,10 +1997,11 @@
       <module fileurl="file://$PROJECT_DIR$/updater/intellij.tools.updater.iml" filepath="$PROJECT_DIR$/updater/intellij.tools.updater.iml" />
       <module fileurl="file://$PROJECT_DIR$/updater/intellij.tools.updater.tests.iml" filepath="$PROJECT_DIR$/updater/intellij.tools.updater.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/turboComplete/intellij.turboComplete.iml" filepath="$PROJECT_DIR$/plugins/turboComplete/intellij.turboComplete.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/turboComplete/languages/kotlin/k1/intellij.turboComplete.languages.kotlin.k1.iml" filepath="$PROJECT_DIR$/plugins/turboComplete/languages/kotlin/k1/intellij.turboComplete.languages.kotlin.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/turboComplete/intellij.turboComplete.tests.iml" filepath="$PROJECT_DIR$/plugins/turboComplete/intellij.turboComplete.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/ui-designer-core/intellij.uiDesigner.iml" filepath="$PROJECT_DIR$/plugins/ui-designer-core/intellij.uiDesigner.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.iml" filepath="$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/backend/intellij.vcs.git.backend.iml" filepath="$PROJECT_DIR$/plugins/git4idea/backend/intellij.vcs.git.backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.backend.tests.iml" filepath="$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.backend.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git-modal-commit/intellij.vcs.git.commit.modal.iml" filepath="$PROJECT_DIR$/plugins/git-modal-commit/intellij.vcs.git.commit.modal.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.coverage/intellij.vcs.git.coverage.iml" filepath="$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.coverage/intellij.vcs.git.coverage.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.coverage/intellij.vcs.git.coverage.tests.iml" filepath="$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.coverage/intellij.vcs.git.coverage.tests.iml" />
@@ -1986,11 +2009,11 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/git-features-trainer/intellij.vcs.git.featuresTrainer.tests.iml" filepath="$PROJECT_DIR$/plugins/git-features-trainer/intellij.vcs.git.featuresTrainer.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/frontend/intellij.vcs.git.frontend.iml" filepath="$PROJECT_DIR$/plugins/git4idea/frontend/intellij.vcs.git.frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/localHistory/intellij.vcs.git.localHistory.iml" filepath="$PROJECT_DIR$/plugins/git4idea/localHistory/intellij.vcs.git.localHistory.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/performanceTesting/intellij.vcs.git.performanceTesting.iml" filepath="$PROJECT_DIR$/plugins/git4idea/performanceTesting/intellij.vcs.git.performanceTesting.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/rt/intellij.vcs.git.rt.iml" filepath="$PROJECT_DIR$/plugins/git4idea/rt/intellij.vcs.git.rt.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/shared/intellij.vcs.git.shared.iml" filepath="$PROJECT_DIR$/plugins/git4idea/shared/intellij.vcs.git.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/terminal/intellij.vcs.git.terminal.iml" filepath="$PROJECT_DIR$/plugins/git4idea/terminal/intellij.vcs.git.terminal.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/terminal/intellij.vcs.git.terminal.tests.iml" filepath="$PROJECT_DIR$/plugins/git4idea/terminal/intellij.vcs.git.terminal.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.tests.iml" filepath="$PROJECT_DIR$/plugins/git4idea/intellij.vcs.git.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/github/github-core/intellij.vcs.github.iml" filepath="$PROJECT_DIR$/plugins/github/github-core/intellij.vcs.github.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/github/github-git/intellij.vcs.github.git.iml" filepath="$PROJECT_DIR$/plugins/github/github-git/intellij.vcs.github.git.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/github/github-json/intellij.vcs.github.json.iml" filepath="$PROJECT_DIR$/plugins/github/github-json/intellij.vcs.github.json.iml" />
@@ -2037,125 +2060,57 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/yaml/backend/intellij.yaml.backend.iml" filepath="$PROJECT_DIR$/plugins/yaml/backend/intellij.yaml.backend.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/yaml/backend/intellij.yaml.backend.tests.iml" filepath="$PROJECT_DIR$/plugins/yaml/backend/intellij.yaml.backend.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/yaml/intellij.yaml.tests.iml" filepath="$PROJECT_DIR$/plugins/yaml/intellij.yaml.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/all-tests/kotlin.all-tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/all-tests/kotlin.all-tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/analysis-api/analysis-api-k2-tests/kotlin.base.analysis.analysis-api.k2.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/analysis-api/analysis-api-k2-tests/kotlin.base.analysis.analysis-api.k2.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/analysis/kotlin.base.fe10.analysis.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/analysis/kotlin.base.fe10.analysis.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/analysis-api-platform/kotlin.base.fe10.analysis-api-platform.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/analysis-api-platform/kotlin.base.fe10.analysis-api-platform.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/code-insight/kotlin.base.fe10.code-insight.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/code-insight/kotlin.base.fe10.code-insight.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/kdoc/kotlin.base.fe10.kdoc.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/kdoc/kotlin.base.fe10.kdoc.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/obsolete-compat/kotlin.base.fe10.obsolete-compat.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/obsolete-compat/kotlin.base.fe10.obsolete-compat.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/plugin/kotlin.base.fe10.plugin.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/plugin/kotlin.base.fe10.plugin.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/fe10/project-structure/kotlin.base.fe10.project-structure.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/fe10/project-structure/kotlin.base.fe10.project-structure.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/injection/base/kotlin.base.injection.iml" filepath="$PROJECT_DIR$/plugins/kotlin/injection/base/kotlin.base.injection.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/injection/base/tests/kotlin.base.injection.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/injection/base/tests/kotlin.base.injection.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/obsolete-compat/kotlin.base.obsolete-compat.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/obsolete-compat/kotlin.base.obsolete-compat.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/scripting/scripting.k1/kotlin.base.scripting.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/scripting/scripting.k1/kotlin.base.scripting.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/base/scripting/scripting.k1/kotlin.base.scripting.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/base/scripting/scripting.k1/kotlin.base.scripting.k1.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/tests/k1/kotlin.code-insight.inspections-shared.tests.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/tests/k1/kotlin.code-insight.inspections-shared.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/tests/k2/kotlin.code-insight.inspections-shared.tests.k2.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/tests/k2/kotlin.code-insight.inspections-shared.tests.k2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-k1/kotlin.code-insight.inspections.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-k1/kotlin.code-insight.inspections.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/kotlin.code-insight.inspections.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/inspections-shared/kotlin.code-insight.inspections.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/tests/k1/kotlin.code-insight.intentions-shared.tests.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/tests/k1/kotlin.code-insight.intentions-shared.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/tests/k2/kotlin.code-insight.intentions-shared.tests.k2.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/tests/k2/kotlin.code-insight.intentions-shared.tests.k2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-k1/kotlin.code-insight.intentions.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-k1/kotlin.code-insight.intentions.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/kotlin.code-insight.intentions.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/intentions-shared/kotlin.code-insight.intentions.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/kotlin.code-insight.k1/kotlin.code-insight.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/kotlin.code-insight.k1/kotlin.code-insight.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/kotlin.code-insight.k1/kotlin.code-insight.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/kotlin.code-insight.k1/kotlin.code-insight.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/line-markers-shared/kotlin.code-insight.line-markers.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/line-markers-shared/kotlin.code-insight.line-markers.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-k1/kotlin.code-insight.live-templates.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-k1/kotlin.code-insight.live-templates.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-k1/kotlin.code-insight.live-templates.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-k1/kotlin.code-insight.live-templates.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-shared/kotlin.code-insight.live-templates.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-shared/kotlin.code-insight.live-templates.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-shared/kotlin.code-insight.live-templates.shared.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/live-templates-shared/kotlin.code-insight.live-templates.shared.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/override-implement-k1/kotlin.code-insight.override-implement.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/override-implement-k1/kotlin.code-insight.override-implement.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/override-implement-shared/kotlin.code-insight.override-implement.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/override-implement-shared/kotlin.code-insight.override-implement.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/postfix-templates-k1/kotlin.code-insight.postfix-templates.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/postfix-templates-k1/kotlin.code-insight.postfix-templates.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/code-insight/structural-search-k1/kotlin.code-insight.structural-search.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/code-insight/structural-search-k1/kotlin.code-insight.structural-search.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/allopen/common-k1/kotlin.compiler-plugins.allopen.common.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/allopen/common-k1/kotlin.compiler-plugins.allopen.common.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/allopen/tests-k1/kotlin.compiler-plugins.allopen.tests.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/allopen/tests-k1/kotlin.compiler-plugins.allopen.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/android-extensions-stubs/kotlin.compiler-plugins.android-extensions-stubs.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/android-extensions-stubs/kotlin.compiler-plugins.android-extensions-stubs.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/assignment/common-k1/kotlin.compiler-plugins.assignment.common.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/assignment/common-k1/kotlin.compiler-plugins.assignment.common.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/kotlinx-serialization/common/kotlin.compiler-plugins.kotlinx-serialization.common.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/kotlinx-serialization/common/kotlin.compiler-plugins.kotlinx-serialization.common.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/kotlinx-serialization/tests/kotlin.compiler-plugins.kotlinx-serialization.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/kotlinx-serialization/tests/kotlin.compiler-plugins.kotlinx-serialization.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/noarg/common/kotlin.compiler-plugins.noarg.common.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/noarg/common/kotlin.compiler-plugins.noarg.common.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/noarg/tests/kotlin.compiler-plugins.noarg.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/noarg/tests/kotlin.compiler-plugins.noarg.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/parcelize/gradle/kotlin.compiler-plugins.parcelize.gradle.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/parcelize/gradle/kotlin.compiler-plugins.parcelize.gradle.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/parcelize/k1/kotlin.compiler-plugins.parcelize.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/parcelize/k1/kotlin.compiler-plugins.parcelize.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-plugins/sam-with-receiver/common/kotlin.compiler-plugins.sam-with-receiver.common.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-plugins/sam-with-receiver/common/kotlin.compiler-plugins.sam-with-receiver.common.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/compiler-reference-index/tests/kotlin.compiler-reference-index.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/compiler-reference-index/tests/kotlin.compiler-reference-index.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/completion/impl-k1/kotlin.completion.impl.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/completion/impl-k1/kotlin.completion.impl.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/completion/impl-shared/kotlin.completion.impl.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/completion/impl-shared/kotlin.completion.impl.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/completion/tests-k1/kotlin.completion.tests.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/completion/tests-k1/kotlin.completion.tests.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/completion/tests-shared/kotlin.completion.tests.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/completion/tests-shared/kotlin.completion.tests.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/all-tests-compose/kotlin.compose-all-tests.k2.iml" filepath="$PROJECT_DIR$/plugins/kotlin/all-tests-compose/kotlin.compose-all-tests.k2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/copyright/tests/kotlin.copyright.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/copyright/tests/kotlin.copyright.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/core/kotlin.core.iml" filepath="$PROJECT_DIR$/plugins/kotlin/core/kotlin.core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/core/tests/kotlin.core.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/core/tests/kotlin.core.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/fir/kotlin.fir.iml" filepath="$PROJECT_DIR$/plugins/kotlin/fir/kotlin.fir.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/all-tests-fir/kotlin.fir-all-tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/all-tests-fir/kotlin.fir-all-tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/frontend-independent/kotlin.fir.frontend-independent.iml" filepath="$PROJECT_DIR$/plugins/kotlin/frontend-independent/kotlin.fir.frontend-independent.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/fir/testFramework/kotlin.fir.testFramework.iml" filepath="$PROJECT_DIR$/plugins/kotlin/fir/testFramework/kotlin.fir.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/fir/tests/kotlin.fir.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/fir/tests/kotlin.fir.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/kotlin.gradle.gradle-java.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/kotlin.gradle.gradle-java.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/k1/kotlin.gradle.gradle-java.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/k1/kotlin.gradle.gradle-java.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/k1/kotlin.gradle.gradle-java.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/k1/kotlin.gradle.gradle-java.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/kotlin.gradle.gradle-java.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/kotlin.gradle.gradle-java.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/tests.shared/kotlin.gradle.gradle-java.tests.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/gradle-java/tests.shared/kotlin.gradle.gradle-java.tests.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.k1/kotlin.gradle.scripting.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.k1/kotlin.gradle.scripting.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.k1/kotlin.gradle.scripting.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.k1/kotlin.gradle.scripting.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.shared/kotlin.gradle.scripting.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/gradle/scripting/kotlin.gradle.scripting.shared/kotlin.gradle.scripting.shared.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-k1/kotlin.highlighting.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-k1/kotlin.highlighting.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-shared/kotlin.highlighting.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-shared/kotlin.highlighting.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-shared/tests/kotlin.highlighting.shared.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/highlighting/highlighting-shared/tests/kotlin.highlighting.shared.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/idea/kotlin.idea.iml" filepath="$PROJECT_DIR$/plugins/kotlin/idea/kotlin.idea.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/idea/tests/kotlin.idea.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/idea/tests/kotlin.idea.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/injection/k1/kotlin.injection.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/injection/k1/kotlin.injection.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/injection/k1/tests/kotlin.injection.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/injection/k1/tests/kotlin.injection.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/inspections/kotlin.inspections.iml" filepath="$PROJECT_DIR$/plugins/kotlin/inspections/kotlin.inspections.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/inspections-fe10/kotlin.inspections-fe10.iml" filepath="$PROJECT_DIR$/plugins/kotlin/inspections-fe10/kotlin.inspections-fe10.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/k1.new/kotlin.j2k.k1.new.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/k1.new/kotlin.j2k.k1.new.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/k1.new.post-processing/kotlin.j2k.k1.new.post-processing.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/k1.new.post-processing/kotlin.j2k.k1.new.post-processing.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/k1.new/tests/kotlin.j2k.k1.new.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/k1.new/tests/kotlin.j2k.k1.new.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/k1.old/kotlin.j2k.k1.old.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/k1.old/kotlin.j2k.k1.old.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/k1.old.post-processing/kotlin.j2k.k1.old.post-processing.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/k1.old.post-processing/kotlin.j2k.k1.old.post-processing.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/shared/kotlin.j2k.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/shared/kotlin.j2k.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/j2k/shared/tests/kotlin.j2k.shared.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/j2k/shared/tests/kotlin.j2k.shared.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jps/graphImplementationTests/kotlin.jps.graphImplementationTests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jps/graphImplementationTests/kotlin.jps.graphImplementationTests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jsr223/kotlin.jsr223.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jsr223/kotlin.jsr223.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/core-fe10/kotlin.jvm-debugger.core-fe10.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/core-fe10/kotlin.jvm-debugger.core-fe10.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/evaluation/kotlin.jvm-debugger.evaluation.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/evaluation/kotlin.jvm-debugger.evaluation.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/evaluation/k1/kotlin.jvm-debugger.evaluation.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/evaluation/k1/kotlin.jvm-debugger.evaluation.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/sequence/kotlin.jvm-debugger.sequence.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/sequence/kotlin.jvm-debugger.sequence.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.k1/kotlin.jvm-debugger.test.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.k1/kotlin.jvm-debugger.test.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.k1/testFramework/kotlin.jvm-debugger.test.k1.testFramework.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/test/kotlin.jvm-debugger.test.k1/testFramework/kotlin.jvm-debugger.test.k1.testFramework.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm-debugger/testFramework/kotlin.jvm-debugger.testFramework.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm-debugger/testFramework/kotlin.jvm-debugger.testFramework.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm/k1/kotlin.jvm.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm/k1/kotlin.jvm.k1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm/k1/kotlin.jvm.k1.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm/k1/kotlin.jvm.k1.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/jvm/shared/kotlin.jvm.shared.iml" filepath="$PROJECT_DIR$/plugins/kotlin/jvm/shared/kotlin.jvm.shared.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/plugin/kotlin.plugin.iml" filepath="$PROJECT_DIR$/plugins/kotlin/plugin/kotlin.plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/plugin/common/kotlin.plugin.common.iml" filepath="$PROJECT_DIR$/plugins/kotlin/plugin/common/kotlin.plugin.common.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/plugin/k1/kotlin.plugin.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/plugin/k1/kotlin.plugin.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/plugin/k2/kotlin.plugin.k2.iml" filepath="$PROJECT_DIR$/plugins/kotlin/plugin/k2/kotlin.plugin.k2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/project-wizard/idea-k1/kotlin.project-wizard.idea.k1.iml" filepath="$PROJECT_DIR$/plugins/kotlin/project-wizard/idea-k1/kotlin.project-wizard.idea.k1.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/project-wizard/tests/kotlin.project-wizard.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/project-wizard/tests/kotlin.project-wizard.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/refactorings/kotlin.refactorings.common/kotlin.refactorings.common.iml" filepath="$PROJECT_DIR$/plugins/kotlin/refactorings/kotlin.refactorings.common/kotlin.refactorings.common.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/refactorings/kotlin.refactorings.common.tests/kotlin.refactorings.common.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/refactorings/kotlin.refactorings.common.tests/kotlin.refactorings.common.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/repl/kotlin.repl.iml" filepath="$PROJECT_DIR$/plugins/kotlin/repl/kotlin.repl.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/run-configurations/junit-fe10/kotlin.run-configurations.junit-fe10.iml" filepath="$PROJECT_DIR$/plugins/kotlin/run-configurations/junit-fe10/kotlin.run-configurations.junit-fe10.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/scripting/kotlin.scripting.iml" filepath="$PROJECT_DIR$/plugins/kotlin/scripting/kotlin.scripting.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/scripting-plugin/kotlin.scripting-plugin.iml" filepath="$PROJECT_DIR$/plugins/kotlin/scripting-plugin/kotlin.scripting-plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/tests-compose/kotlin.tests-compose.iml" filepath="$PROJECT_DIR$/plugins/kotlin/tests-compose/kotlin.tests-compose.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/tests-from-compiler/kotlin.testsFromCompiler.iml" filepath="$PROJECT_DIR$/plugins/kotlin/tests-from-compiler/kotlin.testsFromCompiler.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin/kotlin.uast.uast-kotlin.iml" filepath="$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin/kotlin.uast.uast-kotlin.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin-idea/kotlin.uast.uast-kotlin-idea.iml" filepath="$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin-idea/kotlin.uast.uast-kotlin-idea.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin-idea/tests/kotlin.uast.uast-kotlin-idea.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin-idea/tests/kotlin.uast.uast-kotlin-idea.tests.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin/tests/kotlin.uast.uast-kotlin.tests.iml" filepath="$PROJECT_DIR$/plugins/kotlin/uast/uast-kotlin/tests/kotlin.uast.uast-kotlin.tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/kotlin-compiler-classpath/kotlin.util.compiler-classpath.iml" filepath="$PROJECT_DIR$/plugins/kotlin/kotlin-compiler-classpath/kotlin.util.compiler-classpath.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/compiler-dependencies/kotlin.util.compiler-dependencies.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/compiler-dependencies/kotlin.util.compiler-dependencies.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/project-model-updater/kotlin.util.project-model-updater.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/project-model-updater/kotlin.util.project-model-updater.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-all/kotlin.util.test-generator-all.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-all/kotlin.util.test-generator-all.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-api/kotlin.util.test-generator-api.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-api/kotlin.util.test-generator-api.iml" />
-      <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-fe10/kotlin.util.test-generator-fe10.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-fe10/kotlin.util.test-generator-fe10.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-fir/kotlin.util.test-generator-fir.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-fir/kotlin.util.test-generator-fir.iml" />
     </modules>
   </component>

@@ -53,7 +53,11 @@ private val LOG = logger<DefaultIndexStorageLayoutProvider>()
  */
 @Internal
 @VisibleForTesting
-class DefaultIndexStorageLayoutProvider : FileBasedIndexLayoutProvider {
+class DefaultIndexStorageLayoutProvider(
+  private val storageLockContextFactory: () -> StorageLockContext,
+) : FileBasedIndexLayoutProvider {
+
+  constructor() : this(::newStorageLockContext)
 
   override fun <K, V> getLayout(
     extension: FileBasedIndexExtension<K, V>,
@@ -61,10 +65,10 @@ class DefaultIndexStorageLayoutProvider : FileBasedIndexLayoutProvider {
   ): VfsAwareIndexStorageLayout<K, V> {
     if (extension is SingleEntryFileBasedIndexExtension<V>) {
       @Suppress("UNCHECKED_CAST")
-      return SingleEntryStorageLayout(extension) as VfsAwareIndexStorageLayout<K, V>
+      return SingleEntryStorageLayout(extension, storageLockContextFactory) as VfsAwareIndexStorageLayout<K, V>
     }
     else if (extension is ShardableIndexExtension && extension.shardsCount() > 1) {
-      val (storageFactory, forwardFactory) = createDefaultFactories(extension)
+      val (storageFactory, forwardFactory) = createDefaultFactories(extension, storageLockContextFactory)
       return ShardedStorageLayout(
         extension,
         forwardFactory,
@@ -72,7 +76,7 @@ class DefaultIndexStorageLayoutProvider : FileBasedIndexLayoutProvider {
       )
     }
     else {
-      return DefaultStorageLayout(extension)
+      return DefaultStorageLayout(extension, storageLockContextFactory)
     }
   }
 
@@ -82,8 +86,11 @@ class DefaultIndexStorageLayoutProvider : FileBasedIndexLayoutProvider {
 
   override fun toString(): String = DefaultIndexStorageLayoutProvider::class.java.simpleName
 
-  internal class DefaultStorageLayout<K, V>(private val extension: FileBasedIndexExtension<K, V>) : VfsAwareIndexStorageLayout<K, V> {
-    private val storageLockContext = newStorageLockContext()
+  internal class DefaultStorageLayout<K, V>(
+    private val extension: FileBasedIndexExtension<K, V>,
+    storageLockContextFactory: () -> StorageLockContext,
+  ) : VfsAwareIndexStorageLayout<K, V> {
+    private val storageLockContext = storageLockContextFactory()
 
     private val forwardIndexAccessor = MapForwardIndexAccessor(defaultMapExternalizerFor(extension))
 
@@ -132,9 +139,11 @@ class DefaultIndexStorageLayoutProvider : FileBasedIndexLayoutProvider {
     }
   }
 
-  internal class SingleEntryStorageLayout<V> internal constructor(private val extension: SingleEntryFileBasedIndexExtension<V>) :
-    VfsAwareIndexStorageLayout<Int, V> {
-    private val storageLockContext = newStorageLockContext()
+  internal class SingleEntryStorageLayout<V> internal constructor(
+    private val extension: SingleEntryFileBasedIndexExtension<V>,
+    storageLockContextFactory: () -> StorageLockContext,
+  ) : VfsAwareIndexStorageLayout<Int, V> {
+    private val storageLockContext = storageLockContextFactory()
 
     private val forwardIndexAccessor = SingleEntryIndexForwardIndexAccessor(extension)
 
@@ -177,10 +186,13 @@ private data class StorageFactories<K, V>(
   val forwardFactory: ThrowableNotNullFunction<Int, ForwardIndex, IOException>,
 )
 
-private fun <K, V> createDefaultFactories(extension: FileBasedIndexExtension<K, V>): StorageFactories<K, V> {
+private fun <K, V> createDefaultFactories(
+  extension: FileBasedIndexExtension<K, V>,
+  storageLockContextFactory: () -> StorageLockContext,
+): StorageFactories<K, V> {
   val shardsCount = (extension as ShardableIndexExtension).shardsCount()
 
-  val storageLockContexts = Array(shardsCount) { newStorageLockContext() }
+  val storageLockContexts = Array(shardsCount) { storageLockContextFactory() }
 
   val storageFactory = ThrowableNotNullFunction<Int, VfsAwareIndexStorage<K, V>, IOException> { shardNo ->
     val shardStorageFile = IndexInfrastructure.getStorageFile(extension.name, shardNo)
@@ -243,20 +255,16 @@ private fun deleteIndexDirectory(extension: FileBasedIndexExtension<*, *>) {
 
 
 private val VIA_CHANNELS_CACHE_FILE_WRITER = ToFileWriter { path: Path, offsetInFile: Long, buffer: ByteBuffer ->
-  PageCacheUtils.CHANNELS_CACHE.executeOp(
-    path,
-    { channel: FileChannel ->
-      var offset = offsetInFile
-      while (buffer.hasRemaining()) {
-        offset += channel.write(buffer, offset)
-      }
-    },
-    /*readOnly: */ false
-  )
+  PageCacheUtils.getCachedChannelsAccessor(/*readOnly = */false).executeOp(path) { channel: FileChannel ->
+    var offset = offsetInFile
+    while (buffer.hasRemaining()) {
+      offset += channel.write(buffer, offset)
+    }
+  }
 }
 
-/** Valid values: `null, 'disabled', 'in-memory' (for debug), 'persistent'` */
-private val USE_WRITE_AHEAD_LOG = System.getProperty("indexes.use-write-ahead-log", "disabled")
+/** Valid values: `null`/`'disabled'`, `'persistent'`, `'in-memory'` (for debugging)  */
+private val USE_WRITE_AHEAD_LOG = System.getProperty("indexes.use-write-ahead-log", "persistent")
 
 //The WAL is opened but never closed -- because currently there is no clear lifecycle ownership for the WAL.
 // It is hard to pinpoint the trigger for 'WAL is not needed anymore and can be closed': WAL lifespan should
@@ -264,8 +272,8 @@ private val USE_WRITE_AHEAD_LOG = System.getProperty("indexes.use-write-ahead-lo
 // FilePageCache and Indexes have lifespan ~= application, and not very well-defined (could be closed by either
 // regular way or by ShutDownTracker) => it is hard to define WAL lifespan too.
 //Luckily, WAL _could_ live without a well-defined lifespan: the current WAL implementation over the mmapped
-// file allows WAL to still work correctly even being NOT properly closed (at least as long as OS is not crash
-// and keeps mmapped pages intact) -- so we don't close WAL and rely on this property for now.
+// file allows WAL to still work correctly even being NOT properly closed (at least as long as OS is not crashing
+// and keeps mmapped pages safe) -- so we don't close WAL and rely on this property for now.
 private val WRITE_AHEAD_LOG = when (USE_WRITE_AHEAD_LOG) {
   "disabled", null -> null
   "persistent" -> setupPersistentWAL(PathManager.getIndexRoot())
@@ -279,11 +287,13 @@ private val WRITE_AHEAD_LOG = when (USE_WRITE_AHEAD_LOG) {
 private val CHANNEL_WITH_WAL_OPENER = FileChannelOpener { path: Path, readOnly: Boolean ->
   require(WRITE_AHEAD_LOG != null) { "WRITE_AHEAD_LOG is disabled" }
 
-  FileChannelWithWAL(path, WRITE_AHEAD_LOG, PageCacheUtils.CHANNELS_CACHE, readOnly)
+  val channelsAccessor = PageCacheUtils.getCachedChannelsAccessor(readOnly)
+  FileChannelWithWAL(path, WRITE_AHEAD_LOG, channelsAccessor, readOnly)
 }
 
 /** Shared channels cache, with write-ahead-log feature  */
 private val CHANNELS_WITH_WRITE_AHEAD_CACHE = OpenChannelsCache(
+  "channels-cache-with-WAL",
   //Actually, _this_ cache's capacity is unrelated to CHANNELS_CACHE_CAPACITY -- this cache doesn't spend
   // (limited) file descriptors.
   // But the capacity should still be limited, because even FileChannelWithWAL carries some overhead.
@@ -309,10 +319,14 @@ private fun setupPersistentWAL(directory: Path): WriteAheadLog? {
 @Internal
 fun newStorageLockContext(): StorageLockContext {
   if (WRITE_AHEAD_LOG != null) {
-    return StorageLockContext(/*useRWLock:*/false, CHANNELS_WITH_WRITE_AHEAD_CACHE)
+    return StorageLockContext(
+      /* useReadWriteLock: */ false,
+      CHANNELS_WITH_WRITE_AHEAD_CACHE.asReadOnly(),
+      CHANNELS_WITH_WRITE_AHEAD_CACHE.asWritable()
+    )
   }
   else {
-    return StorageLockContext(/*useRWLock:*/false, /*cacheChannels:*/true)//== use regular PageCacheUtils.CHANNELS_CACHE
+    return StorageLockContext(/*useRWLock:*/false, /*cacheChannels:*/true)//== use regular PageCacheUtils cached accessors
   }
 }
 

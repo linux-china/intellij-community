@@ -25,6 +25,7 @@ import com.intellij.agent.workbench.sessions.model.sortAgentSessionThreadsForDis
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
 import com.intellij.agent.workbench.sessions.core.statistics.AgentWorkbenchTelemetry
 import com.intellij.agent.workbench.sessions.state.AgentSessionUiPreferencesStateService
+import com.intellij.agent.workbench.sessions.util.isAgentSessionNewSessionId
 import com.intellij.ide.RecentProjectsManager
 import com.intellij.ide.RecentProjectsManagerBase
 import com.intellij.openapi.actionSystem.DataContext
@@ -197,10 +198,10 @@ internal class AgentSessionPromptLauncherBridge : AgentPromptLauncherBridge {
       pathState == null -> {
         refreshCatalogAndLoadNewlyOpened()
       }
-      pathState.hasLoaded -> {
+      pathState.hasProviderSnapshot(provider) -> {
         refreshProviderForPath(normalizedPath, provider)
       }
-      !pathState.isLoading -> {
+      !pathState.isProviderLoading(provider) -> {
         refreshCatalogAndLoadNewlyOpened()
       }
     }
@@ -282,16 +283,19 @@ private fun buildSnapshot(pathState: AgentSessionPathState?, provider: AgentSess
     .asSequence()
     .filter { thread -> thread.provider == provider }
     .filter { thread -> !thread.archived }
+    .filter { thread -> !isAgentSessionNewSessionId(thread.id) }
     .toList()
     .let(::sortAgentSessionThreadsForDisplay)
   val hasProviderWarning = pathState.providerWarnings.any { warning -> warning.provider == provider }
+  val isProviderLoading = pathState.isProviderLoading(provider)
+  val hasProviderSnapshot = pathState.hasProviderSnapshot(provider)
   val hasError = pathState.errorMessage != null ||
-                 (hasProviderWarning && providerThreads.isEmpty() && pathState.hasLoaded && !pathState.isLoading)
+                 (hasProviderWarning && providerThreads.isEmpty() && hasProviderSnapshot && !isProviderLoading)
 
   return AgentPromptExistingThreadsSnapshot(
     threads = providerThreads,
-    isLoading = pathState.isLoading,
-    hasLoaded = pathState.hasLoaded,
+    isLoading = isProviderLoading,
+    hasLoaded = hasProviderSnapshot,
     hasError = hasError,
   )
 }

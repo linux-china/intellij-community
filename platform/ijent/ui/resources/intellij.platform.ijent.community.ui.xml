@@ -6,8 +6,14 @@
     <module name="intellij.platform.core.ui"/>
     <module name="intellij.platform.editor.ui"/>
     <module name="intellij.platform.eel.nioFs.impl"/>
+    <module name="intellij.platform.execution"/>
     <module name="intellij.platform.ide"/>
     <module name="intellij.platform.ide.core"/>
+    <module name="intellij.platform.ide.impl"/>
+    <module name="intellij.platform.lang"/>
+    <module name="intellij.platform.projectModel"/>
+    <module name="intellij.platform.util.coroutines"/>
+    <module name="intellij.platform.util.ui"/>
   </dependencies>
   <!-- endregion -->
 
@@ -26,6 +32,32 @@
         id="com.intellij.platform.ijent.impl.MultiRoutingFileSystemVerificationAction"
         class="com.intellij.platform.ijent.community.ui.actions.MultiRoutingFileSystemVerificationAction"
         internal="true"/>
+      <action
+        id="com.intellij.platform.ijent.community.ui.actions.dashboard.ShowIjentDashboardAction"
+        class="com.intellij.platform.ijent.community.ui.actions.dashboard.ShowIjentDashboardAction"
+        internal="true"/>
     </group>
   </actions>
+  <extensionPoints>
+    <extensionPoint name="ijent.dashboard.tab" interface="com.intellij.platform.ijent.community.ui.actions.dashboard.IjentDashboardTab" dynamic="true"/>
+  </extensionPoints>
+  <extensions defaultExtensionNs="com.intellij">
+    <ijent.dashboard.tab implementation="com.intellij.platform.ijent.community.ui.actions.dashboard.IjentDashboardTabStat"/>
+    <ijent.dashboard.tab implementation="com.intellij.platform.ijent.community.ui.actions.dashboard.IjentDashboardTabInfo"/>
+    <ijent.dashboard.tab implementation="com.intellij.platform.ijent.community.ui.actions.dashboard.IjentDashboardTabEnvVars"/>
+    <project.root.unavailable implementation="com.intellij.platform.ijent.community.ui.actions.unavailable.IjentUnavailableDialogHandler"/>
+    <advancedSetting
+      id="container.environments.env.var.shell.mode"
+      enumClass="com.intellij.platform.ijent.community.ui.settings.LoginShellEnvVarModeProviderImpl$EnvVarShellMode"
+      default="LOGIN_INTERACTIVE"
+      bundle="messages.IjentImplBundle"
+      groupKey="advanced.settings.container.environments"
+    />
+    <projectConfigurable
+      groupId="build"
+      id="ijent.dashboard"
+      key="configurable.ijent.dashboard.display.name"
+      bundle="messages.IjentImplBundle"
+      provider="com.intellij.platform.ijent.community.ui.settings.IjentDashboardConfigurableProvider"/>
+  </extensions>
 </idea-plugin>

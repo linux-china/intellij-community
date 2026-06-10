@@ -27,6 +27,11 @@ import kotlin.coroutines.CoroutineContext
 // object is used for namespace qualification
 @Internal
 object InternalPsiVersioning {
+
+  private val PERSISTENT_PSI_ENABLED: Boolean by lazy { Registry.`is`("psi.enable.persistent.syntax.tree", false) }
+  private const val NESTED_LOCKS_THREADING_SUPPORT_CLASS_NAME = "com.intellij.platform.locking.impl.NestedLocksThreadingSupport"
+  private const val SUSPENDING_WRITE_ACTION_METHOD_NAME = "executeSuspendingWriteAction"
+
   // a reading operation with the available psi version
   fun <T> freezePsiVersion(action: () -> T): T {
     if (ApplicationManager.getApplication().isReadAccessAllowed) {
@@ -76,7 +81,7 @@ object InternalPsiVersioning {
    */
   @JvmStatic
   fun getCreationPsiVersionForElement(): Long {
-    return if (Registry.`is`("psi.enable.persistent.syntax.tree", false) && isVersionedComputation()) {
+    return if (PERSISTENT_PSI_ENABLED && isVersionedComputation()) {
       getCurrentPsiVersion()
     } else {
       -1
@@ -200,7 +205,8 @@ object InternalPsiVersioning {
 
       @JvmStatic
       fun addListeners() {
-        if (!isVersionedSyntaxTreeEnabled() || listenerAdded.getAndSet(true)) {
+        val listenersAllowed = Registry.`is`("psi.enable.persistent.syntax.tree.locking.listener") || isVersionedSyntaxTreeEnabled()
+        if (!listenersAllowed || listenerAdded.getAndSet(true)) {
           return
         }
         val writeActionListener = PsiVersioningLockingListener()
@@ -282,8 +288,8 @@ object InternalPsiVersioning {
 
     override fun beforeWriteLockTemporarilyReleased(): Unit {
       writeActionFinished(Any::class.java) // we publish the incremented version here so that the published version is incremented
-      // clear thread local reentrancy tracker, run writeActionStarted again
-      writeActionStarted(Any::class.java)
+      val token = initReadActionSection()
+      cleanupTokenList.get().add(token)
       return
     }
 
@@ -291,7 +297,7 @@ object InternalPsiVersioning {
     }
 
     override fun afterWriteLockReacquired(data: Unit) {
-      writeActionFinished(Any::class.java)
+      cleanupVersioningSection()
       writeActionStarted(Any::class.java)
     }
 
@@ -376,10 +382,28 @@ object InternalPsiVersioning {
         }
       }
     } else {
-      if (correctVersion != value) {
-        thisLogger().error("Expected version $correctVersion, but found $value")
+      // we hope that eventually the problem with suspending write actions will be resolved; but we suppress the error for a known offender for now
+      // let's report these errors only for internal builds -- persistent syntax has no effect anyway
+      if (correctVersion != value && ApplicationManager.getApplication().isInternal && !isInSuspendingWriteAction()) {
+        try {
+          // known case: this breaks is someone executed "suspending write action"
+          thisLogger().error("Expected version $correctVersion, but found $value; write access: ${ApplicationManager.getApplication().isWriteAccessAllowed}; context: ${currentThreadContext()}")
+        } catch (e : AssertionError) {
+          // in tests, the error above throws a hard error which corrupts the stack of cleanups.
+          // we hope that the error will be reported and the rest of the program proceeds as expected
+          if (!ApplicationManager.getApplication().isUnitTestMode) {
+            throw e
+          }
+        }
       }
       AccessToken.EMPTY_ACCESS_TOKEN
+    }
+  }
+
+  private fun isInSuspendingWriteAction(): Boolean {
+    return Throwable().stackTrace.any { stackTraceElement ->
+      stackTraceElement.className == NESTED_LOCKS_THREADING_SUPPORT_CLASS_NAME &&
+      stackTraceElement.methodName == SUSPENDING_WRITE_ACTION_METHOD_NAME
     }
   }
 
@@ -389,6 +413,6 @@ object InternalPsiVersioning {
 
   @JvmStatic
   fun isVersionedSyntaxTreeEnabled(): Boolean {
-    return Registry.`is`("psi.enable.persistent.syntax.tree", false)
+    return PERSISTENT_PSI_ENABLED
   }
 }

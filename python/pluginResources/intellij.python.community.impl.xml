@@ -6,7 +6,12 @@
     <module name="intellij.platform.debugger.impl"/>
     <module name="intellij.platform.externalSystem.impl"/>
     <module name="intellij.json"/>
-    <module name="intellij.platform.structureView.impl"/>
+    <module name="intellij.libraries.jcef"/>
+    <module name="intellij.libraries.xstream"/>
+    <module name="intellij.platform.smRunner"/>
+    <module name="intellij.platform.structureView"/>
+    <module name="intellij.platform.testRunner"/>
+    <module name="intellij.platform.ui.jcef"/>
     <module name="intellij.python.common"/>
     <module name="intellij.python.community"/>
     <module name="intellij.python.community.core.impl"/>
@@ -50,7 +55,6 @@
                      implementationClass="com.jetbrains.python.sdk.poetry.PoetryPackageVersionsInspection"
                      key="INSP.poetry.package.versions.display.name" bundle="messages.PyBundle" groupKey="INSP.GROUP.python"
                      suppressId="PoetryPackageVersions" shortName="PoetryPackageVersionsInspection"/>
-    <registryKey defaultValue="10" description="How often system pythons must be refreshed (minutes)" key="python.system.refresh.minutes" restartRequired="true"/>
     <registryKey defaultValue="20" description="How often conda environments cache must be refreshed (seconds)" key="python.conda.envs.refresh.seconds" restartRequired="true"/>
     <registryKey defaultValue="60" description="TTL of conda environments cache (seconds)" key="python.conda.envs.cache.ttl.seconds" restartRequired="true"/>
     <!-- Only modules with `baseDir` support Python SDKs -->
@@ -245,7 +249,7 @@
                     serviceImplementation="com.jetbrains.python.codeInsight.completion.runtime.patProvider.DummyRemoteFilePathRetrievalService"
                     testServiceImplementation="com.jetbrains.python.codeInsight.completion.runtime.patProvider.DummyRemoteFilePathRetrievalService"/>
 
-    <applicationService serviceImplementation="com.jetbrains.python.packaging.pip.PypiPackageCache"/>
+    <applicationService serviceImplementation="com.jetbrains.python.packaging.pip.PyPiPackageCache"/>
     <applicationService serviceImplementation="com.jetbrains.python.packaging.PyPackageService"/>
     <applicationService serviceInterface="com.jetbrains.python.sdk.add.v2.EelFileSystemFactory"
                         serviceImplementation="com.jetbrains.python.sdk.add.v2.EelFileSystemFactoryImpl"/>
@@ -588,9 +592,6 @@
     <registryKey defaultValue="false" description="Don't run `lock` before listing dependencies when using Poetry"
                  restartRequired="false" key="python.poetry.list.packages.without.lock"/>
 
-    <registryKey defaultValue="false" description="Use legacy system python detection method based on flavors"
-                 restartRequired="false" key="python.use.system.legacy.provider"/>
-
     <registryKey defaultValue="false" description="Save preferences what type of data view will be used: the old data view or the new one."
                  restartRequired="false" key="python.data.view.allow.save.preferences.community.vs.powerful.data.view"/>
 
@@ -603,7 +604,7 @@
                                implementationClass="com.jetbrains.python.refactoring.invertBoolean.PyInvertBooleanDelegate"/>
 
     <!--folding-->
-    <codeFoldingOptionsProvider instance="com.jetbrains.python.PythonFoldingOptionsProvider" id="Python" order="after Android,after C++,after Dart,after General,after Go,after Handlebars,after JAVA,after JavaScript,after JPAQL,after JSON,after Kubernetes,after LinkerScript,after Markdown,after ObjectiveC,after PHP"/>
+    <codeFoldingOptionsProvider instance="com.jetbrains.python.PythonFoldingOptionsProvider" id="Python" order="after Android,after C++,after General,after Go,after Handlebars,after JAVA,after JavaScript,after JPAQL,after JSON,after Kubernetes,after LinkerScript,after Markdown,after ObjectiveC,after PHP"/>
 
     <!-- postfix templates!-->
     <codeInsight.template.postfixTemplateProvider language="Python"
@@ -748,7 +749,7 @@
     <backgroundPostStartupActivity implementation="com.jetbrains.python.packaging.management.PythonPackagesUpdater"/>
 
     <applicationService
-      serviceInterface="com.jetbrains.python.run.PythonInterpreterTargetEnvironmentFactory$Available" open="true"
+      serviceInterface="com.jetbrains.python.run.PythonInterpreterTargetEnvironmentFactory$Available"
       serviceImplementation="com.jetbrains.python.run.PythonInterpreterTargetEnvironmentFactory$Available$Default"/>
 
     <registryKey key="python.new.run.config" defaultValue="true" description="Python Run configurations new UI"/>
@@ -1265,10 +1266,4 @@
     <python.inspections.dependencies.dependenciesInspectionProvider
       implementation="com.jetbrains.python.conda.CondaDependenciesInspectionProvider"/>
   </extensions>
-
-  <extensionPoints>
-    <extensionPoint qualifiedName="Pythonid.systemPythonProvider"
-                    dynamic="true"
-                    interface="com.intellij.python.community.services.systemPython.SystemPythonProvider"/>
-  </extensionPoints>
 </idea-plugin>

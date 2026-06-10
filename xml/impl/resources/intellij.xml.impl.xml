@@ -1,6 +1,7 @@
 <idea-plugin visibility="public">
   <!-- region Generated dependencies - run `Generate Product Layouts` to regenerate -->
   <dependencies>
+    <module name="intellij.libraries.aalto.xml"/>
     <module name="intellij.libraries.fastutil"/>
     <module name="intellij.libraries.kotlinx.collections.immutable"/>
     <module name="intellij.libraries.xerces"/>
@@ -11,6 +12,7 @@
     <module name="intellij.platform.core"/>
     <module name="intellij.platform.core.impl"/>
     <module name="intellij.platform.core.ui"/>
+    <module name="intellij.platform.diff"/>
     <module name="intellij.platform.editor.ex"/>
     <module name="intellij.platform.editor.ui"/>
     <module name="intellij.platform.execution.impl"/>
@@ -25,11 +27,13 @@
     <module name="intellij.platform.util.diff"/>
     <module name="intellij.platform.util.ui"/>
     <module name="intellij.platform.vcs"/>
+    <module name="intellij.xml.analysis"/>
     <module name="intellij.xml.analysis.impl"/>
     <module name="intellij.xml.dom"/>
     <module name="intellij.xml.parser"/>
     <module name="intellij.xml.psi"/>
     <module name="intellij.xml.psi.impl"/>
+    <module name="intellij.xml.syntax"/>
     <module name="intellij.xml.ui.common"/>
   </dependencies>
   <!-- endregion -->
@@ -238,7 +242,7 @@
                      groupBundle="messages.XmlBundle" groupKey="html.inspections.group.name"
                      implementationClass="com.intellij.codeInspection.htmlInspections.HtmlUnknownBooleanAttributeInspection"/>
 
-    <codeFoldingOptionsProvider instance="com.intellij.application.options.editor.XmlCodeFoldingOptionsProvider" id="XML" order="after Android,after C++,after Dart,after General,after Go,after Handlebars,after JAVA,after JavaScript,after JPAQL,after JSON,after Kubernetes,after LinkerScript,after Markdown,after ObjectiveC,after PHP,after Python,after Ruby,after Rust,after SQL,after Swift"/>
+    <codeFoldingOptionsProvider instance="com.intellij.application.options.editor.XmlCodeFoldingOptionsProvider" id="XML" order="after Android,after C++,after General,after Go,after Handlebars,after JAVA,after JavaScript,after JPAQL,after JSON,after Kubernetes,after LinkerScript,after Markdown,after ObjectiveC,after PHP,after Python,after Ruby,after Rust,after SQL,after Swift"/>
 
     <multiHostInjector implementation="com.intellij.psi.impl.source.html.HtmlScriptLanguageInjector"/>
 

@@ -26,6 +26,7 @@
     <module name="intellij.platform.core.ui"/>
     <module name="intellij.platform.credentialStore"/>
     <module name="intellij.platform.diagnostic.telemetry"/>
+    <module name="intellij.platform.diff"/>
     <module name="intellij.platform.editor.ex"/>
     <module name="intellij.platform.editor.ui"/>
     <module name="intellij.platform.execution"/>
@@ -34,6 +35,7 @@
     <module name="intellij.platform.ide.core.plugins"/>
     <module name="intellij.platform.ide.impl"/>
     <module name="intellij.platform.indexing"/>
+    <module name="intellij.platform.kernel"/>
     <module name="intellij.platform.kernel.backend"/>
     <module name="intellij.platform.lang"/>
     <module name="intellij.platform.lang.core"/>

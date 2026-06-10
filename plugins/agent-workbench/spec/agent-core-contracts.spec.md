@@ -35,13 +35,13 @@ These contracts keep shared identity, command mapping, provider capabilities, pr
   [@test] ../sessions/testSrc/AgentSessionTreeUiStateServiceTest.kt
   [@test] ../sessions/testSrc/AgentSessionRefreshOnDemandIntegrationTest.kt
 
-- Standard resume command mapping after executable token is canonical: Codex `-c check_for_update_on_startup=false -c tui.terminal_title=["thread"] resume <id>`, Claude `--resume <id>`, Junie `--skip-update-check --session-id <id>`. YOLO resume uses provider-specific YOLO flags only when explicitly requested by prompt launch or restored from stored chat tab metadata; ordinary thread open must not infer YOLO from global last-used UI preferences.
+- Standard resume command mapping after executable token is canonical: Codex `-c check_for_update_on_startup=false -c tui.terminal_title=["thread-id","thread"] resume <id>`, Claude `--resume <id>`, Junie `--skip-update-check --session-id <id>`. Codex `thread-id` is supported by stable CLI `0.131.0+`; stable `0.130.0` and older ignore it and fall back to `thread`. YOLO resume uses provider-specific YOLO flags only when explicitly requested by prompt launch or restored from stored chat tab metadata; ordinary thread open must not infer YOLO from global last-used UI preferences.
   [@test] ../codex/sessions/testSrc/CodexAgentSessionProviderDescriptorTest.kt
   [@test] ../claude/sessions/testSrc/ClaudeAgentSessionProviderDescriptorTest.kt
   [@test] ../junie/sessions/testSrc/JunieAgentSessionProviderDescriptorTest.kt
   [@test] ../sessions/testSrc/AgentSessionLaunchServiceTest.kt
 
-- New-thread command mapping after executable token is canonical: Codex standard/YOLO include `-c check_for_update_on_startup=false -c tui.terminal_title=["thread"]`, Claude standard/YOLO with a preallocated `--session-id <uuid>`, and Junie standard/YOLO are defined by provider descriptors and tested there.
+- New-thread command mapping after executable token is canonical: Codex standard/YOLO include `-c check_for_update_on_startup=false -c tui.terminal_title=["thread-id","thread"]`, Claude standard/YOLO with a preallocated `--session-id <uuid>`, and Junie standard/YOLO are defined by provider descriptors and tested there. Codex `thread-id` has the same `0.131.0+` stable compatibility boundary as resume launches.
   [@test] ../codex/sessions/testSrc/CodexAgentSessionProviderDescriptorTest.kt
   [@test] ../claude/sessions/testSrc/ClaudeAgentSessionProviderDescriptorTest.kt
   [@test] ../junie/sessions/testSrc/JunieAgentSessionProviderDescriptorTest.kt
@@ -51,13 +51,25 @@ These contracts keep shared identity, command mapping, provider capabilities, pr
   [@test] ../claude/sessions/testSrc/ClaudeAgentSessionProviderDescriptorTest.kt
   [@test] ../junie/sessions/testSrc/JunieAgentSessionProviderDescriptorTest.kt
 
-- Prompt launch handoff carries one optional startup launch override plus ordered post-start dispatch steps and token. Startup prompt commands are transient and must not replace persisted chat resume commands.
+- Prompt launch handoff carries one optional startup launch override plus ordered post-start dispatch steps and token. Dispatch steps carry an explicit action; legacy text-only steps are interpreted as text dispatch. Startup prompt commands are transient and must not replace persisted chat resume commands.
   [@test] ../sessions/testSrc/AgentSessionPromptLauncherBridgeTest.kt
   [@test] ../chat/testSrc/AgentChatEditorServiceTest.kt
 
-- Post-start prompt dispatch is terminal-readiness-gated. Codex plan-mode dispatch sends `/plan` before the prompt body and retries the `/plan` step while Codex reports busy.
+- Prompt plan mode is requested only through provider option ids. A user-typed `/plan` prefix is ordinary prompt text owned by the provider CLI, not Agent Workbench syntax, and must not be stripped or converted into plan mode.
+  [@test] ../codex/sessions/testSrc/CodexAgentSessionProviderDescriptorTest.kt
+  [@test] ../claude/sessions/testSrc/ClaudeAgentSessionProviderDescriptorTest.kt
+  [@test] ../junie/sessions/testSrc/JunieAgentSessionProviderDescriptorTest.kt
   [@test] ../sessions/testSrc/AgentSessionPromptLauncherBridgeTest.kt
+
+- Post-start prompt dispatch is terminal-readiness-gated. Terminal plan-mode dispatch first ensures the TUI is visibly in Plan mode via the BackTab terminal sequence, then sends the plain prompt body; if Plan mode cannot be confirmed, the prompt body is not submitted.
+  [@test] ../sessions/testSrc/AgentSessionPromptLauncherBridgeTest.kt
+  [@test] ../chat/testSrc/AgentChatInitialMessageDispatcherTest.kt
   [@test] ../chat/testSrc/AgentChatFileEditorLifecycleTest.kt
+
+- Claude plan-mode prompt launch uses `--permission-mode plan` in startup commands for new sessions and resumed threads when Agent Workbench opens the process. Plain `claude --resume <id>` must not be treated as preserving plan mode by Agent Workbench, and already-open editor tabs are not mutated into plan mode by prompt launch.
+  [@test] ../claude/sessions/testSrc/ClaudeAgentSessionProviderDescriptorTest.kt
+  [@test] ../claude/sessions/testSrc/ClaudeNewThreadPromptLaunchIntegrationTest.kt
+  [@test] ../claude/sessions/testSrc/ClaudeExistingThreadPromptLaunchIntegrationTest.kt
 
 - Claude recognized menu commands remain post-start dispatch and are sent as executable terminal input without prompt context packaging.
   [@test] ../chat/testSrc/AgentChatFileEditorLifecycleTest.kt

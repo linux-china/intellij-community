@@ -4,6 +4,7 @@
     <module name="intellij.java.frontback.psi.impl"/>
     <module name="intellij.java.psi"/>
     <module name="intellij.java.psi.impl"/>
+    <module name="intellij.kotlin.codeInsight.shared"/>
   </dependencies>
   <!-- endregion -->
 
@@ -249,6 +250,13 @@
     <intentionAction>
       <language>kotlin</language>
       <className>org.jetbrains.kotlin.idea.codeInsight.intentions.shared.SpecifyAllRemainingArgumentsByNameIntention</className>
+      <bundleName>messages.KotlinBundle</bundleName>
+      <categoryKey>group.names.kotlin</categoryKey>
+    </intentionAction>
+
+    <intentionAction>
+      <language>kotlin</language>
+      <className>org.jetbrains.kotlin.idea.codeInsight.intentions.shared.SpecifyRemainingRequiredArgumentsByNameIntention</className>
       <bundleName>messages.KotlinBundle</bundleName>
       <categoryKey>group.names.kotlin</categoryKey>
     </intentionAction>

@@ -69,6 +69,8 @@ internal interface AgentChatTerminalTab {
 
   fun sendText(text: String, shouldExecute: Boolean, useBracketedPasteMode: Boolean = true)
 
+  fun sendBackTab(): Boolean = false
+
   fun sendPendingContextAndExecute(text: String): AgentChatPendingContextSubmissionResult {
     if (text.isEmpty() || sessionState.value != TerminalViewSessionState.Running) {
       return AgentChatPendingContextSubmissionResult.UNAVAILABLE
@@ -201,7 +203,7 @@ private class ToolWindowAgentChatTerminalTab(
       checkpoint = checkpoint,
       onMeaningfulOutput = {
         if (provider != null && AgentSessionProviders.find(provider)?.emitsScopedRefreshSignals == true) {
-          notifyAgentChatTerminalOutputForRefresh(
+          notifyAgentChatScopedRefresh(
             provider = provider,
             projectPath = projectPath,
             threadId = threadId,
@@ -237,7 +239,7 @@ private class ToolWindowAgentChatTerminalTab(
       idleMs = idleMs,
       onMeaningfulOutput = {
         if (provider != null && AgentSessionProviders.find(provider)?.emitsScopedRefreshSignals == true) {
-          notifyAgentChatTerminalOutputForRefresh(
+          notifyAgentChatScopedRefresh(
             provider = provider,
             projectPath = projectPath,
             threadId = threadId,
@@ -272,6 +274,11 @@ private class ToolWindowAgentChatTerminalTab(
       sendTextBuilder.shouldExecute()
     }
     sendTextBuilder.send(text)
+  }
+
+  override fun sendBackTab(): Boolean {
+    terminalView.createSendTextBuilder().send(TERMINAL_BACK_TAB_SEQUENCE)
+    return true
   }
 }
 
@@ -527,3 +534,4 @@ internal const val INITIAL_MESSAGE_POST_SEND_OUTPUT_IDLE_MS: Long = 150
 private const val POST_SEND_SCAN_LIMIT_CHARS: Long = 8_192
 private const val READINESS_SCAN_LIMIT_CHARS: Long = 8_192
 private const val TERMINAL_TAIL_SCAN_LIMIT_CHARS: Long = 4_096
+private const val TERMINAL_BACK_TAB_SEQUENCE: String = "\u001B[Z"

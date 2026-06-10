@@ -9,6 +9,8 @@
                     interface="com.intellij.terminal.frontend.view.TerminalAllowedActionsProvider" dynamic="true"/>
     <extensionPoint qualifiedName="org.jetbrains.plugins.terminal.escapeHandler"
                     interface="com.intellij.terminal.frontend.action.TerminalEscapeHandler" dynamic="true"/>
+    <extensionPoint qualifiedName="org.jetbrains.plugins.terminal.terminalSettingsProvider" dynamic="true"
+                    interface="com.intellij.terminal.frontend.settings.TerminalSettingsProvider"/>
   </extensionPoints>
 
   <extensions defaultExtensionNs="com.intellij">
@@ -44,9 +46,6 @@
     <applicationService
       serviceInterface="org.jetbrains.plugins.terminal.fus.FrontendLatencyService"
       serviceImplementation="com.intellij.terminal.frontend.fus.FrontendLatencyServiceImpl"/>
-    <applicationService
-      serviceInterface="org.jetbrains.plugins.terminal.hyperlinks.BackendHyperlinkInfoService"
-      serviceImplementation="com.intellij.terminal.frontend.session.hyperlinks.BackendHyperlinkInfoServiceImpl"/>
     <applicationService
       serviceInterface="com.intellij.terminal.frontend.session.TerminalActivityTracker"
       serviceImplementation="com.intellij.terminal.frontend.session.TerminalNoOpActivityTracker"

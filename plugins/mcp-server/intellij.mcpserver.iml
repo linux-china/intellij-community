@@ -9,13 +9,14 @@
         <compilerArguments>
           <stringArguments>
             <stringArg name="jvmTarget" arg="25" />
-            <stringArg name="apiVersion" arg="2.3" />
-            <stringArg name="languageVersion" arg="2.3" />
+            <stringArg name="apiVersion" arg="2.4" />
+            <stringArg name="languageVersion" arg="2.4" />
           </stringArguments>
           <arrayArguments>
             <arrayArg name="pluginClasspaths">
               <args>
                 <arg>$KOTLIN_BUNDLED$/lib/kotlinx-serialization-compiler-plugin.jar</arg>
+                <arg>$KOTLIN_COMPOSE_COMPILER_PLUGIN$</arg>
               </args>
             </arrayArg>
           </arrayArguments>
@@ -62,6 +63,8 @@
     <orderEntry type="library" name="io.modelcontextprotocol.kotlin.sdk" level="project" />
     <orderEntry type="module" module-name="intellij.platform.core" />
     <orderEntry type="module" module-name="intellij.platform.project" />
+    <orderEntry type="module" module-name="fleet.rhizomedb" />
+    <orderEntry type="module" module-name="fleet.rhizomedb.transactor" />
     <orderEntry type="module" module-name="intellij.libraries.kotlin.reflect" />
     <orderEntry type="module" module-name="intellij.platform.util" />
     <orderEntry type="library" name="io.github.oshai.kotlin.logging.jvm" level="project" />

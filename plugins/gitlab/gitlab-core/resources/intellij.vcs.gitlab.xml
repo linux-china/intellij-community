@@ -6,6 +6,7 @@
     <plugin id="Git4Idea"/>
     <module name="intellij.platform.collaborationTools"/>
     <module name="intellij.platform.vcs.log"/>
+    <module name="intellij.vcs.git.backend"/>
     <module name="intellij.vcs.git.shared"/>
   </dependencies>
   <!-- endregion -->
@@ -231,7 +232,7 @@
            class="org.jetbrains.plugins.gitlab.mergerequest.ui.diff.action.GitLabMergeRequestDiffReviewDiscussionsToggleAction"
            icon="AllIcons.Actions.Show"
            popup="true">
-      <add-to-group group-id="Diff.EditorGutterPopupMenu.EditorSettings"/>
+      <add-to-group group-id="Diff.ViewerSettings"/>
     </group>
     <action id="GitLab.MergeRequest.Review.Submit"
             class="org.jetbrains.plugins.gitlab.mergerequest.diff.action.GitLabMergeRequestDiffSubmitReviewAction"/>

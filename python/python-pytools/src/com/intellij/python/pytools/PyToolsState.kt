@@ -9,7 +9,10 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.python.pytools.configuration.ExecutableDiscoveryMode
 import com.intellij.python.pytools.lsp.LSP_TOOLS_STORAGE_FILE
+import com.intellij.util.xmlb.Converter
+import com.intellij.util.xmlb.annotations.OptionTag
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 
 /**
@@ -22,24 +25,19 @@ import kotlin.io.path.Path
 @Service(Service.Level.PROJECT)
 @State(name = "PyToolsState", storages = [Storage(LSP_TOOLS_STORAGE_FILE)])
 class PyToolsState(private val project: Project) : PersistentStateComponent<PyToolsState.State> {
-  /**
-   * The serialized form keeps `customPathToExecutable` as a [String] (XML-friendly). Public
-   * accessors on [PyToolsState] expose it as `Path?` — empty/blank strings are treated as
-   * "no custom path".
-   */
   data class ToolEntry(
     var enabled: Boolean = false,
     var discoveryMode: ExecutableDiscoveryMode = ExecutableDiscoveryMode.INTERPRETER,
-    internal var customPathToExecutable: String = "",
-  ) {
-    var customToolBinaryPath: Path?
-      get() = customPathToExecutable.takeIf { it.isNotBlank() }?.let { Path(it) }
-      set(path) {
-        customPathToExecutable = path?.toString().orEmpty()
-      }
+    @OptionTag(value = "customPathToExecutable", converter = PathConverter::class)
+    var customToolBinaryPath: Path? = null,
+  )
+
+  internal class PathConverter : Converter<Path>() {
+    override fun fromString(value: String): Path? = value.takeIf { it.isNotBlank() }?.let { Path(it) }
+    override fun toString(value: Path): String = value.toString()
   }
 
-  data class State(var tools: MutableMap<String, ToolEntry> = mutableMapOf())
+  data class State(var tools: MutableMap<String, ToolEntry> = ConcurrentHashMap())
 
   private var state = State()
 
@@ -54,10 +52,9 @@ class PyToolsState(private val project: Project) : PersistentStateComponent<PyTo
     val migrated = ToolEntry(
       enabled = tool.legacyEnabled(project),
       discoveryMode = tool.legacyDiscoveryMode(project),
-      customPathToExecutable = tool.legacyCustomPath(project)?.toString().orEmpty(),
+      customToolBinaryPath = tool.legacyCustomPath(project),
     )
-    state.tools[key] = migrated
-    return migrated
+    return state.tools.putIfAbsent(key, migrated) ?: migrated
   }
 
   fun isEnabled(tool: PyTool): Boolean = getEntry(tool).enabled

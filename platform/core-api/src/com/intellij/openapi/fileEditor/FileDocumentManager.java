@@ -18,7 +18,6 @@ import com.intellij.openapi.vfs.SavingRequestor;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.util.Processor;
-import com.intellij.util.concurrency.annotations.RequiresBlockingContext;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.ApiStatus.Internal;
@@ -35,7 +34,6 @@ import java.util.function.Predicate;
  * Manages the saving of changes to disk.
  */
 public abstract class FileDocumentManager implements SavingRequestor {
-  @RequiresBlockingContext
   public static @NotNull FileDocumentManager getInstance() {
     return ApplicationManager.getApplication().getService(FileDocumentManager.class);
   }
@@ -226,6 +224,17 @@ public abstract class FileDocumentManager implements SavingRequestor {
   @Internal
   public @Nullable FileViewProvider findCachedPsiInAnyProject(@NotNull VirtualFile file) {
     return null;
+  }
+
+  /**
+   * Determines if the specified virtual file can have an associated document.
+   *
+   * @param virtualFile the virtual file to check. Must not be null.
+   * @return true if the file can have an associated document, false otherwise.
+   */
+  @Internal
+  public boolean canHaveDocument(@NotNull VirtualFile virtualFile) {
+    return getDocument(virtualFile) != null;
   }
 
   /**

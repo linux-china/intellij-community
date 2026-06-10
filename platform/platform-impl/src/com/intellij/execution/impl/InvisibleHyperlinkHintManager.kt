@@ -192,7 +192,7 @@ internal class InvisibleHyperlinkHintManager(private val editor: Editor, parentD
       .setShowImmediately(true)
     HintManagerImpl.getInstanceImpl().showEditorHint(
       hint, editor, p,
-      HintManager.HIDE_BY_ANY_KEY or HintManager.HIDE_BY_TEXT_CHANGE or HintManager.HIDE_BY_SCROLLING,
+      HintManager.HIDE_BY_ANY_KEY or HintManager.HIDE_BY_SCROLLING,
       0, false, hintHint
     )
     return hint

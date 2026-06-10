@@ -147,6 +147,9 @@ object CommunityLibraryLicenses {
       .copyrightText("Copyright © 2011-2024 The Apache Software Foundation")
       .suppliedByOrganizations(Suppliers.APACHE),
 
+    LibraryLicense("Apache MINA SSHD OSGi", libraryName = "apache.sshd.osgi", url = "https://github.com/apache/mina-sshd")
+      .apache("https://github.com/apache/mina-sshd/blob/master/LICENSE.txt"),
+
     LibraryLicense("Apache Tuweni-Toml", libraryName = "tuweni-toml", url = "https://github.com/apache/incubator-tuweni/tree/main/toml")
       .apache("https://github.com/apache/incubator-tuweni/blob/main/LICENSE")
       .copyrightText("Copyright 2019-2023 The Apache Software Foundation"),
@@ -221,6 +224,12 @@ object CommunityLibraryLicenses {
     LibraryLicense("Brotli", libraryName = "brotli-dec", url = "https://github.com/google/brotli")
       .mit("https://github.com/google/brotli/blob/master/LICENSE")
       .suppliedByOrganizations(Suppliers.GOOGLE),
+
+    LibraryLicense("Byte Buddy", libraryName = "byte-buddy", url = "https://bytebuddy.net")
+      .apache("https://github.com/raphw/byte-buddy/blob/master/LICENSE"),
+
+    LibraryLicense("Byte Buddy Agent", libraryName = "byte-buddy-agent", url = "https://bytebuddy.net")
+      .apache("https://github.com/raphw/byte-buddy/blob/master/LICENSE"),
 
     LibraryLicense("caffeine", libraryName = "caffeine", url = "https://github.com/ben-manes/caffeine")
       .apache("https://github.com/ben-manes/caffeine/blob/master/LICENSE")
@@ -314,24 +323,12 @@ object CommunityLibraryLicenses {
       .mit("https://github.com/cucumber/cucumber-jvm/blob/main/LICENSE")
       .suppliedByOrganizations("SmartBear Software"),
 
-    LibraryLicense("Dart Analysis Server", version = LibraryLicense.CUSTOM_REVISION, attachedTo = "intellij.dart", url = "https://github.com/dart-lang/eclipse3")
-      .eplV1("https://github.com/dart-archive/eclipse3/tree/master/docs"),
-
-    LibraryLicense("Dart VM Service drivers", version = LibraryLicense.CUSTOM_REVISION, attachedTo = "intellij.dart", url = "https://github.com/dart-lang/vm_service_drivers")
-      .newBsd("https://github.com/dart-lang/vm_service_drivers/blob/master/LICENSE"),
-
     LibraryLicense("dbus-java", libraryName = "dbus-java", url = "https://github.com/hypfvieh/dbus-java")
       .lgpl2("https://github.com/hypfvieh/dbus-java/blob/dbus-java-3.0/LICENSE")
       .suppliedByPersons("David M. <hypfvieh@googlemail.com>"),
 
     LibraryLicense("debugpy", version = LibraryLicense.CUSTOM_REVISION, attachedTo="intellij.python", url = "https://github.com/microsoft/debugpy")
       .mit("https://github.com/microsoft/debugpy/blob/main/LICENSE"),
-
-    LibraryLicense("Detekt", libraryName = "io.gitlab.arturbosch.detekt.api", url = "https://github.com/detekt/detekt")
-      .apache("https://github.com/detekt/detekt/blob/master/LICENSE"),
-
-    LibraryLicense("Detekt Compose Rules", libraryName = "io.nlopez.compose.rules.detekt", url = "https://github.com/mrmans0n/compose-rules")
-      .apache("https://github.com/mrmans0n/compose-rules/blob/main/LICENSE.md"),
 
     LibraryLicense("docutils", version = "0.12", attachedTo = "intellij.python", url = "https://docutils.sourceforge.io/")
       .public("https://sourceforge.net/p/docutils/code/HEAD/tree/trunk/docutils/COPYING.rst"),
@@ -766,9 +763,6 @@ object CommunityLibraryLicenses {
       .apache("https://github.com/JetBrains/jSerialComm/blob/master/LICENSE-APACHE-2.0")
       .forkedFrom(groupId = "com.fazecast", artifactId = "jSerialComm", version = "2.11.2", mavenRepositoryUrl = "https://repo1.maven.org/maven2/"),
 
-    LibraryLicense("JSON", libraryName = "json.jar", version = LibraryLicense.CUSTOM_REVISION, url = "https://www.json.org/")
-      .license("JSON License", "https://www.json.org/license.html"),
-
     LibraryLicense("JSON in Java", libraryName = "org.json:json", url = "https://github.com/stleary/JSON-java")
       .license("JSON License", "https://www.json.org/license.html"),
 
@@ -816,7 +810,19 @@ object CommunityLibraryLicenses {
     LibraryLicense("JUnit5Params", libraryName = "JUnit5Params", url = "https://junit.org/junit5/")
       .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
 
+    LibraryLicense("JUnit5Suites", libraryName = "JUnit5Suites", url = "https://junit.org/junit5/")
+      .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
+
     LibraryLicense("JUnit5Vintage", libraryName = "JUnit5Vintage", url = "https://junit.org/junit5/")
+      .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
+
+    LibraryLicense("JUnit6", libraryName = "JUnit6", url = "https://junit.org/junit5/")
+      .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
+
+    LibraryLicense("JUnit6Launcher", libraryName = "JUnit6Launcher", url = "https://junit.org/junit5/")
+      .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
+
+    LibraryLicense("JUnit6Params", libraryName = "JUnit6Params", url = "https://junit.org/junit5/")
       .eplV2("https://github.com/junit-team/junit5/blob/main/LICENSE.md"),
 
     LibraryLicense(libraryName = "jzlib", url = "http://www.jcraft.com/jzlib/")
@@ -1040,6 +1046,12 @@ object CommunityLibraryLicenses {
     LibraryLicense("MigLayout", libraryName = "miglayout-swing", url = "https://github.com/mikaelgrev/miglayout/")
       .newBsd("https://github.com/mikaelgrev/miglayout/blob/master/src/site/resources/docs/license.txt")
       .suppliedByOrganizations("MiG InfoCom AB"),
+
+    LibraryLicense("MockK", libraryName = "io.mockk", url = "https://mockk.io")
+      .apache("https://github.com/mockk/mockk/blob/master/LICENSE"),
+
+    LibraryLicense("MockK JVM", libraryName = "io.mockk.jvm", url = "https://mockk.io")
+      .apache("https://github.com/mockk/mockk/blob/master/LICENSE"),
 
     LibraryLicense("morfologik-fsa", libraryName = "org.carrot2:morfologik-fsa", url = "https://github.com/morfologik/morfologik-stemming")
       .newBsd("https://github.com/morfologik/morfologik-stemming/blob/master/LICENSE.txt")
@@ -1373,10 +1385,6 @@ object CommunityLibraryLicenses {
     LibraryLicense("VS Code Twig Language 2", version = "0.9.4", attachedTo = "intellij.textmate", url = "https://github.com/mblode/vscode-twig-language-2")
       .mit("https://github.com/mblode/vscode-twig-language-2/blob/master/LICENSE.md"),
 
-    // originally https://github.com/pelotoncycle/weberknecht
-    LibraryLicense("weberknecht", libraryName = "weberknecht-0.1.5.jar", version = "0.1.5", url = "https://github.com/pusher-community/titanium_pusher_android/blob/master/src/de/roderick/weberknecht/")
-      .apache("https://github.com/pusher-community/titanium_pusher_android/blob/master/src/de/roderick/weberknecht/WebSocket.java"),
-
     LibraryLicense(libraryName = "winp", url = "https://github.com/jenkinsci/winp")
       .mit("https://github.com/jenkinsci/winp/blob/master/LICENSE.txt")
       .suppliedByPersons("Kohsuke Kawaguchi"),
@@ -1437,7 +1445,6 @@ object CommunityLibraryLicenses {
     jetbrainsLibrary("com.jetbrains.fus.reporting.ap.validation.all"),
     jetbrainsLibrary("com.jetbrains.fus.reporting.fus-api"),
     jetbrainsLibrary("completion-log-events"),
-    jetbrainsLibrary("completion-performance-kotlin"),
     jetbrainsLibrary("completion-ranking-cpp-exp"),
     jetbrainsLibrary("completion-ranking-css-exp"),
     jetbrainsLibrary("completion-ranking-dart-exp"),
@@ -1476,7 +1483,6 @@ object CommunityLibraryLicenses {
     jetbrainsLibrary("jetbrains.compose.hot.reload.devtools.api"),
     jetbrainsLibrary("jetbrains.compose.hot.reload.gradle.idea"),
     jetbrainsLibrary("jetbrains.intellij.deps.rwmutex.idea"),
-    jetbrainsLibrary("jetbrains.kotlin.compiler.embeddable"),
     jetbrainsLibrary("jetbrains.kotlin.jps.plugin.classpath"),
     jetbrainsLibrary("jetbrains.ml.models.jetenry.inline.prompt.detection.model"),
     jetbrainsLibrary("jetbrains.ml.models.python.imports.ranking.model"),

@@ -9,6 +9,7 @@ import org.jetbrains.idea.devkit.dom.Extensions
 import org.jetbrains.idea.devkit.inspections.DevKitPluginXmlInspectionBase
 import org.jetbrains.idea.devkit.inspections.remotedev.SplitModeInspectionUtil.buildModuleKindMismatchMessage
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeApiRestrictionsService
+import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeQodanaInspectionScopeLimiter
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeModuleKindResolver
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeModuleKindResolver.doesApiKindMatchExpectedModuleKind
 import org.jetbrains.idea.devkit.util.DescriptorUtil
@@ -18,6 +19,7 @@ internal class SplitModeXmlApiUsageInspection : DevKitPluginXmlInspectionBase() 
   override fun isAllowed(holder: DomElementAnnotationHolder): Boolean {
     return super.isAllowed(holder)
            && SplitModeInspectionUtil.isAllowedForSplitModeInspection(holder.fileElement.file)
+           && SplitModeQodanaInspectionScopeLimiter.getInstance().shouldInspectFileInQodanaMode(holder.fileElement.file)
   }
 
   override fun checkDomElement(element: DomElement, holder: DomElementAnnotationHolder, helper: DomHighlightingHelper) {
@@ -36,10 +38,20 @@ internal class SplitModeXmlApiUsageInspection : DevKitPluginXmlInspectionBase() 
 
     val currentlyOpenedDescriptor = DescriptorUtil.getIdeaPlugin(holder.fileElement.file)
     val hint = SplitModeApiRestrictionsService.getInstance().getExtensionPointHint(extensionPointName)
+    val xmlElement = element.xmlElement ?: return
+    if (SplitModeInspectionExclusionsService.getInstance(currentXmlFile.project).isExcluded(xmlElement, SPLIT_MODE_XML_API_USAGE_SHORT_NAME)) {
+      return
+    }
+    val regularFixes = SplitModeDependencyQuickFixes.createMismatchFixes(module, currentlyOpenedDescriptor, expectedModuleKind)
+    val suppressionFix = SplitModeInspectionExclusionsService.getInstance(currentXmlFile.project).createSuppressionFixIfApplicable(
+      xmlElement,
+      SPLIT_MODE_XML_API_USAGE_SHORT_NAME,
+    )
+    val fixes = if (suppressionFix != null) regularFixes + suppressionFix else regularFixes
     holder.createProblem(
       element,
       buildModuleKindMismatchMessage(extensionPointName, expectedModuleKind, actualModuleKind, hint),
-      *SplitModeDependencyQuickFixes.createMismatchFixes(module, currentlyOpenedDescriptor, expectedModuleKind)
+      *fixes
     )
   }
 

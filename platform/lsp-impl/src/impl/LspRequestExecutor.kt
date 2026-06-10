@@ -2,20 +2,20 @@ package com.intellij.platform.lsp.impl
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.platform.lsp.api.LspServer.Companion.DEFAULT_REQUEST_TIMEOUT_MS
+import com.intellij.platform.lsp.api.LspClient.Companion.DEFAULT_REQUEST_TIMEOUT_MS
 import com.intellij.platform.lsp.impl.cache.LspCache
 import com.intellij.platform.lsp.impl.cache.LspPerFileCache
 import com.intellij.platform.lsp.impl.cache.LspSingleSlotCache
 import com.intellij.platform.lsp.impl.cache.getOrCompute
-import com.intellij.platform.lsp.impl.completion.createCompletionContext
-import com.intellij.platform.lsp.impl.completion.toCompletionList
-import com.intellij.platform.lsp.impl.documentSymbol.toDocumentSymbolTree
-import com.intellij.platform.lsp.impl.documentation.HoverResultCache
-import com.intellij.platform.lsp.impl.documentation.TextRangeAndMarkupContent
-import com.intellij.platform.lsp.impl.highlighting.LspDocumentHighlightCache
-import com.intellij.platform.lsp.impl.highlighting.TextRangeAndHighlightKind
+import com.intellij.platform.lsp.impl.features.completion.createCompletionContext
+import com.intellij.platform.lsp.impl.features.completion.toCompletionList
+import com.intellij.platform.lsp.impl.features.documentSymbol.toDocumentSymbolTree
+import com.intellij.platform.lsp.impl.features.documentation.HoverResultCache
+import com.intellij.platform.lsp.impl.features.documentation.TextRangeAndMarkupContent
+import com.intellij.platform.lsp.impl.features.highlighting.LspDocumentHighlightCache
+import com.intellij.platform.lsp.impl.features.highlighting.TextRangeAndHighlightKind
+import com.intellij.platform.lsp.impl.features.workspaceSymbol.toWorkspaceSymbol
 import com.intellij.platform.lsp.impl.util.toLocationLink
-import com.intellij.platform.lsp.impl.workspaceSymbol.toWorkspaceSymbol
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.util.concurrency.annotations.RequiresReadLock
 import org.eclipse.lsp4j.CompletionList
@@ -40,17 +40,17 @@ import java.util.concurrent.CompletableFuture
 
 @ApiStatus.Internal
 class LspRequestExecutor(
-  private val lspServer: LspServerImpl,
+  private val lspClient: LspClientImpl,
   private val documentMapping: LspDocumentMapping,
-) : LspRequestExecutorBase(lspServer) {
+) : LspRequestExecutorBase(lspClient) {
 
   private val allCaches = mutableListOf<LspCache>()
 
-  private val hoverResultCache = register(HoverResultCache(lspServer.project))
-  private val workspaceSymbolCache = register(LspSingleSlotCache<String, List<WorkspaceSymbol>>(lspServer.project))
-  private val documentSymbolCache = register(LspPerFileCache<Unit, List<DocumentSymbol>>(lspServer.project))
-  private val documentHighlightCache = register(LspDocumentHighlightCache(lspServer.project))
-  private val selectionRangeCache = register(LspPerFileCache<Int, SelectionRange>(lspServer.project))
+  private val hoverResultCache = register(HoverResultCache(lspClient.project))
+  private val workspaceSymbolCache = register(LspSingleSlotCache<String, List<WorkspaceSymbol>>(lspClient.project))
+  private val documentSymbolCache = register(LspPerFileCache<Unit, List<DocumentSymbol>>(lspClient.project))
+  private val documentHighlightCache = register(LspDocumentHighlightCache(lspClient.project))
+  private val selectionRangeCache = register(LspPerFileCache<Int, SelectionRange>(lspClient.project))
 
   private fun <T : LspCache> register(cache: T): T {
     allCaches.add(cache)
@@ -71,7 +71,7 @@ class LspRequestExecutor(
   @RequiresBackgroundThread
   fun getCompletionListAsync(file: VirtualFile, offset: Int, isAutoPopup: Boolean): CompletableFuture<CompletionList?> {
     val host = documentMapping.unwrapInjection(file, offset) ?: return CompletableFuture.completedFuture(null)
-    val completionContext = createCompletionContext(lspServer, host.hostDocument, host.hostOffset, isAutoPopup)
+    val completionContext = createCompletionContext(lspClient, host.hostDocument, host.hostOffset, isAutoPopup)
     return documentMapping.withDocumentAtOffset(host.hostFile, host.hostDocument, host.hostOffset) { lspDocument, position ->
       val params = CompletionParams(lspDocument.id, position, completionContext)
       val future = doSendRequestAsync { it.textDocumentService.completion(params) } ?: CompletableFuture.completedFuture(null)

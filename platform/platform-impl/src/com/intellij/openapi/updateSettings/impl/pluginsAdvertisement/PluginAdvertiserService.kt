@@ -36,7 +36,6 @@ import com.intellij.openapi.updateSettings.impl.PluginDownloader
 import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginAdvertiserService.Companion.DEPENDENCY_SUPPORT_TYPE
 import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginAdvertiserService.Companion.EXECUTABLE_DEPENDENCY_KIND
 import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginAdvertiserService.Companion.ideaUltimate
-import com.intellij.openapi.util.IntellijInternalApi
 import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.util.NlsContexts.NotificationContent
 import com.intellij.openapi.vfs.VirtualFile
@@ -59,7 +58,6 @@ import org.jetbrains.annotations.Nls
 import kotlin.coroutines.coroutineContext
 
 @ApiStatus.Internal
-@IntellijInternalApi
 sealed interface PluginAdvertiserService {
 
   companion object {
@@ -162,8 +160,8 @@ sealed interface PluginAdvertiserService {
   fun rescanDependencies(block: suspend CoroutineScope.() -> Unit = {})
 }
 
-@OptIn(IntellijInternalApi::class, DelicateCoroutinesApi::class)
-@IntellijInternalApi
+@OptIn(DelicateCoroutinesApi::class)
+@ApiStatus.Internal
 open class PluginAdvertiserServiceImpl(
   private val project: Project,
   private val cs: CoroutineScope,
@@ -624,7 +622,6 @@ open class PluginAdvertiserServiceImpl(
 }
 
 @ApiStatus.Internal
-@IntellijInternalApi
 open class HeadlessPluginAdvertiserServiceImpl : PluginAdvertiserService {
 
   final override suspend fun run(

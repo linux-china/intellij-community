@@ -14,6 +14,7 @@ import com.intellij.testFramework.common.timeoutRunBlocking
 import com.intellij.testFramework.common.waitUntil
 import com.intellij.testFramework.junit5.RegistryKey
 import com.intellij.testFramework.junit5.TestApplication
+import com.intellij.testFramework.rules.ProjectModelExtension
 import com.intellij.ui.BalloonLayout
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,7 @@ import kotlinx.coroutines.job
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.awt.Rectangle
 import java.nio.file.Files
 import javax.swing.JComponent
@@ -37,6 +39,9 @@ import kotlin.time.Duration.Companion.seconds
 @RegistryKey(key = "vfs.background.refresh.on.idle", value = "false")
 internal class SaveAndSyncHandlerLegacyBackgroundRefreshTest {
   private val ideFrame = TestIdeFrame()
+
+  @RegisterExtension
+  private val project = ProjectModelExtension()
 
   @BeforeEach
   fun `set settings`() {
@@ -66,6 +71,85 @@ internal class SaveAndSyncHandlerLegacyBackgroundRefreshTest {
   @Test
   fun `legacy refresh sync is blocked and dirty roots does not refresh`(): Unit = timeoutRunBlocking(10.seconds) {
     assertBackgroundRefresh(syncBlocked = true, dirtyRoots = true, expectRefresh = false)
+  }
+
+  @Test
+  fun `suppressPeriodicRefresh suppresses unfocused background refresh until released`(): Unit = timeoutRunBlocking(120.seconds) {
+    val dirtyFile = Files.createTempFile("background-refresh-suppressed", ".txt")
+    val virtualFile = VfsUtil.findFile(dirtyFile, true)
+
+    @Suppress("RAW_SCOPE_CREATION")
+    val handlerCoroutineScope = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineName("SaveAndSyncHandlerLegacyBackgroundRefreshTest"))
+    val handler = SaveAndSyncHandlerImpl(handlerCoroutineScope, listenDelay = 0.seconds)
+
+    val token = handler.suppressPeriodicRefresh("test")
+    try {
+      delay(1.seconds) // wait for handler to start listening
+      VfsTestUtil.syncRefresh()
+
+      val virtualFileManager = VirtualFileManager.getInstance()
+      val initialModificationCount = virtualFileManager.modificationCount
+
+      deactivateFrame() // starts the unfocused background refresh job
+      dirtyFile.writeText("after")
+      VfsUtil.markDirty(false, false, virtualFile)
+
+      // suppressed: the unfocused background job keeps ticking but performs no refresh
+      delay(3.seconds)
+      Assertions.assertThat(virtualFileManager.modificationCount).isEqualTo(initialModificationCount)
+
+      // released while still deactivated: the same background job resumes and refreshes the dirty root.
+      // This is the positive control proving the absence of refresh above was due to suppression.
+      token.close()
+      VfsUtil.markDirty(false, false, virtualFile)
+      waitUntil("Unfocused background VFS refresh did not resume after release", timeout = 60.seconds) {
+        virtualFileManager.modificationCount > initialModificationCount
+      }
+    }
+    finally {
+      token.close()
+      dirtyFile.deleteIfExists()
+      handlerCoroutineScope.coroutineContext.job.cancelAndJoin()
+      activateFrame()
+    }
+  }
+
+  @Test
+  fun `frame activation refresh keeps working while periodic refresh suppressed`(): Unit = timeoutRunBlocking(120.seconds) {
+    // RIDER-139430 regression proof: suppressPeriodicRefresh must NOT block the on-frame-activation
+    // sync that blockSyncOnFrameActivation breaks.
+    GeneralSettings.getInstance().isSyncOnFrameActivation = true
+
+    val dirtyFile = Files.createTempFile("background-refresh-activation", ".txt")
+    val virtualFile = VfsUtil.findFile(dirtyFile, true)
+
+    @Suppress("RAW_SCOPE_CREATION")
+    val handlerCoroutineScope = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineName("SaveAndSyncHandlerLegacyBackgroundRefreshTest"))
+    val handler = SaveAndSyncHandlerImpl(handlerCoroutineScope, listenDelay = 0.seconds)
+
+    try {
+      delay(1.seconds) // wait for handler to start listening
+      VfsTestUtil.syncRefresh()
+
+      val virtualFileManager = VirtualFileManager.getInstance()
+      val initialModificationCount = virtualFileManager.modificationCount
+
+      handler.suppressPeriodicRefresh("test").use {
+        dirtyFile.writeText("after")
+        VfsUtil.markDirty(false, false, virtualFile)
+
+        activateFrame() // triggers applicationActivated() -> scheduleRefresh()
+
+        waitUntil("Frame-activation VFS refresh did not run while periodic refresh suppressed", timeout = 60.seconds) {
+          virtualFileManager.modificationCount > initialModificationCount
+        }
+      }
+    }
+    finally {
+      GeneralSettings.getInstance().isSyncOnFrameActivation = false
+      dirtyFile.deleteIfExists()
+      handlerCoroutineScope.coroutineContext.job.cancelAndJoin()
+    }
   }
 
   private suspend fun CoroutineScope.assertBackgroundRefresh(

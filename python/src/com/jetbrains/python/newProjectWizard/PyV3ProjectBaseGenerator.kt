@@ -6,6 +6,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.edtWriteAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.fileLogger
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.NlsSafe
@@ -32,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.TestOnly
+import org.jetbrains.annotations.VisibleForTesting
 import kotlin.reflect.jvm.jvmName
 
 /**
@@ -52,6 +54,9 @@ abstract class PyV3ProjectBaseGenerator<TYPE_SPECIFIC_SETTINGS : PyV3ProjectType
   private val _newProjectName: @NlsSafe String? = null,
   private val supportsNotEmptyModuleStructure: Boolean = false,
 ) : DirectoryProjectGenerator<PyV3BaseProjectSettings>, PyProjectTypeGenerator {
+  private companion object {
+    val log = fileLogger()
+  }
   private val baseSettings = PyV3BaseProjectSettings()
   private var uiServices: PyV3UIServices = PyV3UIServicesProd
   val newProjectName: @NlsSafe String get() = _newProjectName ?: "${name.replace(" ", "")}Project"
@@ -71,9 +76,19 @@ abstract class PyV3ProjectBaseGenerator<TYPE_SPECIFIC_SETTINGS : PyV3ProjectType
   override fun generateProject(project: Project, baseDir: VirtualFile, settings: PyV3BaseProjectSettings, module: Module) {
     val coroutineScope = project.service<MyService>().coroutineScope
     coroutineScope.launch(TraceContext(PyBundle.message("trace.context.new.project.wizard"), coroutineScope)) {
-      generateProjectImpl(settings, module, baseDir)
-      startAutoImportIfNeeded(project)
+      generateProjectAndStartAutoImport(settings, module, baseDir)
     }
+  }
+
+  @VisibleForTesting
+  internal suspend fun generateProjectAndStartAutoImport(
+    settings: PyV3BaseProjectSettings,
+    module: Module,
+    baseDir: VirtualFile,
+  ) {
+    generateProjectImpl(settings, module, baseDir)
+    log.info("Import started by project generator")
+    startAutoImportIfNeeded(module.project, "PyV3 generation")
   }
 
   private suspend fun generateProjectImpl(

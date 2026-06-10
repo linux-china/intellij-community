@@ -20,6 +20,7 @@ import org.jetbrains.idea.devkit.inspections.remotedev.SplitModeInspectionUtil.b
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeModuleKindResolver.doesApiKindMatchExpectedModuleKind
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.ModuleAnalysis
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeApiRestrictionsService
+import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeQodanaInspectionScopeLimiter
 import org.jetbrains.idea.devkit.inspections.remotedev.analysis.SplitModeModuleKindResolver
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UClass
@@ -40,7 +41,9 @@ import org.jetbrains.uast.visitor.AbstractUastVisitor
 class SplitModeApiUsageInspection : DevKitUastInspectionBase(UClass::class.java, UField::class.java, UMethod::class.java) {
 
   override fun isAllowed(holder: ProblemsHolder): Boolean {
-    return super.isAllowed(holder) && SplitModeInspectionUtil.isAllowedForSplitModeInspection(holder.file)
+    return super.isAllowed(holder)
+           && SplitModeInspectionUtil.isAllowedForSplitModeInspection(holder.file)
+           && SplitModeQodanaInspectionScopeLimiter.getInstance().shouldInspectFileInQodanaMode(holder.file)
   }
 
   override fun checkClass(
@@ -110,7 +113,8 @@ class SplitModeApiUsageInspection : DevKitUastInspectionBase(UClass::class.java,
     descriptors: MutableList<ProblemDescriptor>,
   ) {
     val resolvedApi = resolveApiUsage(expression) ?: return
-    val expectedModuleKind = SplitModeApiRestrictionsService.getInstance().getCodeApiKind(resolvedApi.qualifiedName, resolvedApi.owner) ?: return
+    val expectedModuleKind =
+      SplitModeApiRestrictionsService.getInstance().getCodeApiKind(resolvedApi.qualifiedName, resolvedApi.owner) ?: return
     val currentModuleType = currentModuleAnalysis.resolvedModuleKind
 
     if (!doesApiKindMatchExpectedModuleKind(currentModuleType, expectedModuleKind)) {
@@ -119,7 +123,14 @@ class SplitModeApiUsageInspection : DevKitUastInspectionBase(UClass::class.java,
       val message = buildModuleKindMismatchMessage(resolvedApi.qualifiedName, expectedModuleKind, currentModuleType, hint)
       val tooltipMessage = buildModuleKindMismatchTooltipMessage(resolvedApi.qualifiedName, expectedModuleKind, currentModuleType, hint)
       val module = ModuleUtilCore.findModuleForPsiElement(sourcePsi) ?: return
-      val fixes = SplitModeDependencyQuickFixes.createMismatchFixes(module, null, expectedModuleKind)
+      if (SplitModeInspectionExclusionsService.getInstance(sourcePsi.project).isExcluded(sourcePsi, SPLIT_MODE_API_USAGE_SHORT_NAME)) {
+        return
+      }
+      val regularFixes = SplitModeDependencyQuickFixes.createMismatchFixes(module, null, expectedModuleKind)
+      val suppressionFix =
+        SplitModeInspectionExclusionsService.getInstance(sourcePsi.project).createSuppressionFixIfApplicable(sourcePsi,
+                                                                                                             SPLIT_MODE_API_USAGE_SHORT_NAME)
+      val fixes = if (suppressionFix != null) regularFixes + suppressionFix else regularFixes
 
       descriptors.add(
         manager.createProblemDescriptor(

@@ -98,9 +98,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jdom.Element
+import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.ApiStatus.Internal
 import java.awt.BorderLayout
 import java.awt.Color
@@ -260,6 +262,9 @@ open class EditorComposite internal constructor(
 
   @Internal
   fun isAvailable(): Boolean = fileEditorWithProviders.value !== INITIAL_EMPTY
+
+  @Internal
+  fun isDisposed(): Boolean = !coroutineScope.isActive
 
   @Internal
   protected open suspend fun beforeFileOpen(scope: CoroutineScope, model: EditorCompositeModel) {
@@ -680,6 +685,10 @@ open class EditorComposite internal constructor(
               replaceWith = ReplaceWith("FileEditorManager.getInstance()"),
               level = DeprecationLevel.ERROR)
   val fileEditorManager: FileEditorManager
+    @ApiStatus.ScheduledForRemoval
+    @Deprecated(message = "Use FileEditorManager.getInstance()",
+                replaceWith = ReplaceWith("FileEditorManager.getInstance()"),
+                level = DeprecationLevel.ERROR)
     get() = FileEditorManager.getInstance(project)
 
   @get:Deprecated("use {@link #getAllEditors()}", ReplaceWith("allEditors"), level = DeprecationLevel.ERROR)
@@ -965,7 +974,8 @@ open class EditorComposite internal constructor(
         currentInTab = false,
         ideFingerprint = null,
         managingFsCreationTimestamp = getManagingFsCreationTimestamp(file),
-        protocol = getProtocol(file)
+        protocol = getProtocol(file),
+        isExcludedFromTabLimit = !EditorAutoClosingHandler.isClosingAllowed(this@EditorComposite),
       )
     }
   }

@@ -23,12 +23,14 @@ import com.intellij.openapi.components.serviceAsync
 import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.diagnostic.getOrLogException
+import com.intellij.openapi.diagnostic.trace
 import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.getOpenedProjects
 import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.util.registry.Registry
@@ -39,6 +41,7 @@ import com.intellij.openapi.vfs.newvfs.RefreshQueue
 import com.intellij.openapi.vfs.newvfs.RefreshSession
 import com.intellij.openapi.vfs.newvfs.monitoring.VfsUsageCollector.logBackgroundRefresh
 import com.intellij.openapi.wm.IdeFrame
+import com.intellij.platform.backend.observation.Observation
 import com.intellij.platform.ide.progress.ModalTaskOwner
 import com.intellij.platform.ide.progress.TaskCancellation
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
@@ -69,7 +72,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.file.Path
 import java.util.ArrayDeque
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.NANOSECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -87,11 +92,13 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
   listenDelay: Duration = LISTEN_DELAY,
 ) : SaveAndSyncHandler() {
   private val refreshKnownLocalRootsRequests = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  private val scopedVfsRefreshScheduler = ScopedVfsRefreshScheduler()
   private val refreshOpenedFilesRequests = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
   private val saveRequests = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
   private val blockSaveOnFrameDeactivationCount = AtomicInteger()
   private val blockSyncCount = AtomicInteger()
+  private val suppressPeriodicRefreshReasons = CopyOnWriteArrayList<String>()
 
   private val saveAppAndProjectsSettingsTask = SaveTask()
   private val saveQueue = ArrayDeque<SaveTask>()
@@ -122,16 +129,18 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
           .debounce(300.milliseconds)
           .collect {
             if (!isSyncBlocked(settings)) {
-              for (listener in EP_NAME.extensionList) {
-                runCatching {
-                  listener.beforeRefresh()
-                }.getOrLogException(LOG)
-              }
-
+              notifyBeforeRefresh()
               doRefreshAllKnownLocalRoots(refreshQueue, refreshSession)
             }
           }
       }
+
+      scopedVfsRefreshScheduler.launchProcessing(
+        coroutineScope = this,
+        refreshQueue = refreshQueue,
+        refreshGate = { getVfsRefreshGate(settings) },
+        beforeRefresh = ::notifyBeforeRefresh,
+      )
 
       launch(CoroutineName("refresh opened files requests flow processing")) {
         // not collectLatest - wait for previous execution
@@ -195,12 +204,24 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
     session.launch()
   }
 
+  private suspend fun notifyBeforeRefresh() {
+    for (listener in EP_NAME.extensionList) {
+      runCatching {
+        listener.beforeRefresh()
+      }.getOrLogException(LOG)
+    }
+  }
+
   private fun isSyncBlocked(settings: GeneralSettings): Boolean {
+    return getVfsRefreshGate(settings) != ScopedVfsRefreshGate.Ready
+  }
+
+  private fun getVfsRefreshGate(settings: GeneralSettings): ScopedVfsRefreshGate {
     if (!settings.isSyncOnFrameActivation) {
       LOG.debug("VFS refresh rejected: isSyncOnFrameActivation=false")
-      return true
+      return ScopedVfsRefreshGate.DropPending
     }
-    return isSyncBlockedTemporarily()
+    return if (isSyncBlockedTemporarily()) ScopedVfsRefreshGate.RetryLater else ScopedVfsRefreshGate.Ready
   }
 
   private fun isSyncBlockedTemporarily(): Boolean {
@@ -423,6 +444,10 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
     if (roots.isEmpty()) {
       return false
     }
+    if (suppressPeriodicRefreshReasons.isNotEmpty()) {
+      LOG.trace { "Periodic background VFS refresh skipped, suppressed by: ${suppressPeriodicRefreshReasons.joinToString()}" }
+      return false
+    }
     if (isSyncBlockedTemporarily() || roots.none { it is NewVirtualFile && it.isDirty }) {
       return false
     }
@@ -436,6 +461,14 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
     externalChangesModificationTracker.incModificationCount()
     check(refreshOpenedFilesRequests.tryEmit(Unit))
     check(refreshKnownLocalRootsRequests.tryEmit(Unit))
+  }
+
+  override fun scheduleRefresh(paths: Collection<Path>) {
+    if (paths.isEmpty()) {
+      return
+    }
+    externalChangesModificationTracker.incModificationCount()
+    scopedVfsRefreshScheduler.schedule(paths)
   }
 
   override fun maybeRefresh(modalityState: ModalityState) {
@@ -481,8 +514,24 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
   }
 
   override fun unblockSyncOnFrameActivation() {
-    blockSyncCount.decrementAndGet()
+    if (blockSyncCount.decrementAndGet() == 0) {
+      scopedVfsRefreshScheduler.requestProcessing()
+    }
     LOG.debug("sync unblocked")
+  }
+
+  override fun suppressPeriodicRefresh(reason: String): AccessToken {
+    suppressPeriodicRefreshReasons.add(reason)
+    LOG.info("Periodic background VFS refresh suppressed: $reason")
+    val released = AtomicBoolean()
+    return object : AccessToken() {
+      override fun finish() {
+        if (released.compareAndSet(false, true)) {
+          suppressPeriodicRefreshReasons.remove(reason)
+          LOG.info("Periodic background VFS refresh resumed: $reason")
+        }
+      }
+    }
   }
 
 
@@ -600,7 +649,13 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
     val queue = serviceAsync<RefreshQueue>()
     try {
       while (keepRefreshing()) {
-        if (settings.isBackgroundSync && refreshAllLocalRootsInBackground(queue)) {
+        val projects = ProjectManager.getInstanceIfCreated()?.openProjects?.filter { !it.isDisposed }.orEmpty()
+        val canTryRefresh = settings.isBackgroundSync &&
+                            projects.isNotEmpty() &&
+                            // wait for all projects to be configured. `true` if all are already configured
+                            projects.all { !Observation.awaitConfiguration(it, null) }
+
+        if (canTryRefresh && keepRefreshing() && refreshAllLocalRootsInBackground(queue)) {
           sessions.incrementAndGet()
         }
         delay(interval)
@@ -616,7 +671,7 @@ internal class SaveAndSyncHandlerImpl @JvmOverloads constructor(
 
 private suspend fun doRefreshOpenedFiles(refreshQueue: RefreshQueue) {
   val files = getOpenedProjects()
-    .flatMap { it.serviceIfCreated<FileEditorManager>()?.selectedEditors?.asSequence() ?: emptySequence() }
+    .flatMap { it.serviceIfCreated<FileEditorManager>()?.selectedEditorWithRemotes?.asSequence() ?: emptySequence() }
     .flatMap { it.filesToRefresh }
     .filter { it is NewVirtualFile }
     .toList()

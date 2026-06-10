@@ -13,7 +13,6 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import java.nio.file.Path
 
-// The system property `idea.kotlin.plugin.use.k1.obsolete` is changed so tests should be sequential
 @Execution(ExecutionMode.SAME_THREAD)
 class KotlinK1andK2ModesTest {
   @Rule
@@ -57,5 +56,5 @@ class KotlinK1andK2ModesTest {
 private fun getSinglePlugin(rootDir: Path): Pair<IdeaPluginDescriptorImpl, PluginNonLoadReason?> {
   val allPlugins = PluginSetTestBuilder.fromPath(rootDir).discoverPlugins().second.pluginLists.flatMap { it.plugins }
   val plugin = allPlugins.single()
-  return plugin to ProductPluginInitContext().validatePluginIsCompatible(plugin)
+  return plugin to PluginInitContextFactory.getInstance().createActualContext().validatePluginIsCompatible(plugin)
 }
