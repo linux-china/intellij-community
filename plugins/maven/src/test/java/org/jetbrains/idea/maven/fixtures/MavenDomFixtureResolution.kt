@@ -28,7 +28,7 @@ import org.junit.Assert.assertSame
 
 suspend fun MavenDomTestFixture.getReferenceAtCaret(f: VirtualFile): PsiReference? {
   configTest(f)
-  val editorOffset = getEditorOffset(f)
+  val editorOffset = doGetEditorOffset(f)
   val psiFile = findPsiFile(f)
   return readAction { psiFile.findReferenceAt(editorOffset) }
 }
@@ -57,6 +57,21 @@ suspend fun MavenDomTestFixture.resolveReference(file: VirtualFile, referenceTex
     resolved = resolved.wrappee
   }
   return resolved
+}
+
+suspend fun MavenDomTestFixture.resolveReference(file: VirtualFile, referenceText: String, index: Int): PsiElement? {
+  var index = index
+  val text = VfsUtilCore.loadText(file)
+  var k = -1
+
+  do {
+    k = text.indexOf(referenceText, k + 1)
+    assert(k >= 0) { index }
+  }
+  while (--index >= 0)
+
+  val psiReference = getReferenceAt(file, k)!!
+  return readAction { psiReference.resolve() }
 }
 
 suspend fun MavenDomTestFixture.assertResolved(file: VirtualFile, expected: PsiElement) {
@@ -127,9 +142,14 @@ suspend fun MavenDomTestFixture.findTagValue(file: VirtualFile, path: String, cl
   return readAction { tag.value }
 }
 
-private suspend fun MavenDomTestFixture.getEditorOffset(f: VirtualFile): Int {
+private suspend fun MavenDomTestFixture.doGetEditorOffset(f: VirtualFile): Int {
   configTest(f)
   return readAction { fixture.editor.caretModel.offset }
+}
+
+suspend fun MavenDomTestFixture.getEditorOffset(f: VirtualFile): Int {
+  val editor = getEditor(f)
+  return readAction { editor.caretModel.offset }
 }
 
 suspend fun MavenDomTestFixture.assertDocumentation(expectedText: String?) {

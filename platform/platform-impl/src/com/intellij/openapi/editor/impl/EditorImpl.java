@@ -182,6 +182,7 @@ import com.intellij.ui.codeFloatingToolbar.CodeFloatingToolbar;
 import com.intellij.ui.components.JBLayeredPane;
 import com.intellij.ui.components.JBScrollBar;
 import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.components.ScrollBarPainter;
 import com.intellij.ui.dsl.builder.DslComponentProperty;
 import com.intellij.ui.dsl.builder.VerticalComponentGap;
 import com.intellij.ui.mac.MacGestureSupportInstaller;
@@ -908,11 +909,23 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
   }
 
   void updateFocus() {
-    Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-    if (focusOwner == null) {
+    Window window = SwingUtilities.getWindowAncestor(myPanel);
+    if (window == null) {
       return;
     }
-    myIsCurrentlyInFocus = isEditorOwningFocus(focusOwner);
+    KeyboardFocusManager focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+    Component focusOwner = focusManager.getFocusOwner();
+    if (focusOwner == null) {
+      // When the window is not the focused window, getFocusOwner() returns null.
+      // Fall back to permanentFocusOwner, which is retained across window focus changes.
+      focusOwner = focusManager.getPermanentFocusOwner();
+    }
+    if (focusOwner == null) {
+      // Still null — this happens in headless/test environments where no window is ever focused.
+      // Don't toggle the flag in this case to preserve the existing behavior in tests.
+      return;
+    }
+    myIsCurrentlyInFocus = window.isFocused() && isEditorOwningFocus(focusOwner);
   }
 
   private boolean isEditorOwningFocus(@NotNull Component focusOwner) {
@@ -2766,6 +2779,7 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
            + (myView == null ? "" : "\nview: " + myView.dumpState());
   }
 
+  @ApiStatus.Internal
   public CaretRectangle @Nullable [] getCaretLocations(boolean onlyIfShown) {
     return myCaretCursor.getCaretLocations(onlyIfShown);
   }
@@ -3618,6 +3632,7 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     myPropertyChangeSupport.firePropertyChange(PROP_ONE_LINE_MODE, oldValue, event.getNewValue());
   }
 
+  @ApiStatus.Internal
   public static final class CaretRectangle {
     public final @NotNull Point2D myPoint;
     public final float myWidth;
@@ -3871,7 +3886,12 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
 
     private OpaqueAwareScrollBar(@JdkConstants.AdjustableOrientation int orientation) {
       super(orientation);
-      putClientProperty(ColorKey.FUNCTION_KEY, (Function<ColorKey, Color>)key -> getColorsScheme().getColor(key));
+      putClientProperty(ColorKey.FUNCTION_KEY, (Function<ColorKey, Color>)key -> {
+        if (key == ScrollBarPainter.BACKGROUND) {
+          return getBackgroundColor();
+        }
+        return getColorsScheme().getColor(key);
+      });
       addPropertyChangeListener("opaque", event -> {
         revalidate();
         repaint();

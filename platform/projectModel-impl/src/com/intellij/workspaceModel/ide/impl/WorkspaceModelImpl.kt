@@ -71,7 +71,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.writeText
 import kotlin.system.measureTimeMillis
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.minutes
 
 private val EP_NAME: ExtensionPointName<BridgeInitializer> = ExtensionPointName("com.intellij.workspace.bridgeInitializer")
 
@@ -90,7 +90,7 @@ open class WorkspaceModelImpl : WorkspaceModelInternal {
   private val reactive = WmReactive(this)
 
   final override val entityStorage: VersionedEntityStorageImpl
-  private val unloadedEntitiesStorage: VersionedEntityStorageImpl
+  final override val unloadedEntitiesStorage: VersionedEntityStorageImpl
   private val lock = ThreadContextAwareReentrantLock()
 
   /** replay = 1 is needed to send the very first state when the subscription fo the flow happens.
@@ -500,17 +500,19 @@ open class WorkspaceModelImpl : WorkspaceModelInternal {
       }
 
       if (!deferred.isCompleted && ApplicationManager.getApplication().isUnitTestMode) {
+        // Startup activities including DelayedProjectSynchronizer are skipped in unit tests unless it's explicitly specified
+        // that they have to be run. So we need to trigger synchronization manually.
         ProjectSynchronizerUtil.getInstance(project).applyJpsModelToProjectModel()
+        deferred.complete(Unit)
       }
-
-      if (waitingTimedOut.get()) {
+      else if (waitingTimedOut.get()) {
         deferred.complete(Unit) // don't wait again
       }
       else {
         // Safety net: if the callback is never invoked (e.g. due to a platform bug), unblock waiters after a timeout.
         coroutineScope.launch {
           // JpsGlobalModelSynchronizerImpl has a 5-second delay and ModuleManagerComponentBridgeInitializer has a 1-second delay;
-          val timeout = 20.seconds
+          val timeout = 1.minutes
           delay(timeout)
           if (deferred.complete(Unit) && !waitingTimedOut.getAndSet(true)) {
             val threadDump = buildString {

@@ -404,21 +404,17 @@ public final class PyStdlibTypeProvider extends PyTypeProviderBase {
       return cache.getStrType();
     }
 
-    // If it's a mixin with basic scalar types - check str first for the failing test
-    if (enumClass.isSubclass("builtins.str", context) || enumClass.isSubclass("str", context)) {
+    if (enumClass.isSubclass("str", context)) {
       return cache.getStrType();
     }
-    if (enumClass.isSubclass("builtins.int", context) || enumClass.isSubclass("int", context)) {
+    if (enumClass.isSubclass("int", context)) {
       return cache.getIntType();
     }
-    if (enumClass.isSubclass("builtins.bytes", context) || enumClass.isSubclass("bytes", context)) {
+    if (enumClass.isSubclass("bytes", context)) {
       return cache.getBytesType(LanguageLevel.forElement(enumClass));
     }
-    if (enumClass.isSubclass("builtins.float", context) || enumClass.isSubclass("float", context)) {
+    if (enumClass.isSubclass("float", context)) {
       return cache.getFloatType();
-    }
-    if (enumClass.isSubclass("builtins.bool", context) || enumClass.isSubclass("bool", context)) {
-      return cache.getBoolType();
     }
 
     // Infer from the MEMBERS' assigned values (not non-members like helpers/descriptors).

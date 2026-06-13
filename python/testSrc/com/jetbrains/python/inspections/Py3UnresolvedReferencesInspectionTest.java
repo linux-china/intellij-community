@@ -37,7 +37,11 @@ public class Py3UnresolvedReferencesInspectionTest extends PyInspectionTestCase 
   }
 
   protected void doMultiFileTest(@NotNull String filename, @NotNull List<String> sourceRoots) {
-    myFixture.copyDirectoryToProject(getTestDirectoryPath(), "");
+    doMultiFileTest(getTestName(false), filename, sourceRoots);
+  }
+
+  protected void doMultiFileTest(@NotNull String testDirectory, @NotNull String filename, @NotNull List<String> sourceRoots) {
+    myFixture.copyDirectoryToProject(TEST_DIRECTORY + testDirectory, "");
     final Module module = myFixture.getModule();
     for (String root : sourceRoots) {
       PsiTestUtil.addSourceRoot(module, myFixture.findFileInTempDir(root));
@@ -511,6 +515,26 @@ public class Py3UnresolvedReferencesInspectionTest extends PyInspectionTestCase 
     });
   }
 
+  // PY-55589
+  public void testPartialStubPackageUser() {
+    doMultiFileTest("a.py");
+  }
+
+  // PY-55589
+  public void testPartialStubPackageUserNested() {
+    doMultiFileTest("a/b.py");
+  }
+
+  // PY-55589
+  public void testPartialStubPackageUserNestedWithSiblingStub() {
+    doMultiFileTest("a/b.py");
+  }
+
+  // PY-55589
+  public void testPartialStubPackageUserNestedWithSiblingStubSourceRoot() {
+    doMultiFileTest("PartialStubPackageUserNestedWithSiblingStub", "a/b.py", Collections.singletonList("mypackage-stubs"));
+  }
+
   // PY-85880
   public void testLiteralUnionInTuple() {
     doTestByText("""
@@ -614,6 +638,20 @@ public class Py3UnresolvedReferencesInspectionTest extends PyInspectionTestCase 
   public void testStrictClassAttributesOff() {
     final PyUnresolvedReferencesInspection inspection = new PyUnresolvedReferencesInspection();
     inspection.strictClassAttributes = false;
+    myFixture.enableInspections(inspection);
+    myFixture.configureByFile(getTestCaseDirectory() + getTestName(true) + ".py");
+    myFixture.checkHighlighting(isWarning(), isInfo(), isWeakWarning());
+  }
+
+  @TestFor(issues="PY-87799")
+  public void testStrictInstanceAttributes() {
+    doTest();
+  }
+
+  @TestFor(issues="PY-87799")
+  public void testStrictInstanceAttributesOff() {
+    final PyUnresolvedReferencesInspection inspection = new PyUnresolvedReferencesInspection();
+    inspection.strictInstanceAttributes = false;
     myFixture.enableInspections(inspection);
     myFixture.configureByFile(getTestCaseDirectory() + getTestName(true) + ".py");
     myFixture.checkHighlighting(isWarning(), isInfo(), isWeakWarning());

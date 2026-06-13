@@ -27,6 +27,7 @@
     <module name="intellij.agent.workbench.junie.common"/>
     <module name="intellij.agent.workbench.junie.sessions"/>
     <module name="intellij.agent.workbench.pi.sessions"/>
+    <module name="intellij.agent.workbench.pi.sessions.filewatch"/>
     <module name="intellij.agent.workbench.terminal.sessions"/>
     <module name="intellij.agent.workbench.sessions.core"/>
     <module name="intellij.agent.workbench.sessions.launch.config.backend"/>
@@ -59,5 +60,9 @@
     <registryKey key="agent.workbench.semantic.proposed.plan.navigation"
                    defaultValue="false"
                    description="Highlight and navigate proposed plans in Agent Workbench chat tabs"/>
+    <registryKey key="agent.workbench.use.monochrome.icons"
+                 defaultValue="true"
+                 description="Use monochrome line icons on main toolbar buttons, action buttons, and status indicators in Agent Workbench"
+                 restartRequired="false"/>
   </extensions>
 </idea-plugin>

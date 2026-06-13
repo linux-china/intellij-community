@@ -28,6 +28,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.components.JBLabel
 import kotlinx.coroutines.CoroutineScope
@@ -216,12 +217,18 @@ internal class AgentPromptProviderSelector(
     if (provider == null) {
       providerIconLabel.icon = AllIcons.Toolwindows.ToolWindowMessages
       providerIconLabel.setToolTipText(HtmlChunk.text(AgentPromptBundle.message("popup.provider.selector.tooltip")))
+      providerIconLabel.accessibleContext.accessibleName = AgentPromptBundle.message("popup.provider.selector.label")
+      providerIconLabel.accessibleContext.accessibleDescription = AgentPromptBundle.message("popup.provider.selector.tooltip")
       updateProviderOptionsPresentation()
       return
     }
 
-    providerIconLabel.icon = getIcon(provider.icon, selectedLaunchMode)
+    val useMonochrome = Registry.`is`("agent.workbench.use.monochrome.icons", true)
+    val baseIcon = if (useMonochrome) provider.bridge.monochromeIcon else provider.bridge.icon
+    providerIconLabel.icon = getIcon(baseIcon, selectedLaunchMode)
     providerIconLabel.setToolTipText(HtmlChunk.text(provider.displayName))
+    providerIconLabel.accessibleContext.accessibleName = provider.displayName
+    providerIconLabel.accessibleContext.accessibleDescription = AgentPromptBundle.message("popup.provider.selector.tooltip")
     updateProviderOptionsPresentation()
   }
 

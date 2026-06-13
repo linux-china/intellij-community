@@ -1539,7 +1539,7 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
   }
 
   // PY-80837
-  public void testEnumAttributeDefaultValueType() {
+  public void testInitEnumMember() {
     doTestByText("""
                    from enum import Enum, IntEnum, StrEnum
                    
@@ -1556,6 +1556,23 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
                        OK = "a"
                        BAD = <warning descr="Expected type 'str', got 'int' instead">1</warning>
                    """);
+  }
+
+  @TestFor(issues = "PY-90192")
+  public void testInitEnumMemberCustomNew() {
+    fixme("PY-90192", AssertionError.class, "Expected type 'int', got 'str' instead", () ->
+    doTestByText("""
+                   from enum import Enum
+                   
+                   class A:
+                       def __new__(cls, x: int, y: int):
+                           return object.__new__(cls)
+                   
+                   class MyEnum(A, Enum):
+                       OK = 1, 2
+                       BAD = 1, <warning descr="Expected type 'int', got 'str' instead">"abb"</warning>
+                   """)
+    );
   }
 
   @TestFor(issues = "PY-87997")
@@ -5708,5 +5725,231 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
                    a.attr += <warning descr="Expected type 'int', got 'str' instead">"s"</warning>
                    <warning descr="Expected type 'int' (from '__set__'), got 'str' instead">a.attr += C()</warning>
                    """);
+  }
+
+  // PY-59260
+  public void testIntFlagValueType() {
+    doTestByText("""
+                   from enum import IntFlag, auto
+                   
+                   # IntFlag should infer int
+                   class IF(IntFlag):
+                       FIRST = auto()
+                       SECOND = auto()
+                       THIRD = 42
+                   
+                   # IntFlag.value should return int, so these should not produce type errors
+                   variable: int = IF.FIRST.value
+                   another_var: int = IF.SECOND.value
+                   explicit_var: int = IF.THIRD.value
+                   
+                   # This should produce a type error
+                   wrong_var: str = <warning descr="Expected type 'str', got 'int' instead">IF.FIRST.value</warning>
+                   """);
+  }
+
+  // PY-59260
+  public void testEnumValueTypeInference() {
+    doTestByText("""
+                   from enum import Enum, IntFlag, StrEnum
+                   
+                   # IntFlag should infer int
+                   class IF(IntFlag):
+                       A = 1
+                   i: int = IF.A.value
+                   
+                   # StrEnum should infer str
+                   class SE(StrEnum):
+                       B = "b"
+                   s: str = SE.B.value
+                   
+                   # str mixin should infer str
+                   class StrMixin(str, Enum):
+                       C = "c"
+                   s2: str = StrMixin.C.value
+                   s3: int = <warning descr="Expected type 'int', got 'str' instead">StrMixin.C.value</warning>
+                   
+                   # Empty str mixin should also infer str
+                   class EmptyStrMixin(str, Enum):
+                       pass
+                   def test_empty(x: EmptyStrMixin):
+                       s4: str = x.value
+                       i2: int = <warning descr="Expected type 'int', got 'str' instead">x.value</warning>
+                   """);
+  }
+
+  // PY-59260
+  public void testEmptyEnumValueTypes() {
+    doTestByText("""
+                   from enum import StrEnum, Enum
+                   
+                   class EmptyStrEnum(StrEnum):
+                       pass
+                   
+                   class EmptyStrMixin(str, Enum):
+                       pass
+                   
+                   def test_empty_str_enum(x: EmptyStrEnum):
+                       s: str = x.value
+                       i: int = <warning descr="Expected type 'int', got 'str' instead">x.value</warning>
+                   
+                   def test_empty_str_mixin(x: EmptyStrMixin):
+                       s: str = x.value
+                       i: int = <warning descr="Expected type 'int', got 'str' instead">x.value</warning>
+                   """);
+  }
+
+  // PY-59260
+  public void testEnumValueTypeIgnoresNonMembers() {
+    doTestByText("""
+                   from enum import Enum, nonmember
+                   
+                   # Simple enum with just integer members
+                   class SimpleEnum(Enum):
+                       A = 1
+                       B = 2
+                   
+                   # Should infer int
+                   x: int = SimpleEnum.A.value
+                   y: str = <warning descr="Expected type 'str', got 'int' instead">SimpleEnum.B.value</warning>
+                   
+                   # Enum with non-member first, then actual members
+                   class E(Enum):
+                       # This should be classified as a non-member
+                       HELPER_CONSTANT = nonmember("not a member")
+                       # These are the actual members - should infer int from first member
+                       FIRST_MEMBER = 42
+                       SECOND_MEMBER = 43
+                   
+                   # Should infer int from FIRST_MEMBER (ignoring HELPER_CONSTANT)
+                   a: int = E.FIRST_MEMBER.value
+                   b: str = <warning descr="Expected type 'str', got 'int' instead">E.SECOND_MEMBER.value</warning>
+                   """);
+  }
+
+  @TestFor(issues = "PY-12592")
+  public void testUnpackAnnotatedTargetMismatch() {
+    doTestByText(
+      """
+        a = 1, 2
+        b: str
+        b, c = <warning descr="Expected type 'str', got 'int' instead">a</warning>
+        """);
+  }
+
+  public void testStarOperatorTypeMismatch() {
+    doTestByText(
+      """
+        def f(a, b, c): pass
+
+        f(*<warning descr="Expected an iterable, got 'int'">1</warning>)
+        f(*<warning descr="Expected an iterable, got 'int'">(1)</warning>)
+        (*<warning descr="Expected an iterable, got 'int'">1</warning>,)
+        [*<warning descr="Expected an iterable, got 'int'">1</warning>]
+        {*<warning descr="Expected an iterable, got 'int'">1</warning>}
+        {*<warning descr="Expected an iterable, got 'int'">(1)</warning>}
+        
+        def g(**kwargs): pass
+
+        g(**<warning descr="Expected a mapping, got 'int'">1</warning>)
+        g(**<warning descr="Expected a mapping, got 'int'">(1)</warning>)
+        {**<warning descr="Expected a mapping, got 'int'">1</warning>}
+        {**<warning descr="Expected a mapping, got 'int'">(1)</warning>}
+        """);
+  }
+
+  public void testStarOperatorTypeMismatchNoFalsePositive() {
+    doTestByText(
+      """
+        def f(*args, **kwargs): pass
+        
+        f(*(1, 2, 3))
+        f(**{"a": 1})
+        """);
+  }
+
+  @TestFor(issues = "PY-12592")
+  public void testStarUnpackInTypeContext() {
+    doTestByText(
+      """
+        def f(*a: *tuple[int, str]): ...
+
+        x: tuple[*tuple[int, str]]
+        """);
+  }
+
+  @TestFor(issues = "PY-89352")
+  public void testUnpackTargetCorrectType() {
+    doTestByText(
+      """
+        x: int
+        x, = <warning descr="Expected type 'int', got 'str' instead">"a"</warning>,
+        (x,) = <warning descr="Expected type 'int', got 'str' instead">"a"</warning>,
+        [x] = <warning descr="Expected type 'int', got 'str' instead">"a"</warning>,
+        """);
+  }
+
+  @TestFor(issues = "PY-89352")
+  public void testUnpackTargetCorrectTypeStarred() {
+    doTestByText(
+      """
+        x: int
+        *x, = <warning descr="Expected type 'int', got 'list[int]' instead">[1, 2, 3]</warning>
+        (*x,) = <warning descr="Expected type 'int', got 'list[int]' instead">[1, 2, 3]</warning>
+        [*x] = <warning descr="Expected type 'int', got 'list[int]' instead">[1, 2, 3]</warning>
+        """);
+  }
+
+  @TestFor(issues = "PY-12592")
+  public void testSpread() {
+    doTestByText(
+      """
+        a = []
+        b, c, d = 1, *a
+
+        t = (1, 2)
+        b, c, d = 1, *t
+        b, c, d, e = <warning descr="Not enough values to unpack (expected 4, got 3)">1, *t</warning>
+        """);
+  }
+
+  @TestFor(issues = {"PY-4357", "PY-4360", "PY-12592"})
+  public void testTupleUnpackCountBalance() {
+    doTestByText(
+      """
+        a, b, c = <warning descr="Too many values to unpack (expected 3, got 4)">1, 2, 3, 4</warning>
+        a, b, c, d = 1, 2, 3, 4
+        a = 1, 2, 3, 4
+
+        c = 1, 2, 3
+        a, b = <warning descr="Too many values to unpack (expected 2, got 3)">c</warning>
+        (a, b) = <warning descr="Too many values to unpack (expected 2, got 3)">1, 2, 3</warning>
+
+        *a, b = 1, 2, 3
+        *a, b, c = 1, 2
+        b, c, *a, d = <warning descr="Not enough values to unpack (expected 3, got 2)">1, 2</warning>
+        <warning descr="Only one starred expression allowed in assignment">a, *b, c, *d</warning> = 1, 2, 3, 4, 5, 6
+        """);
+  }
+
+  // PY-12592: a starred target must not shift the value bound to the targets that follow it
+  @TestFor(issues = "PY-12592")
+  public void testStarredTargetBindsCorrectValues() {
+    doTestByText(
+      """
+        a: list[int | str]
+        b: bool
+
+        *a, b = 1, "a", False
+        """);
+  }
+
+  @TestFor(issues = "PY-12592")
+  public void testStarredTargetBindsLastValue() {
+    doTestByText(
+      """
+        b: bool
+        *a, b = 1, 2, <warning descr="Expected type 'bool', got 'str' instead">"x"</warning>
+        """);
   }
 }

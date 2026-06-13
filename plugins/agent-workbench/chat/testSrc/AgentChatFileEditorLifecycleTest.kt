@@ -5,13 +5,20 @@ import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.buildAgentThreadIdentity
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.agent.workbench.common.session.AgentSessionThread
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
+import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.sessions.core.AgentSessionThreadRebindPolicy
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessagePlan
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchAction
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchCompletionPolicy
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchStep
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageTimeoutPolicy
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
+import com.intellij.agent.workbench.sessions.core.providers.InMemoryAgentSessionProviderRegistry
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditor
@@ -29,6 +36,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.terminal.TerminalTitle
 import com.intellij.terminal.frontend.view.TerminalKeyEvent
 import com.intellij.terminal.frontend.view.TerminalViewSessionState
+import com.intellij.util.ui.EmptyIcon
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -57,6 +65,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.Icon
 import javax.swing.JPanel
 import kotlin.coroutines.CoroutineContext
 
@@ -600,6 +609,22 @@ class AgentChatFileEditorLifecycleTest {
   }
 
   @Test
+  fun selectNotifyFocusesTerminalAfterEditorComponentIsShown() {
+    val terminalTabs = FakeAgentChatTerminalTabs()
+    val editor = testEditor(terminalTabs = terminalTabs, showComponent = false)
+
+    editor.selectNotify()
+
+    assertThat(terminalTabs.createCalls).isEqualTo(0)
+    assertThat(terminalTabs.tab.focusRequests).isEqualTo(0)
+
+    editor.showComponentForTests()
+
+    assertThat(terminalTabs.createCalls).isEqualTo(1)
+    assertThat(terminalTabs.tab.focusRequests).isEqualTo(1)
+  }
+
+  @Test
   fun pendingContextCanBeQueuedBeforeAsyncTerminalInitialization() {
     val terminalTabs = FakeAgentChatTerminalTabs()
     val editorScope = object : CoroutineScope {
@@ -799,6 +824,22 @@ class AgentChatFileEditorLifecycleTest {
   }
 
   @Test
+  fun fileClosedRecordsProviderTerminalSessionCloseWhenNoCopiesRemain() {
+    val project = testProject()
+    val terminalTabs = FakeAgentChatTerminalTabs()
+    val file = claudeLifecycleTestFile()
+    val liveTerminalStore = AgentChatLiveTerminalStore()
+    val descriptor = RecordingTerminalSessionClosedProvider(AgentSessionProvider.CLAUDE)
+
+    AgentSessionProviders.withRegistryForTest(InMemoryAgentSessionProviderRegistry(listOf(descriptor))) {
+      liveTerminalStore.acquireOrCreate(project = project, file = file, terminalTabs = terminalTabs)
+      liveTerminalStore.handleFileClosed(project, testFileEditorManager(isFileOpen = false), file)
+    }
+
+    assertThat(descriptor.closedSessions).containsExactly(ClosedTerminalSession(file.projectPath, file.threadId))
+  }
+
+  @Test
   fun fileClosedKeepsInitializedTerminalTabWhenFileIsStillReportedOpen() {
     val project = testProject()
     val terminalTabs = FakeAgentChatTerminalTabs()
@@ -818,6 +859,24 @@ class AgentChatFileEditorLifecycleTest {
     assertThat(terminalTabs.createCalls).isEqualTo(1)
     assertThat(terminalTabs.closeCalls).isEqualTo(0)
     assertThat(liveTerminalStore.isTracked(file.tabKey)).isTrue()
+
+    liveTerminalStore.dispose(project)
+  }
+
+  @Test
+  fun fileClosedDoesNotRecordProviderTerminalSessionCloseWhenFileIsStillOpen() {
+    val project = testProject()
+    val terminalTabs = FakeAgentChatTerminalTabs()
+    val file = claudeLifecycleTestFile()
+    val liveTerminalStore = AgentChatLiveTerminalStore()
+    val descriptor = RecordingTerminalSessionClosedProvider(AgentSessionProvider.CLAUDE)
+
+    AgentSessionProviders.withRegistryForTest(InMemoryAgentSessionProviderRegistry(listOf(descriptor))) {
+      liveTerminalStore.acquireOrCreate(project = project, file = file, terminalTabs = terminalTabs)
+      liveTerminalStore.handleFileClosed(project, testFileEditorManager(isFileOpen = true), file)
+    }
+
+    assertThat(descriptor.closedSessions).isEmpty()
 
     liveTerminalStore.dispose(project)
   }
@@ -1506,6 +1565,32 @@ class AgentChatFileEditorLifecycleTest {
   }
 
   @Test
+  fun codexTerminalPlanModeFallbackSendsPromptWhenPlanModeIsNotConfirmed() {
+    val terminalTabs = FakeAgentChatTerminalTabs()
+    terminalTabs.tab.readinessResult = AgentChatTerminalInputReadiness.TIMEOUT
+    terminalTabs.tab.enqueuePostSendOutput("Default mode", "Default mode", "Default mode")
+    val file = testFile().also {
+      it.updateInitialMessageMetadata(
+        initialMessageDispatchSteps = codexTerminalPlanDispatchSteps("Send after plan fallback"),
+        initialMessageDispatchStepIndex = 0,
+        initialMessageToken = "token-terminal-plan-fallback",
+        initialMessageSent = false,
+      )
+    }
+    val editor = testEditor(file = file, terminalTabs = terminalTabs)
+
+    editor.selectNotify()
+    terminalTabs.tab.setSessionState(TerminalViewSessionState.Running)
+    terminalTabs.tab.emitMeaningfulOutput("Codex ready")
+
+    waitForCondition(timeoutMs = 5_000) { file.initialMessageSent }
+    assertThat(terminalTabs.tab.backTabCount.get()).isEqualTo(3)
+    assertThat(file.initialMessageDispatchStepIndex).isEqualTo(2)
+    assertThat(terminalTabs.tab.sentTexts)
+      .containsExactly(SentTerminalText("Send after plan fallback", shouldExecute = true))
+  }
+
+  @Test
   fun codexPlanModeOldBusyOutputDoesNotBlockOnceLatestTailIsIdle() {
     val terminalTabs = FakeAgentChatTerminalTabs()
     terminalTabs.tab.readinessResult = AgentChatTerminalInputReadiness.TIMEOUT
@@ -2029,8 +2114,10 @@ private class FakeAgentChatTerminalTabs : AgentChatTerminalTabs {
 }
 
 private class FakeAgentChatTerminalTab : AgentChatTerminalTab {
+  private val focusableComponent = RecordingFocusComponent()
+
   override val component: JComponent = JPanel()
-  override val preferredFocusableComponent: JComponent = JButton("focus")
+  override val preferredFocusableComponent: JComponent = focusableComponent
   override val coroutineScope: CoroutineScope = object : CoroutineScope {
     override val coroutineContext = Job()
   }
@@ -2050,6 +2137,9 @@ private class FakeAgentChatTerminalTab : AgentChatTerminalTab {
 
   @JvmField
   val sentTexts: CopyOnWriteArrayList<SentTerminalText> = CopyOnWriteArrayList()
+
+  val focusRequests: Int
+    get() = focusableComponent.requestFocusInWindowCalls
 
   @JvmField
   val backTabCount: AtomicInteger = AtomicInteger()
@@ -2121,6 +2211,16 @@ private class FakeAgentChatTerminalTab : AgentChatTerminalTab {
 
   override fun sendText(text: String, shouldExecute: Boolean, useBracketedPasteMode: Boolean) {
     sentTexts += SentTerminalText(text, shouldExecute, useBracketedPasteMode)
+    emitNextPostSendOutput()
+  }
+
+  override fun sendBackTab(): Boolean {
+    backTabCount.incrementAndGet()
+    emitNextPostSendOutput()
+    return true
+  }
+
+  private fun emitNextPostSendOutput() {
     postSendOutputQueue.pollFirst()?.let { output ->
       if (output.delayMs <= 0) {
         emitMeaningfulOutput(output.text)
@@ -2134,11 +2234,6 @@ private class FakeAgentChatTerminalTab : AgentChatTerminalTab {
           .start()
       }
     }
-  }
-
-  override fun sendBackTab(): Boolean {
-    backTabCount.incrementAndGet()
-    return true
   }
 
   override suspend fun awaitInitialMessageReadiness(
@@ -2168,6 +2263,16 @@ private class FakeAgentChatTerminalTab : AgentChatTerminalTab {
     return emittedOutputChunks
       .filter { chunk -> chunk.version > checkpoint.regularEndOffset }
       .joinToString(separator = "\n") { chunk -> chunk.text }
+  }
+}
+
+private class RecordingFocusComponent : JButton("focus") {
+  var requestFocusInWindowCalls: Int = 0
+    private set
+
+  override fun requestFocusInWindow(): Boolean {
+    requestFocusInWindowCalls++
+    return true
   }
 }
 
@@ -2384,6 +2489,23 @@ private fun codexPlanDispatchSteps(
   )
 }
 
+private fun codexTerminalPlanDispatchSteps(
+  prompt: String,
+  promptTimeoutPolicy: AgentInitialMessageTimeoutPolicy = AgentInitialMessageTimeoutPolicy.REQUIRE_EXPLICIT_READINESS,
+): List<AgentInitialMessageDispatchStep> {
+  return listOf(
+    AgentInitialMessageDispatchStep(
+      action = AgentInitialMessageDispatchAction.ENSURE_TERMINAL_PLAN_MODE,
+      timeoutPolicy = AgentInitialMessageTimeoutPolicy.REQUIRE_EXPLICIT_READINESS,
+      completionPolicy = AgentInitialMessageDispatchCompletionPolicy.RETRY_ON_CODEX_PLAN_BUSY,
+    ),
+    AgentInitialMessageDispatchStep(
+      text = prompt,
+      timeoutPolicy = promptTimeoutPolicy,
+    ),
+  )
+}
+
 @Suppress("SameParameterValue")
 private fun juniePlanDispatchSteps(prompt: String): List<AgentInitialMessageDispatchStep> {
   return listOf(
@@ -2466,6 +2588,44 @@ private class CodexScopedRefreshSignalCollector {
 
   fun dispose() {
     job.cancel()
+  }
+}
+
+private data class ClosedTerminalSession(
+  @JvmField val path: String,
+  @JvmField val threadId: String,
+)
+
+private class RecordingTerminalSessionClosedProvider(
+  override val provider: AgentSessionProvider,
+) : AgentSessionProviderDescriptor {
+  val closedSessions: CopyOnWriteArrayList<ClosedTerminalSession> = CopyOnWriteArrayList()
+
+  override val displayNameKey: String = "test.provider"
+  override val newSessionLabelKey: String = "test.new.session"
+  override val icon: Icon = EmptyIcon.ICON_0
+  override val sessionSource: AgentSessionSource = object : AgentSessionSource {
+    override val provider: AgentSessionProvider
+      get() = this@RecordingTerminalSessionClosedProvider.provider
+
+    override suspend fun listThreadsFromOpenProject(path: String, project: Project): List<AgentSessionThread> = emptyList()
+
+    override suspend fun listThreadsFromClosedProject(path: String): List<AgentSessionThread> = emptyList()
+  }
+  override val cliMissingMessageKey: String = "test.cli.missing"
+
+  override suspend fun isCliAvailable(): Boolean = true
+
+  override suspend fun buildResumeLaunchSpec(sessionId: String): AgentSessionTerminalLaunchSpec =
+    AgentSessionTerminalLaunchSpec(emptyList())
+
+  override suspend fun buildNewSessionLaunchSpec(mode: AgentSessionLaunchMode): AgentSessionTerminalLaunchSpec =
+    AgentSessionTerminalLaunchSpec(emptyList())
+
+  override fun buildInitialMessagePlan(request: AgentPromptInitialMessageRequest): AgentInitialMessagePlan = AgentInitialMessagePlan.EMPTY
+
+  override fun recordTerminalSessionClosed(path: String, threadId: String) {
+    closedSessions += ClosedTerminalSession(path, threadId)
   }
 }
 

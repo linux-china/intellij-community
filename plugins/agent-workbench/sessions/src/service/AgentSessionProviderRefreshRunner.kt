@@ -10,6 +10,7 @@ import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
 import com.intellij.agent.workbench.common.session.AgentSubAgent
 import com.intellij.agent.workbench.sessions.core.normalizeConcreteAgentSessionThreadId
+import com.intellij.agent.workbench.sessions.core.AgentSessionThreadPresentationModel
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshHints
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshThreadSeed
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
@@ -28,9 +29,6 @@ import com.intellij.agent.workbench.sessions.model.AgentWorktree
 import com.intellij.agent.workbench.sessions.model.hasProviderSnapshot
 import com.intellij.agent.workbench.sessions.model.mergeAgentSessionThreadsForDisplay
 import com.intellij.agent.workbench.sessions.state.AgentSessionsStateStore
-import com.intellij.agent.workbench.sessions.state.AgentSessionThreadTitleOverrides
-import com.intellij.agent.workbench.sessions.state.InMemoryAgentSessionThreadTitleOverrides
-import com.intellij.agent.workbench.sessions.state.applyTitleOverrides
 import com.intellij.agent.workbench.sessions.util.buildAgentSessionIdentity
 import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.diagnostic.logger
@@ -51,9 +49,8 @@ internal class AgentSessionProviderRefreshRunner(
   private val archiveSuppressionSupport: AgentSessionArchiveSuppressionSupport,
   private val refreshSupportProvider: (AgentSessionProvider) -> AgentSessionThreadRebindSupport?,
   private val resolveProviderWarningMessage: (AgentSessionProvider, Throwable) -> String,
-  private val titleOverrides: AgentSessionThreadTitleOverrides = InMemoryAgentSessionThreadTitleOverrides(),
   private val openAgentChatSnapshotProvider: suspend () -> AgentChatOpenTabsRefreshSnapshot = ::collectOpenAgentChatRefreshSnapshot,
-  private val threadPresentationUpdater: AgentSessionThreadPresentationUpdater = DefaultAgentSessionThreadPresentationUpdater(),
+  private val presentationModel: AgentSessionThreadPresentationModel,
 ) {
   suspend fun refreshLoadedProviderThreads(
     provider: AgentSessionProvider,
@@ -106,7 +103,6 @@ internal class AgentSessionProviderRefreshRunner(
           refreshResult = refreshResult,
           outcomes = outcomes,
         )
-        applyTitleOverridesToOutcomes(outcomes)
       }
       catch (e: Throwable) {
         if (e is CancellationException) throw e
@@ -120,13 +116,14 @@ internal class AgentSessionProviderRefreshRunner(
 
       val refreshSupport = refreshSupportProvider(provider)
       val pendingTabsSnapshotByPath = openChatSnapshot.pendingTabsByPath(provider)
+      val pendingTabsForRebindByPath = if (refreshSupport?.canBindPendingOpenChatTabs == true) pendingTabsSnapshotByPath else emptyMap()
       val concreteTabsSnapshotByPath = openChatSnapshot.concreteTabsAwaitingNewThreadRebindByPath(provider)
 
       val hintThreadIdsByPath = refreshSupport?.collectRefreshHintThreadIdsByPath(
         targetPaths = targetPaths,
         outcomes = outcomes,
         knownThreadIdsByPath = knownThreadIdsByPath,
-        pendingTabsByPath = pendingTabsSnapshotByPath,
+        pendingTabsByPath = pendingTabsForRebindByPath,
         openConcreteThreadIdentitiesByPath = openChatSnapshot.concreteThreadIdentitiesByPath,
       ) ?: emptyMap()
 
@@ -135,7 +132,7 @@ internal class AgentSessionProviderRefreshRunner(
           .asSequence()
           .filter { path ->
             hintThreadIdsByPath.containsKey(path) ||
-            pendingTabsSnapshotByPath[path]?.isNotEmpty() == true
+            pendingTabsForRebindByPath[path]?.isNotEmpty() == true
           }
           .toCollection(LinkedHashSet())
       }
@@ -150,7 +147,7 @@ internal class AgentSessionProviderRefreshRunner(
         hintThreadIdsByPath = hintThreadIdsByPath,
         refreshHintPaths = refreshHintPaths,
         forcedThreadIds = updateEvent.threadIds,
-      ).withTitleOverrides(provider)
+      )
 
       if (refreshSupport != null && refreshHintsByPath.isNotEmpty()) {
         refreshSupport.applyActivityHints(
@@ -175,32 +172,21 @@ internal class AgentSessionProviderRefreshRunner(
         concreteTabsByPath = concreteTabsSnapshotByPath,
       )
 
-      val pendingBindOutcome = refreshSupport?.bindPendingOpenChatTabs(
+      refreshSupport?.bindPendingOpenChatTabs(
         outcomes = outcomes,
         refreshId = refreshId,
         allowedThreadIdsByPath = allowedNewThreadIdsByPath,
         refreshHintsByPath = refreshHintsByPath,
-        pendingTabsByPath = pendingTabsSnapshotByPath,
+        pendingTabsByPath = pendingTabsForRebindByPath,
       )
 
-      val pendingTabsForProjectionByPath =
-        pendingBindOutcome?.pendingTabsForProjectionByPath ?: pendingTabsSnapshotByPath
-
       syncOpenChatTabPresentation(provider = provider, outcomes = outcomes, refreshId = refreshId)
-
-      val pendingProjectionPaths = refreshSupport?.mergePendingThreadsFromOpenTabs(
-        outcomes = outcomes,
-        targetPaths = targetPaths,
-        refreshId = refreshId,
-        pendingTabsByPath = pendingTabsForProjectionByPath,
-      ) ?: emptySet()
 
       applyProviderOutcomesToState(
         provider = provider,
         refreshId = refreshId,
         logLabel = "Provider refresh",
         outcomes = outcomes,
-        pendingProjectionPaths = pendingProjectionPaths,
       )
       contentRepository.syncWarmSnapshotsFromRuntime(targetPaths)
       LOG.debug { "Finished provider refresh id=$refreshId provider=${provider.value}" }
@@ -270,7 +256,7 @@ internal class AgentSessionProviderRefreshRunner(
         hintThreadIdsByPath = hintThreadIdsByPath,
         refreshHintPaths = refreshHintPaths,
         forcedThreadIds = updateEvent.threadIds,
-      ).withTitleOverrides(provider)
+      )
 
       if (refreshHintsByPath.isNotEmpty()) {
         applyRefreshHintsToOutcomes(
@@ -295,29 +281,18 @@ internal class AgentSessionProviderRefreshRunner(
           outcomes = outcomes,
         )
       }
-      applyTitleOverridesToOutcomes(outcomes)
-
       refreshSupport?.clearStaleConcreteOpenChatNewThreadRebindAnchors(
         refreshId = refreshId,
         concreteTabsByPath = concreteTabsSnapshotByPath,
       )
 
-      val pendingBindOutcome = refreshSupport?.bindPendingOpenChatTabs(
+      refreshSupport?.bindPendingOpenChatTabs(
         outcomes = outcomes,
         refreshId = refreshId,
         allowedThreadIdsByPath = null,
         refreshHintsByPath = refreshHintsByPath,
         pendingTabsByPath = pendingTabsSnapshotByPath,
       )
-
-      val pendingTabsForProjectionByPath =
-        pendingBindOutcome?.pendingTabsForProjectionByPath ?: pendingTabsSnapshotByPath
-      val pendingProjectionPaths = refreshSupport?.mergePendingThreadsFromOpenTabs(
-        outcomes = outcomes,
-        targetPaths = targetPaths,
-        refreshId = refreshId,
-        pendingTabsByPath = pendingTabsForProjectionByPath,
-      ) ?: emptySet()
 
       syncOpenChatTabPresentation(provider = provider, outcomes = outcomes, refreshId = refreshId)
 
@@ -326,9 +301,8 @@ internal class AgentSessionProviderRefreshRunner(
         refreshId = refreshId,
         logLabel = "Provider hint refresh",
         outcomes = outcomes,
-        pendingProjectionPaths = pendingProjectionPaths,
       )
-      if (pendingProjectionPaths.isNotEmpty() || refreshHintsByPath.isNotEmpty()) {
+      if (refreshHintsByPath.isNotEmpty()) {
         contentRepository.syncWarmSnapshotsFromRuntime(targetPaths)
       }
       LOG.debug { "Finished provider hint refresh id=$refreshId provider=${provider.value}" }
@@ -440,51 +414,16 @@ internal class AgentSessionProviderRefreshRunner(
     }
   }
 
-  private fun applyTitleOverridesToOutcomes(outcomes: MutableMap<String, ProviderRefreshOutcome>) {
-    for ((path, outcome) in ArrayList(outcomes.entries)) {
-      val threads = outcome.threads ?: continue
-      val updatedThreads = titleOverrides.applyTitleOverrides(path = path, threads = threads)
-      if (updatedThreads != threads) {
-        outcomes[path] = outcome.copy(threads = updatedThreads)
-      }
-    }
-  }
-
-  private fun Map<String, AgentSessionRefreshHints>.withTitleOverrides(
-    provider: AgentSessionProvider,
-  ): Map<String, AgentSessionRefreshHints> {
-    if (isEmpty()) {
-      return this
-    }
-    var changed = false
-    val updated = mapValues { (path, hints) ->
-      val updatedCandidates = titleOverrides.applyTitleOverrides(
-        path = path,
-        provider = provider,
-        candidates = hints.rebindCandidates,
-      )
-      if (updatedCandidates == hints.rebindCandidates) {
-        hints
-      }
-      else {
-        changed = true
-        hints.copy(rebindCandidates = updatedCandidates)
-      }
-    }
-    return if (changed) updated else this
-  }
-
   private fun applyProviderOutcomesToState(
     provider: AgentSessionProvider,
     refreshId: Long,
     logLabel: String,
     outcomes: Map<String, ProviderRefreshOutcome>,
-    pendingProjectionPaths: Set<String>,
   ) {
     stateStore.update { state ->
       var changed = false
       val nextProjects = state.projects.map { project ->
-        val shouldApplyProjectOutcome = project.isOpen || project.hasProviderSnapshot(provider) || project.path in pendingProjectionPaths
+        val shouldApplyProjectOutcome = project.isOpen || project.hasProviderSnapshot(provider)
         val updatedProject = if (shouldApplyProjectOutcome) {
           val outcome = outcomes[project.path]
           if (outcome != null) {
@@ -504,7 +443,7 @@ internal class AgentSessionProviderRefreshRunner(
 
         val nextWorktrees = updatedProject.worktrees.map { worktree ->
           val shouldApplyWorktreeOutcome =
-            worktree.isOpen || worktree.hasProviderSnapshot(provider) || worktree.path in pendingProjectionPaths
+            worktree.isOpen || worktree.hasProviderSnapshot(provider)
           if (!shouldApplyWorktreeOutcome) return@map worktree
           val outcome = outcomes[worktree.path] ?: return@map worktree
           val refreshedWorktree = worktree.withProviderRefreshOutcome(provider, outcome)
@@ -540,7 +479,7 @@ internal class AgentSessionProviderRefreshRunner(
     }
   }
 
-  private suspend fun syncOpenChatTabPresentation(
+  private fun syncOpenChatTabPresentation(
     provider: AgentSessionProvider,
     outcomes: Map<String, ProviderRefreshOutcome>,
     refreshId: Long,
@@ -559,14 +498,16 @@ internal class AgentSessionProviderRefreshRunner(
       threadsByPath[path] = threads
     }
 
-    val updatedTabs = threadPresentationUpdater.updateProviderSnapshot(
+    val changeSet = presentationModel.updateProviderSnapshot(
       provider = provider,
       authoritativePaths = authoritativePaths,
       threadsByPath = threadsByPath,
     )
+    val updatedPresentations = changeSet.changedKeys.size + changeSet.removedKeys.size
 
     LOG.debug {
-      "Provider refresh id=$refreshId provider=${provider.value} synchronized open chat tab presentation (updatedTabs=$updatedTabs)"
+      "Provider refresh id=$refreshId provider=${provider.value} synchronized thread presentation model " +
+      "(updatedPresentations=$updatedPresentations)"
     }
   }
 
@@ -826,28 +767,23 @@ private fun applyRefreshHintsToOutcomes(
   for ((path, outcome) in ArrayList(outcomes.entries)) {
     val threads = outcome.threads ?: continue
     val refreshHints = refreshHintsByPath[path] ?: continue
-    val activityByThreadId = refreshHints.activityByThreadId
-    if (activityByThreadId.isEmpty()) {
+    val activityUpdatesByThreadId = refreshHints.activityUpdatesByThreadId
+    if (activityUpdatesByThreadId.isEmpty()) {
       continue
     }
 
-    val summaryActivityByThreadId = refreshHints.summaryActivityByThreadId
     var changed = false
     val updatedThreads = threads.map { thread ->
       if (thread.provider != provider) {
         return@map thread
       }
-      val hintedActivity = activityByThreadId[thread.id] ?: return@map thread
-      val hintedSummaryActivity = when {
-        summaryActivityByThreadId.containsKey(thread.id) -> summaryActivityByThreadId[thread.id]
-        thread.summaryActivity == null -> null
-        else -> hintedActivity
-      }
-      if (hintedActivity == thread.activity && hintedSummaryActivity == thread.summaryActivity) {
+      val activityUpdate = activityUpdatesByThreadId[thread.id] ?: return@map thread
+      val resolvedUpdate = resolveAgentThreadActivityReportUpdate(thread = thread, activityUpdate = activityUpdate)
+      if (resolvedUpdate.activityReport == thread.activityReport && resolvedUpdate.updatedAt == thread.updatedAt) {
         return@map thread
       }
       changed = true
-      thread.copy(activity = hintedActivity, summaryActivity = hintedSummaryActivity)
+      thread.copy(activityReport = resolvedUpdate.activityReport, updatedAt = resolvedUpdate.updatedAt)
     }
     if (changed) {
       outcomes[path] = outcome.copy(threads = updatedThreads)

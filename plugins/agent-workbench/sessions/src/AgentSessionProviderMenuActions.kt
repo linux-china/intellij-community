@@ -4,7 +4,6 @@ package com.intellij.agent.workbench.sessions
 // @spec community/plugins/agent-workbench/spec/agent-terminal-sessions.spec.md
 
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuItem
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuModel
 import com.intellij.agent.workbench.sessions.core.providers.withYoloModeBadge
@@ -13,6 +12,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.util.registry.Registry
 import org.jetbrains.annotations.Nls
 import javax.swing.Icon
 
@@ -36,16 +36,17 @@ fun buildAgentSessionProviderMenuActions(
   return actions.toTypedArray()
 }
 
-fun providerIconWithMode(provider: AgentSessionProvider, mode: AgentSessionLaunchMode): Icon? {
-  val icon = providerIcon(provider) ?: return null
-  if (mode == AgentSessionLaunchMode.YOLO) {
+fun providerItemIconWithMode(item: AgentSessionProviderMenuItem): Icon {
+  val icon = item.bridge.icon
+  if (item.mode == AgentSessionLaunchMode.YOLO) {
     return withYoloModeBadge(icon)
   }
   return icon
 }
 
-fun providerItemIconWithMode(item: AgentSessionProviderMenuItem): Icon {
-  val icon = item.bridge.icon
+fun providerItemMonochromeIconWithMode(item: AgentSessionProviderMenuItem): Icon {
+  val useMonochrome = Registry.`is`("agent.workbench.use.monochrome.icons", true)
+  val icon = if (useMonochrome) item.bridge.monochromeIcon else item.bridge.icon
   if (item.mode == AgentSessionLaunchMode.YOLO) {
     return withYoloModeBadge(icon)
   }

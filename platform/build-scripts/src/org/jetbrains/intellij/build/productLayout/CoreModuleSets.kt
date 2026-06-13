@@ -153,7 +153,6 @@ object CoreModuleSets {
     module("intellij.libraries.jackson.dataformat.toml")
 
     module("intellij.libraries.jackson.datatype.jdk8")
-    module("intellij.libraries.jackson.datatype.joda")
     module("intellij.libraries.jackson.datatype.jsr310")
 
     embeddedModule("intellij.libraries.jackson.module.kotlin")
@@ -355,6 +354,8 @@ object CoreModuleSets {
     embeddedModule("intellij.platform.configurationStore.impl")
 
     embeddedModule("intellij.platform.lang.core")
+    embeddedModule("intellij.platform.testIntegration")
+    embeddedModule("intellij.platform.testIntegration.ui")
     embeddedModule("intellij.platform.lang")
     embeddedModule("intellij.platform.lang.impl")
 

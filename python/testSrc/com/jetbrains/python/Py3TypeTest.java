@@ -5744,6 +5744,48 @@ public class Py3TypeTest extends PyTestCase {
   }
 
   @TestFor(issues="PY-79204")
+  public void testInferParameterFromDecoratorNoReturnAnnotation() {
+    RecursionManager.assertOnRecursionPrevention(myFixture.getTestRootDisposable());
+    doTest("int", """
+      from typing import Callable
+
+      def d(fn: Callable[[int], str]): ...
+
+      @d
+      def f(a):
+          expr = a
+      """);
+  }
+
+  @TestFor(issues="PY-79204")
+  public void testInferParameterFromDecoratorUntypedInnermostFallsBackToOuter() {
+    RecursionManager.assertOnRecursionPrevention(myFixture.getTestRootDisposable());
+    doTest("int", """
+      from collections.abc import Callable
+
+      def transparent(fn): return fn
+
+      def d(fn: Callable[[int], str]): ...
+
+      @d
+      @transparent
+      def f(a):
+          expr = a
+      """);
+  }
+
+  @TestFor(issues="PY-79204")
+  public void testInferParameterFromDecoratorKnownDecoratorDoesNotOverrideSelf() {
+    RecursionManager.assertOnRecursionPrevention(myFixture.getTestRootDisposable());
+    doTest("Self@A", """
+      class A:
+          @property
+          def f(self):
+              expr = self
+      """);
+  }
+
+  @TestFor(issues="PY-79204")
   public void testInferParameterFromDecoratorCalled() {
     RecursionManager.assertOnRecursionPrevention(myFixture.getTestRootDisposable());
     doTest("int", """
@@ -6634,6 +6676,58 @@ public class Py3TypeTest extends PyTestCase {
     x: B1 | B2 = B1()
     expr = A() + x
     """);
+  }
+
+  @TestFor(issues="PY-12592")
+  public void testListLiteralSpreadType() {
+    doTest("list[int]", """
+      expr = [*[1]]
+      """);
+  }
+
+  @TestFor(issues="PY-12592")
+  public void testStarTargetInTupleUnpackingType() {
+    doTest("list[str]", """
+      a = (1, "b")
+      head, *tail = a
+      expr = tail
+      """);
+  }
+
+  @TestFor(issues="PY-12592")
+  public void testNestedTailTargetAfterStarInTupleUnpackingType() {
+    doTest("Literal[\"b\"]", """
+      a = (1, (2, "b"))
+      head, *_, (_, end) = a
+      expr = end
+      """);
+  }
+
+  @TestFor(issues="PY-12592")
+  public void testNestedSequenceTargetInTupleUnpacking() {
+    doTest("tuple[int, int]", """
+      data = [[1, 2]]
+      (x, y), = data
+      expr = x, y
+      """);
+  }
+
+  @TestFor(issues="PY-89352")
+  public void testHeadTypeInHomogeneousTupleStarTargetUnpacking() {
+    doTest("int", """
+      a: tuple[int, ...]
+      head, *tail = a
+      expr = head
+      """);
+  }
+
+  @TestFor(issues="PY-89352")
+  public void testTailTypeInHomogeneousTupleStarTargetUnpacking() {
+    doTest("list[int]", """
+      a: tuple[int, ...]
+      head, *tail = a
+      expr = tail
+      """);
   }
 
   private void doTest(final String expectedType, final String text) {

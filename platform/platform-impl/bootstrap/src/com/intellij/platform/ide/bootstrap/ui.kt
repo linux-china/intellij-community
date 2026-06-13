@@ -10,6 +10,7 @@ import com.intellij.ide.ui.html.createGlobalStyleSheet
 import com.intellij.ide.ui.laf.LookAndFeelThemeAdapter
 import com.intellij.ide.ui.laf.createBaseLaF
 import com.intellij.idea.AppExitCodes
+import com.intellij.idea.AppMode
 import com.intellij.openapi.application.ex.ApplicationInfoEx
 import com.intellij.openapi.application.impl.AWTExceptionHandler
 import com.intellij.openapi.application.setUserInteractiveQosForEdt
@@ -27,6 +28,8 @@ import com.intellij.util.system.LowLevelLocalMachineAccess
 import com.intellij.util.system.OS
 import com.intellij.util.ui.RawSwingDispatcher
 import com.intellij.util.ui.StartupUiUtil
+import com.intellij.util.ui.accessibility.ScreenReader.ASSISTIVE_TECHNOLOGIES_PROPERTY
+import com.intellij.util.ui.accessibility.ScreenReader.ATK_WRAPPER
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -34,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.VisibleForTesting
 import java.awt.Font
 import java.awt.GraphicsEnvironment
@@ -138,6 +142,10 @@ internal fun scheduleInitAwtToolkit(scope: CoroutineScope, lockSystemDirsJob: Jo
 private suspend fun initAwtToolkit(busyThread: Thread) {
   checkHiDPISettings()
 
+  if (OS.CURRENT == OS.Linux && !AppMode.isRemoteDevHost() && System.getProperty(ASSISTIVE_TECHNOLOGIES_PROPERTY) == null) {
+    System.setProperty(ASSISTIVE_TECHNOLOGIES_PROPERTY, ATK_WRAPPER)
+  }
+
   System.setProperty("sun.awt.noerasebackground", "true")
   // mute system Cmd+`/Cmd+Shift+` shortcuts on macOS to avoid a conflict with corresponding platform actions (JBR-specific option)
   if (System.getProperty("apple.awt.captureNextAppWinKey") == null) {
@@ -158,7 +166,10 @@ private suspend fun initAwtToolkit(busyThread: Thread) {
       sun.awt.AWTAutoShutdown.getInstance().notifyThreadBusy(busyThread)
     }
     catch (e: IllegalAccessError) {
-      throw RuntimeException("Required '--add-opens' option wasn't added to JVM arguments. If you're running the IDE from sources, most probably it means that 'DevKit' plugin isn't enabled", e)
+      throw RuntimeException(
+        "Required '--add-opens' options weren't added to JVM arguments." +
+        " If you're running the IDE from sources, most probably it means that the 'DevKit' plugin isn't enabled",
+      e)
     }
   }
 
@@ -199,6 +210,7 @@ private suspend fun replaceIdeEventQueue(isHeadless: Boolean) {
 }
 
 @VisibleForTesting
+@ApiStatus.Internal
 fun checkHiDPISettings() {
   if (!System.getProperty("hidpi", "true").toBoolean()) {
     // suppress JRE-HiDPI mode

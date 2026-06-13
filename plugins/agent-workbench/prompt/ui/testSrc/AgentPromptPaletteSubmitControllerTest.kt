@@ -9,12 +9,14 @@ import com.intellij.agent.workbench.prompt.core.AgentPromptContextEnvelopeSummar
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextRendererIds
 import com.intellij.agent.workbench.prompt.core.AgentPromptExistingThreadsSnapshot
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
 import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.prompt.core.AgentPromptInvocationData
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchError
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchRequest
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchResult
 import com.intellij.agent.workbench.prompt.core.AgentPromptLauncherBridge
+import com.intellij.agent.workbench.prompt.core.AgentPromptReasoningEffort
 import com.intellij.agent.workbench.sessions.core.providers.AGENT_PROMPT_PROVIDER_OPTION_PLAN_MODE
 import com.intellij.agent.workbench.sessions.core.providers.AGENT_PROMPT_PROVIDER_PLAN_MODE_OPTION
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessagePlan
@@ -24,6 +26,9 @@ import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
 import com.intellij.agent.workbench.sessions.core.providers.buildPlanModeInitialMessagePlan
+import com.intellij.agent.workbench.sessions.service.AgentSessionProviderAvailabilityService
+import com.intellij.agent.workbench.sessions.settings.AgentSessionProviderSettingsService
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.testFramework.junit5.TestApplication
 import com.intellij.testFramework.runInEdtAndWait
@@ -41,6 +46,36 @@ import javax.swing.JPanel
 @TestApplication
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
 class AgentPromptPaletteSubmitControllerTest {
+  @Test
+  fun captureNewTaskPromptLaunchRequestSeedsProviderStateBeforeSubmit() {
+    val project = ProjectManager.getInstance().defaultProject
+    val providerSettings = service<AgentSessionProviderSettingsService>()
+    val availabilityService = project.service<AgentSessionProviderAvailabilityService>()
+    providerSettings.setProviderEnabled(AgentSessionProvider.CODEX, false)
+    availabilityService.setAvailabilityForTest(mapOf(AgentSessionProvider.CODEX to false))
+    try {
+      val request = captureNewTaskPromptLaunchRequest(
+        descriptor = testProviderBridge(
+          provider = AgentSessionProvider.CODEX,
+          promptOptions = listOf(AGENT_PROMPT_PROVIDER_PLAN_MODE_OPTION),
+        ),
+        prompt = "Plan this refactor",
+        workingProjectPath = "/repo",
+        project = project,
+      )
+
+      assertThat(request.provider).isEqualTo(AgentSessionProvider.CODEX)
+      assertThat(request.projectPath).isEqualTo("/repo")
+      assertThat(request.initialMessageRequest.prompt).isEqualTo("Plan this refactor")
+      assertThat(request.initialMessageRequest.providerOptionIds).containsExactly(AGENT_PROMPT_PROVIDER_OPTION_PLAN_MODE)
+      assertThat(request.targetThreadId).isNull()
+    }
+    finally {
+      providerSettings.setProviderEnabled(AgentSessionProvider.CODEX, true)
+      availabilityService.clearAvailabilityForTest()
+    }
+  }
+
   @Test
   fun resolveWorkingProjectPathPrefersUserSelectedPathOverLauncherPath() {
     runInEdtAndWait {
@@ -168,6 +203,79 @@ class AgentPromptPaletteSubmitControllerTest {
       assertThat(request.initialMessageRequest.prompt).isEqualTo("Plan this refactor")
       assertThat(request.initialMessageRequest.providerOptionIds).containsExactly(AGENT_PROMPT_PROVIDER_OPTION_PLAN_MODE)
       assertThat(request.targetThreadId).isNull()
+    }
+  }
+
+  @Test
+  fun submitIncludesGenerationSettingsForNewTaskLaunch() {
+    runInEdtAndWait {
+      val project = ProjectManager.getInstance().defaultProject
+      var capturedRequest: AgentPromptLaunchRequest? = null
+      val fixture = createFixture(
+        project = project,
+        launcherProvider = {
+          object : AgentPromptLauncherBridge {
+            override fun launch(request: AgentPromptLaunchRequest): AgentPromptLaunchResult {
+              capturedRequest = request
+              return AgentPromptLaunchResult.SUCCESS
+            }
+
+            override fun resolveWorkingProjectPath(invocationData: AgentPromptInvocationData): String = "/launcher/path"
+          }
+        },
+        providersProvider = { listOf(testProviderBridge(provider = AgentSessionProvider.CODEX)) },
+        currentTargetMode = { PromptTargetMode.NEW_TASK },
+        generationSettingsProvider = {
+          AgentPromptGenerationSettings(reasoningEffort = AgentPromptReasoningEffort.MEDIUM)
+        },
+      )
+      fixture.providerSelector.refresh()
+      fixture.providerSelector.selectProvider(AgentSessionProvider.CODEX)
+      fixture.promptArea.text = "Refactor selected code"
+      fixture.launchState.selectedWorkingProjectPath = "/repo"
+
+      fixture.controller.submit()
+
+      val request = checkNotNull(capturedRequest)
+      assertThat(request.generationSettings.reasoningEffort).isEqualTo(AgentPromptReasoningEffort.MEDIUM)
+      assertThat(request.targetThreadId).isNull()
+    }
+  }
+
+  @Test
+  fun submitIgnoresGenerationSettingsForExistingTaskLaunch() {
+    runInEdtAndWait {
+      val project = ProjectManager.getInstance().defaultProject
+      var capturedRequest: AgentPromptLaunchRequest? = null
+      val fixture = createFixture(
+        project = project,
+        launcherProvider = {
+          object : AgentPromptLauncherBridge {
+            override fun launch(request: AgentPromptLaunchRequest): AgentPromptLaunchResult {
+              capturedRequest = request
+              return AgentPromptLaunchResult.SUCCESS
+            }
+
+            override fun resolveWorkingProjectPath(invocationData: AgentPromptInvocationData): String = "/launcher/path"
+          }
+        },
+        providersProvider = { listOf(testProviderBridge(provider = AgentSessionProvider.CODEX)) },
+        currentTargetMode = { PromptTargetMode.EXISTING_TASK },
+        generationSettingsProvider = {
+          AgentPromptGenerationSettings(reasoningEffort = AgentPromptReasoningEffort.HIGH)
+        },
+      )
+      fixture.providerSelector.refresh()
+      fixture.providerSelector.selectProvider(AgentSessionProvider.CODEX)
+      fixture.promptArea.text = "Refactor selected code"
+      fixture.launchState.selectedWorkingProjectPath = "/repo"
+      fixture.existingTaskController.selectedExistingTaskId = "thread-1"
+
+      fixture.controller.submit()
+
+      val request = checkNotNull(capturedRequest)
+      assertThat(request.generationSettings).isEqualTo(AgentPromptGenerationSettings.AUTO)
+      assertThat(request.targetThreadId).isEqualTo("thread-1")
     }
   }
 
@@ -424,6 +532,7 @@ class AgentPromptPaletteSubmitControllerTest {
     onSubmitBlocked: (String) -> Unit = {},
     onSubmitSucceeded: () -> Unit = {},
     onPromptSubmitted: (AgentPromptHistoryEntry) -> Unit = {},
+    generationSettingsProvider: () -> AgentPromptGenerationSettings = { AgentPromptGenerationSettings.AUTO },
     isContainerModeSelected: () -> Boolean = { false },
     isContainerModeSupported: (AgentSessionProvider) -> Boolean = { false },
     isContainerModeRuntimeAvailable: (AgentSessionProvider) -> Boolean = { false },
@@ -478,6 +587,7 @@ class AgentPromptPaletteSubmitControllerTest {
       onSubmitBlocked = onSubmitBlocked,
       onSubmitSucceeded = onSubmitSucceeded,
       onPromptSubmitted = onPromptSubmitted,
+      generationSettingsProvider = generationSettingsProvider,
       isContainerModeSelected = isContainerModeSelected,
       isContainerModeSupported = isContainerModeSupported,
       isContainerModeRuntimeAvailable = isContainerModeRuntimeAvailable,

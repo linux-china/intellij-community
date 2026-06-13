@@ -12,10 +12,11 @@ import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
 import com.intellij.agent.workbench.sessions.core.providers.AgentThreadRenameAction
+import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchCheckboxSetting
 import com.intellij.openapi.project.Project
 import javax.swing.Icon
 
-class TestAgentSessionProviderDescriptor(
+open class TestAgentSessionProviderDescriptor(
   override val provider: AgentSessionProvider,
   private val supportedModes: Set<AgentSessionLaunchMode>,
   private val cliAvailable: Boolean,
@@ -35,6 +36,7 @@ class TestAgentSessionProviderDescriptor(
   override val suppressArchivedThreadsDuringRefresh: Boolean = false,
   override val supportsArchiveThread: Boolean = false,
   override val supportsUnarchiveThread: Boolean = false,
+  override val providerSettings: List<AgentWorkbenchCheckboxSetting> = emptyList(),
   private val newSessionLabelKeyOverride: String? = null,
   override val quickStartActionTextKey: String = "action.AgentWorkbenchSessions.NewThreadQuick.text",
   override val quickStartActionDescriptionKey: String = "action.AgentWorkbenchSessions.NewThreadQuick.description",
@@ -56,7 +58,7 @@ class TestAgentSessionProviderDescriptor(
 
   override val icon: Icon
     get() = iconOverride
-            ?: if (provider == AgentSessionProvider.CLAUDE) AgentWorkbenchCommonIcons.Claude_14x14 else AgentWorkbenchCommonIcons.Codex_14x14
+            ?: if (provider == AgentSessionProvider.CLAUDE) AgentWorkbenchCommonIcons.Claude else AgentWorkbenchCommonIcons.Codex
 
   override val supportedLaunchModes: Set<AgentSessionLaunchMode>
     get() = supportedModes

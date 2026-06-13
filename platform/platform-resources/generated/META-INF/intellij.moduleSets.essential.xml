@@ -18,7 +18,6 @@
     <module name="intellij.libraries.jackson.dataformat.yaml" loading="embedded"/>
     <module name="intellij.libraries.jackson.dataformat.toml"/>
     <module name="intellij.libraries.jackson.datatype.jdk8"/>
-    <module name="intellij.libraries.jackson.datatype.joda"/>
     <module name="intellij.libraries.jackson.datatype.jsr310"/>
     <module name="intellij.libraries.jackson.module.kotlin" loading="embedded"/>
     <!-- endregion -->
@@ -199,6 +198,8 @@
     <module name="intellij.platform.lvcs" loading="embedded"/>
     <module name="intellij.platform.configurationStore.impl" loading="embedded"/>
     <module name="intellij.platform.lang.core" loading="embedded"/>
+    <module name="intellij.platform.testIntegration" loading="embedded"/>
+    <module name="intellij.platform.testIntegration.ui" loading="embedded"/>
     <module name="intellij.platform.lang" loading="embedded"/>
     <module name="intellij.platform.lang.impl" loading="embedded"/>
     <module name="intellij.platform.statistics" loading="embedded"/>
@@ -291,7 +292,7 @@
     <!-- region direct modules -->
     <module name="intellij.platform.scopes" loading="embedded"/>
     <module name="intellij.platform.scopes.backend"/>
-    <module name="intellij.platform.find" loading="embedded"/>
+    <module name="intellij.platform.find"/>
     <module name="intellij.platform.find.backend"/>
     <module name="intellij.platform.editor.frontend"/>
     <module name="intellij.platform.managed.cache"/>

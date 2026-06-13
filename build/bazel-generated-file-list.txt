@@ -113,12 +113,14 @@ android/device-manager-v2
 android/device-manager-v2/integration
 android/execution/common
 android/glance-designer
+android/glasses-pairing
 android/gmaven
 android/gradle-declarative-lang
 android/gradle-declarative-lang-flags
 android/gradle-declarative-lang-ide
 android/gradle-declarative-lang-sync
 android/gradle-dsl
+android/gradle-dsl-android
 android/gradle-dsl-declarative
 android/gradle-dsl-flags
 android/gradle-dsl-groovy
@@ -145,6 +147,8 @@ android/layoutlib-loader
 android/lint
 android/lint/tests
 android/logcat
+android/logcat/gradle
+android/logcat/gradle/integration-tests
 android/memory-usage
 android/ml-api
 android/mlkit
@@ -359,6 +363,8 @@ json
 json/backend
 json/backend/regexp
 json/backend/tests
+json/networknt.wrapper
+json/networknt.wrapper/tests
 json/structureView
 json/syntax
 jupyter
@@ -874,6 +880,8 @@ platform/syntax/syntax-tree
 platform/syntax/syntax-util
 platform/tasks-platform-api
 platform/tasks-platform-impl
+platform/tasks-platform-impl/tasks.impl.bookmarks
+platform/tasks-platform-impl/tasks.impl.debugger
 platform/testFramework
 platform/testFramework/bootstrap
 platform/testFramework/common
@@ -890,6 +898,8 @@ platform/testFramework/junit5/projectStructure
 platform/testFramework/monorepo
 platform/testFramework/selfContainedProjects
 platform/testFramework/teamCity
+platform/testIntegration
+platform/testIntegration-ui
 platform/testRunner
 platform/testRunner/plugin
 platform/threadDumpParser
@@ -980,6 +990,7 @@ plugins/agent-workbench/json
 plugins/agent-workbench/junie/common
 plugins/agent-workbench/junie/sessions
 plugins/agent-workbench/pi/sessions
+plugins/agent-workbench/pi/sessions-filewatch
 plugins/agent-workbench/plugin
 plugins/agent-workbench/prompt/context
 plugins/agent-workbench/prompt/core
@@ -1203,6 +1214,7 @@ plugins/keymaps/visual-studio2022-keymap
 plugins/keymaps/vscode-keymap
 plugins/keymaps/xcode-keymap
 plugins/kotlin
+plugins/kotlin/all-tests
 plugins/kotlin/all-tests-compose
 plugins/kotlin/all-tests-fir
 plugins/kotlin/base/analysis
@@ -1248,19 +1260,12 @@ plugins/kotlin/code-insight/fixes-k2/tests
 plugins/kotlin/code-insight/impl-base
 plugins/kotlin/code-insight/inspections-k2
 plugins/kotlin/code-insight/inspections-k2/tests
-plugins/kotlin/code-insight/inspections-shared
-plugins/kotlin/code-insight/inspections-shared/tests/k2
 plugins/kotlin/code-insight/intentions-k2
 plugins/kotlin/code-insight/intentions-k2/tests
-plugins/kotlin/code-insight/intentions-shared
-plugins/kotlin/code-insight/intentions-shared/tests/k2
 plugins/kotlin/code-insight/kotlin.code-insight.k2
 plugins/kotlin/code-insight/line-markers
-plugins/kotlin/code-insight/line-markers-shared
 plugins/kotlin/code-insight/live-templates-k2
-plugins/kotlin/code-insight/live-templates-shared
 plugins/kotlin/code-insight/override-implement-k2
-plugins/kotlin/code-insight/override-implement-shared
 plugins/kotlin/code-insight/postfix-templates
 plugins/kotlin/code-insight/structural-search-k2
 plugins/kotlin/code-insight/structural-search-k2/tests
@@ -1327,8 +1332,6 @@ plugins/kotlin/grazie
 plugins/kotlin/grazie/intellij.kotlin.grazie.tests
 plugins/kotlin/highlighting/highlighting-k2
 plugins/kotlin/highlighting/highlighting-minimal
-plugins/kotlin/highlighting/highlighting-shared
-plugins/kotlin/highlighting/highlighting-shared/tests
 plugins/kotlin/i18n
 plugins/kotlin/i18n/tests
 plugins/kotlin/idea/tests

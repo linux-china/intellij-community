@@ -1429,18 +1429,17 @@ com.intellij.internal.inspector.UiInspectorTableRendererContextProvider
 - a:getUiInspectorContext(javax.swing.JTable,java.lang.Object,I,I):java.util.List
 com.intellij.internal.inspector.UiInspectorTreeRendererContextProvider
 - a:getUiInspectorContext(javax.swing.JTree,java.lang.Object,I):java.util.List
-c:com.intellij.internal.performanceTests.DummyProjectInitializationDiagnosticService
-- com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService
-- <init>():V
-- isProjectInitializationAndIndexingFinished():Z
-- registerBeginningOfInitializationActivity(java.util.function.Supplier):com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService$ActivityTracker
-com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService
-- s:getInstance(com.intellij.openapi.project.Project):com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService
-- a:isProjectInitializationAndIndexingFinished():Z
-- a:registerBeginningOfInitializationActivity(java.util.function.Supplier):com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService$ActivityTracker
-- s:registerTracker(com.intellij.openapi.project.Project,java.lang.String):com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService$ActivityTracker
-com.intellij.internal.performanceTests.ProjectInitializationDiagnosticService$ActivityTracker
+f:com.intellij.internal.performanceTests.ProjectInitializationDiagnostic
+- s:isProjectInitializationAndIndexingFinished(com.intellij.openapi.project.Project):Z
+- s:registerTracker(com.intellij.openapi.project.Project,java.lang.String):com.intellij.internal.performanceTests.ProjectInitializationDiagnostic$ActivityTracker
+com.intellij.internal.performanceTests.ProjectInitializationDiagnostic$ActivityTracker
 - a:activityFinished():V
+com.intellij.internal.performanceTests.ProjectInitializationDiagnosticHandler
+- sf:Companion:com.intellij.internal.performanceTests.ProjectInitializationDiagnosticHandler$Companion
+- a:isProjectInitializationAndIndexingFinished(com.intellij.openapi.project.Project):Z
+- a:registerBeginningOfInitializationActivity(com.intellij.openapi.project.Project,java.util.function.Supplier):com.intellij.internal.performanceTests.ProjectInitializationDiagnostic$ActivityTracker
+f:com.intellij.internal.performanceTests.ProjectInitializationDiagnosticHandler$Companion
+- f:getEP_NAME():com.intellij.openapi.extensions.ExtensionPointName
 f:com.intellij.lang.StdLanguages
 - sf:JAVA:com.intellij.lang.Language
 - sf:XML:com.intellij.lang.Language
@@ -5412,11 +5411,13 @@ com.intellij.platform.ide.productMode.IdeProductMode
 - s:getInstance():com.intellij.platform.ide.productMode.IdeProductMode
 - s:isBackend():Z
 - s:isFrontend():Z
+- s:isLight():Z
 - s:isMonolith():Z
 f:com.intellij.platform.ide.productMode.IdeProductMode$Companion
 - f:getInstance():com.intellij.platform.ide.productMode.IdeProductMode
 - f:isBackend():Z
 - f:isFrontend():Z
+- f:isLight():Z
 - f:isMonolith():Z
 a:com.intellij.pom.NavigatableAdapter
 - com.intellij.pom.Navigatable
@@ -6260,6 +6261,7 @@ f:com.intellij.ui.GuiUtils
 - s:getSizeByChars(I,javax.swing.JComponent):java.awt.Dimension
 - s:getTextWithoutMnemonicEscaping(java.lang.String):java.lang.String
 - s:installVisibilityReferent(javax.swing.JComponent,javax.swing.JComponent):V
+- s:installVisibilityReferents(javax.swing.JComponent,javax.swing.JComponent[]):V
 - s:invokeLaterIfNeeded(java.lang.Runnable,com.intellij.openapi.application.ModalityState):V
 - s:iterateChildren(java.awt.Component,java.util.function.Consumer,javax.swing.JComponent[]):V
 - s:removePotentiallyLeakingReferences(java.awt.Container):V

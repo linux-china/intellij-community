@@ -7,32 +7,22 @@ import com.intellij.agent.workbench.json.createJsonParser
 import tools.jackson.core.JsonParser
 import tools.jackson.core.JsonToken
 import tools.jackson.core.json.JsonFactory
+import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.normalizeAgentWorkbenchPathOrNull
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
-import com.intellij.agent.workbench.filewatch.AgentWorkbenchDirectoryWatcher
-import com.intellij.agent.workbench.filewatch.AgentWorkbenchWatchEvent
-import com.intellij.agent.workbench.filewatch.AgentWorkbenchWatchEventType
 import com.intellij.agent.workbench.json.createJsonGenerator
 import com.intellij.agent.workbench.json.WorkbenchJsonlScanner
 import com.intellij.agent.workbench.json.forEachJsonObjectField
 import com.intellij.agent.workbench.json.readJsonLongOrNull
 import com.intellij.agent.workbench.json.readJsonStringOrNull
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
 import com.intellij.agent.workbench.sessions.core.providers.BaseAgentSessionSource
 import com.intellij.agent.workbench.sessions.core.providers.resolveReadTrackedActivity
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
@@ -41,6 +31,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Instant
 import java.time.format.DateTimeParseException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.UUID
 import kotlin.io.path.isRegularFile
 import kotlin.streams.asSequence
@@ -131,6 +122,7 @@ internal class PiSessionStore(
       sessionFile = sessionFile,
       leafId = state.leafId,
       entryIds = state.entryIds,
+      activity = state.leafActivity,
       archived = false,
     )
   }
@@ -241,10 +233,15 @@ internal class PiSessionStore(
 
 internal class PiSessionSource(
   internal val sessionStore: PiSessionStore = PiSessionStore(),
-  sessionWatchEventsFactory: ((Set<Path>) -> Flow<AgentWorkbenchWatchEvent>)? = null,
+  extensionStatusEvents: Flow<AgentSessionSourceUpdateEvent> = PiExtensionStatusBridge.updateEvents,
+  fileWatchFallbackEnabledProvider: () -> Boolean = ::isPiFileWatchFallbackEnabled,
+  sessionUpdateEventsContributorProvider: () -> List<PiSessionUpdateEventsContributor> = ::piSessionUpdateEventsContributors,
 ) : BaseAgentSessionSource(AgentSessionProvider.PI) {
+  private val fileWatchFallbackEnabled = fileWatchFallbackEnabledProvider()
   private val watchedSessionDirectoriesLock = Any()
   private val watchedProjectPathsBySessionDir = MutableStateFlow<Map<Path, Set<String>>>(emptyMap())
+  private val observedUpdatedAtByThreadId = ConcurrentHashMap<String, Long>()
+  private val completedUnreadUpdatedAtByThreadId = ConcurrentHashMap<String, Long>()
 
   override val supportsUpdates: Boolean get() = true
 
@@ -252,7 +249,12 @@ internal class PiSessionSource(
 
   override val updateEvents: Flow<AgentSessionSourceUpdateEvent> = merge(
     readStateUpdateEvents,
-    watchPiSessionUpdates(watchedProjectPathsBySessionDir, sessionWatchEventsFactory ?: ::createPiSessionWatchEvents),
+    extensionStatusEvents,
+    createPiSessionUpdateEvents(
+      watchedProjectPathsBySessionDir = watchedProjectPathsBySessionDir,
+      fileWatchFallbackEnabledProvider = { fileWatchFallbackEnabled },
+      sessionUpdateEventsContributorProvider = sessionUpdateEventsContributorProvider,
+    ),
   )
 
   override suspend fun listThreads(path: String, openProject: Project?): List<AgentSessionThread> {
@@ -260,8 +262,16 @@ internal class PiSessionSource(
     val entries = sessionStore.loadEntries(path)
       .filterNot(PiSessionIndexEntry::archived)
       .sortedByDescending(PiSessionIndexEntry::updatedAt)
-    rememberActiveThreadRead(entries, PiSessionIndexEntry::sessionId, PiSessionIndexEntry::updatedAt)
-    return entries.map { entry -> entry.toAgentSessionThread(readTracker) }
+    rememberActiveWorkingThreadRead(entries)
+    val threads = entries.map { entry ->
+      entry.toAgentSessionThread(
+        readTracker = readTracker,
+        completedUnreadUpdatedAtByThreadId = completedUnreadUpdatedAtByThreadId,
+        observedUpdatedAtByThreadId = observedUpdatedAtByThreadId,
+      )
+    }
+    rememberObservedThreadUpdates(entries)
+    return threads
   }
 
   override suspend fun listArchivedThreads(path: String, openProject: Project?): List<AgentSessionThread> {
@@ -272,9 +282,25 @@ internal class PiSessionSource(
       .map { entry -> entry.toAgentSessionThread(readTracker) }
   }
 
+  private fun rememberActiveWorkingThreadRead(entries: Iterable<PiSessionIndexEntry>) {
+    rememberActiveThreadRead(
+      threads = entries,
+      id = PiSessionIndexEntry::sessionId,
+      updatedAt = PiSessionIndexEntry::updatedAt,
+      shouldRemember = { it.activity == AgentThreadActivity.PROCESSING },
+    )
+  }
+
+  private fun rememberObservedThreadUpdates(entries: Iterable<PiSessionIndexEntry>) {
+    entries.forEach { entry ->
+      observedUpdatedAtByThreadId.merge(entry.sessionId, entry.updatedAt, ::maxOf)
+    }
+  }
+
   private fun rememberSessionDirectory(path: String) {
+    if (!fileWatchFallbackEnabled) return
     val normalizedProjectPath = normalizePiProjectPath(path) ?: return
-    val sessionDir = normalizePiWatchPath(sessionStore.sessionDir(path))
+    val sessionDir = normalizePiSessionDirectoryPath(sessionStore.sessionDir(path))
 
     synchronized(watchedSessionDirectoriesLock) {
       val current = watchedProjectPathsBySessionDir.value
@@ -293,104 +319,7 @@ internal class PiSessionSource(
   }
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
-private fun watchPiSessionUpdates(
-  watchedProjectPathsBySessionDir: StateFlow<Map<Path, Set<String>>>,
-  sessionWatchEventsFactory: (Set<Path>) -> Flow<AgentWorkbenchWatchEvent>,
-): Flow<AgentSessionSourceUpdateEvent> {
-  return watchedProjectPathsBySessionDir.flatMapLatest { projectPathsBySessionDir ->
-    if (projectPathsBySessionDir.isEmpty()) {
-      emptyFlow()
-    }
-    else {
-      sessionWatchEventsFactory(createPiSessionWatchRoots(projectPathsBySessionDir.keys))
-        .mapNotNull { event -> createPiSessionSourceUpdateEventForWatchEvent(event, projectPathsBySessionDir) }
-    }
-  }
-}
-
-private fun createPiSessionWatchRoots(sessionDirs: Collection<Path>): Set<Path> {
-  val roots = LinkedHashSet<Path>()
-  for (sessionDir in sessionDirs) {
-    roots.add(sessionDir)
-    sessionDir.parent?.let(roots::add)
-  }
-  return roots
-}
-
-private fun createPiSessionWatchEvents(sessionDirs: Set<Path>): Flow<AgentWorkbenchWatchEvent> {
-  if (sessionDirs.isEmpty()) return emptyFlow()
-  return callbackFlow {
-    val watcher = AgentWorkbenchDirectoryWatcher(
-      roots = sessionDirs,
-      scope = this,
-      onWatchEvent = { event -> trySend(event).isSuccess },
-      onFailure = { t -> LOG.warn("Pi session directory watcher failed", t) },
-    )
-    awaitClose { watcher.close() }
-  }
-}
-
-internal fun createPiSessionSourceUpdateEventForWatchEvent(
-  event: AgentWorkbenchWatchEvent,
-  projectPathsBySessionDir: Map<Path, Set<String>>,
-): AgentSessionSourceUpdateEvent? {
-  val rootPath = event.rootPath?.let(::normalizePiWatchPath) ?: return null
-  val eventPath = event.path?.let(::normalizePiWatchPath)
-  val scopedPaths = collectScopedPathsForPiWatchEvent(
-    rootPath = rootPath,
-    eventPath = eventPath,
-    isOverflow = event.eventType == AgentWorkbenchWatchEventType.OVERFLOW,
-    projectPathsBySessionDir = projectPathsBySessionDir,
-  ).takeIf { it.isNotEmpty() } ?: return null
-  if (event.eventType == AgentWorkbenchWatchEventType.OVERFLOW) {
-    return AgentSessionSourceUpdateEvent(
-      type = AgentSessionSourceUpdate.THREADS_CHANGED,
-      scopedPaths = scopedPaths,
-    )
-  }
-  if (!isRelevantPiSessionWatchEvent(event, eventPath, projectPathsBySessionDir.keys)) return null
-  return AgentSessionSourceUpdateEvent(
-    type = AgentSessionSourceUpdate.THREADS_CHANGED,
-    scopedPaths = scopedPaths,
-  )
-}
-
-private fun collectScopedPathsForPiWatchEvent(
-  rootPath: Path,
-  eventPath: Path?,
-  isOverflow: Boolean,
-  projectPathsBySessionDir: Map<Path, Set<String>>,
-): Set<String> {
-  val scopedPaths = LinkedHashSet<String>()
-  for ((sessionDir, paths) in projectPathsBySessionDir) {
-    val matches = if (isOverflow) {
-      rootPath == sessionDir || sessionDir.startsWith(rootPath)
-    }
-    else {
-      eventPath != null && (eventPath == sessionDir || eventPath.startsWith(sessionDir))
-    }
-    if (matches) {
-      scopedPaths.addAll(paths)
-    }
-  }
-  return scopedPaths
-}
-
-private fun isRelevantPiSessionWatchEvent(event: AgentWorkbenchWatchEvent, eventPath: Path?, sessionDirs: Set<Path>): Boolean {
-  if (eventPath == null) return false
-  if (event.isDirectory) {
-    return eventPath in sessionDirs
-  }
-  return isPiSessionWatchFile(eventPath)
-}
-
-private fun isPiSessionWatchFile(path: Path?): Boolean {
-  val fileName = path?.fileName?.toString() ?: return false
-  return fileName.endsWith(".jsonl")
-}
-
-private fun normalizePiWatchPath(path: Path): Path {
+private fun normalizePiSessionDirectoryPath(path: Path): Path {
   return runCatching {
     path.toAbsolutePath().normalize()
   }.getOrElse {
@@ -407,6 +336,7 @@ internal data class PiSessionIndexEntry(
   val sessionFile: Path,
   val leafId: String?,
   val entryIds: Set<String>,
+  val activity: AgentThreadActivity?,
   val archived: Boolean,
 )
 
@@ -422,6 +352,7 @@ private data class PiSessionFileState(
   var name: String? = null,
   var lastActivityAtMs: Long? = null,
   var leafId: String? = null,
+  var leafActivity: AgentThreadActivity? = null,
   val entryIds: LinkedHashSet<String> = LinkedHashSet(),
 )
 
@@ -467,6 +398,7 @@ private fun parseSessionObject(parser: JsonParser, state: PiSessionFileState) {
   var messageRole: String? = null
   var messageText: String? = null
   var messageTimestamp: Long? = null
+  var messageStopReason: String? = null
 
   forEachJsonObjectField(parser) { fieldName ->
     when (fieldName) {
@@ -481,6 +413,7 @@ private fun parseSessionObject(parser: JsonParser, state: PiSessionFileState) {
         messageRole = parsedMessage.role
         messageText = parsedMessage.text
         messageTimestamp = parsedMessage.timestamp
+        messageStopReason = parsedMessage.stopReason
       }
       else -> parser.skipChildren()
     }
@@ -500,16 +433,18 @@ private fun parseSessionObject(parser: JsonParser, state: PiSessionFileState) {
   if (entryId != null) {
     state.entryIds += entryId
     state.leafId = entryId
+    state.leafActivity = null
   }
   else if (parentId != null) {
     state.leafId = parentId
+    state.leafActivity = null
   }
 
   when (normalizedType) {
     "session_info" -> state.name = sessionInfoName?.trim()?.takeIf { it.isNotEmpty() }
     "message" -> {
       val role = messageRole ?: return
-      if (role != "user" && role != "assistant") return
+      if (!isPiActivityMessageRole(role)) return
       val activityTime = messageTimestamp ?: timestamp?.let(::parseIsoTimestamp)
       if (activityTime != null) {
         state.lastActivityAtMs = maxOf(state.lastActivityAtMs ?: 0L, activityTime)
@@ -517,7 +452,27 @@ private fun parseSessionObject(parser: JsonParser, state: PiSessionFileState) {
       if (role == "user" && state.firstUserMessage == null) {
         state.firstUserMessage = messageText?.takeIf { it.isNotBlank() }
       }
+      state.leafActivity = resolvePiLeafActivity(role, messageStopReason)
     }
+    "custom", "custom_message" -> {
+      val activityTime = timestamp?.let(::parseIsoTimestamp)
+      if (activityTime != null) {
+        state.lastActivityAtMs = maxOf(state.lastActivityAtMs ?: 0L, activityTime)
+      }
+      state.leafActivity = AgentThreadActivity.PROCESSING
+    }
+  }
+}
+
+private fun isPiActivityMessageRole(role: String): Boolean {
+  return role == "user" || role == "assistant" || role == "toolResult"
+}
+
+private fun resolvePiLeafActivity(role: String, stopReason: String?): AgentThreadActivity? {
+  return when (role) {
+    "user", "toolResult" -> AgentThreadActivity.PROCESSING
+    "assistant" -> if (stopReason?.trim() == "toolUse") AgentThreadActivity.PROCESSING else null
+    else -> null
   }
 }
 
@@ -525,26 +480,29 @@ private data class PiParsedMessage(
   val role: String?,
   val text: String?,
   val timestamp: Long?,
+  val stopReason: String?,
 )
 
 private fun parsePiMessage(parser: JsonParser): PiParsedMessage {
   if (parser.currentToken() != JsonToken.START_OBJECT) {
     parser.skipChildren()
-    return PiParsedMessage(role = null, text = null, timestamp = null)
+    return PiParsedMessage(role = null, text = null, timestamp = null, stopReason = null)
   }
   var role: String? = null
   var text: String? = null
   var timestamp: Long? = null
+  var stopReason: String? = null
   forEachJsonObjectField(parser) { fieldName ->
     when (fieldName) {
       "role" -> role = readJsonStringOrNull(parser)
       "content" -> text = readPiMessageContent(parser)
       "timestamp" -> timestamp = readJsonLongOrNull(parser)
+      "stopReason" -> stopReason = readJsonStringOrNull(parser)
       else -> parser.skipChildren()
     }
     true
   }
-  return PiParsedMessage(role = role, text = text, timestamp = timestamp)
+  return PiParsedMessage(role = role, text = text, timestamp = timestamp, stopReason = stopReason)
 }
 
 private fun readPiMessageContent(parser: JsonParser): String? {
@@ -651,12 +609,55 @@ private fun PiSessionIndexEntry.toAgentSessionThread(readTracker: Map<String, Lo
     title = title,
     updatedAt = updatedAt,
     archived = archived,
-    activity = resolveReadTrackedActivity(readTracker = readTracker, threadId = sessionId, updatedAt = updatedAt),
+    activity = activity ?: resolveCompletedPiActivity(readTracker = readTracker),
     provider = AgentSessionProvider.PI,
   )
 }
 
-private fun normalizePiProjectPath(path: String): String? {
+private fun PiSessionIndexEntry.toAgentSessionThread(
+  readTracker: Map<String, Long>,
+  completedUnreadUpdatedAtByThreadId: MutableMap<String, Long>,
+  observedUpdatedAtByThreadId: Map<String, Long>,
+): AgentSessionThread {
+  return AgentSessionThread(
+    id = sessionId,
+    title = title,
+    updatedAt = updatedAt,
+    archived = archived,
+    activity = activity ?: resolveCompletedPiActivity(
+      readTracker = readTracker,
+      completedUnreadUpdatedAtByThreadId = completedUnreadUpdatedAtByThreadId,
+      observedUpdatedAtByThreadId = observedUpdatedAtByThreadId,
+    ),
+    provider = AgentSessionProvider.PI,
+  )
+}
+
+private fun PiSessionIndexEntry.resolveCompletedPiActivity(
+  readTracker: Map<String, Long>,
+  completedUnreadUpdatedAtByThreadId: MutableMap<String, Long>? = null,
+  observedUpdatedAtByThreadId: Map<String, Long> = emptyMap(),
+): AgentThreadActivity {
+  val lastSeenAt = readTracker[sessionId]
+  if (lastSeenAt != null) {
+    return resolveReadTrackedActivity(readTracker = readTracker, threadId = sessionId, updatedAt = updatedAt)
+  }
+
+  if (completedUnreadUpdatedAtByThreadId?.get(sessionId) == updatedAt) {
+    return AgentThreadActivity.UNREAD
+  }
+
+  val observedUpdatedAt = observedUpdatedAtByThreadId[sessionId] ?: return AgentThreadActivity.READY
+  return if (updatedAt > observedUpdatedAt) {
+    completedUnreadUpdatedAtByThreadId?.put(sessionId, updatedAt)
+    AgentThreadActivity.UNREAD
+  }
+  else {
+    AgentThreadActivity.READY
+  }
+}
+
+internal fun normalizePiProjectPath(path: String): String? {
   val trimmedPath = path.trim().takeIf { it.isNotEmpty() } ?: return null
   val normalizedPath = normalizeAgentWorkbenchPathOrNull(trimmedPath) ?: return null
   return normalizedPath.trimEnd('/').ifEmpty { "/" }

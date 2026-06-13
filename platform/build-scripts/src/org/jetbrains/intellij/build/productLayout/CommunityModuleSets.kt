@@ -132,11 +132,7 @@ object CommunityModuleSets {
     embeddedModule("intellij.platform.scopes")
     module("intellij.platform.scopes.backend")
 
-    // The loading="embedded" attribute is required here for module synchronization with CWM's ThinClientFindAndReplaceExecutor.
-    // Since intellij.platform.frontend.split module loads in embedded mode, and it needs to override the default FindAndReplaceExecutor,
-    // the find module must also be marked as embedded to maintain proper dependency loading order.
-    // This attribute can be removed once ThinClientFindAndReplaceExecutor is removed.
-    embeddedModule("intellij.platform.find")
+    module("intellij.platform.find")
     module("intellij.platform.find.backend")
     module("intellij.platform.editor.frontend")
     module("intellij.platform.managed.cache")
@@ -320,6 +316,7 @@ object CommunityModuleSets {
    * These are commonly needed by test plugins and are duplicated across products.
    */
   fun platformTestFrameworksCore(): ModuleSet = moduleSet("platform.testFrameworks.core") {
+    module("intellij.platform.testExtensions")
     module("intellij.platform.testFramework", allowedMissingPluginIds = listOf("com.intellij.java", "com.intellij.platform.images"))
     module("intellij.platform.testFramework.common")
     module("intellij.platform.testFramework.core")
@@ -378,6 +375,8 @@ object CommunityModuleSets {
     module("intellij.platform.collaborationTools.auth.base")
     module("intellij.platform.tasks")
     module("intellij.platform.tasks.impl")
+    module("intellij.platform.tasks.impl.bookmarks")
+    module("intellij.platform.tasks.impl.debugger")
     module("intellij.platform.scriptDebugger.ui")
     module("intellij.platform.scriptDebugger.backend")
     module("intellij.platform.scriptDebugger.protocolReaderRuntime")

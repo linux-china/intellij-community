@@ -1,27 +1,29 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.pi.sessions
 
-import com.intellij.agent.workbench.filewatch.AgentWorkbenchWatchEvent
-import com.intellij.agent.workbench.filewatch.AgentWorkbenchWatchEventType
 import com.intellij.agent.workbench.common.AgentThreadActivity
+import com.intellij.agent.workbench.common.AgentThreadActivityReport
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
-import kotlinx.coroutines.CompletableDeferred
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
+import com.intellij.testFramework.junit5.RegistryKey
+import com.intellij.testFramework.junit5.TestApplication
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration.Companion.seconds
 
+@TestApplication
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
 class PiSessionSourceTest {
   @TempDir
@@ -89,85 +91,115 @@ class PiSessionSourceTest {
   }
 
   @Test
-  fun `session jsonl changes emit scoped thread update`() {
+  @RegistryKey(key = PI_FILE_WATCH_FALLBACK_REGISTRY_KEY, value = "false")
+  fun `pi file watch fallback registry flag is disabled`() {
+    assertThat(isPiFileWatchFallbackEnabled()).isFalse()
+  }
+
+  @Test
+  @RegistryKey(key = PI_FILE_WATCH_FALLBACK_REGISTRY_KEY, value = "true")
+  fun `pi file watch fallback registry flag can be enabled`() {
+    assertThat(isPiFileWatchFallbackEnabled()).isTrue()
+  }
+
+  @Test
+  fun `disabled file watch fallback does not resolve contributors`() {
+    var contributorProviderCallCount = 0
+
+    val source = PiSessionSource(
+      sessionStore = PiSessionStore(sessionDirResolver = { tempDir.resolve("unused-sessions") }),
+      extensionStatusEvents = emptyFlow(),
+      fileWatchFallbackEnabledProvider = { false },
+      sessionUpdateEventsContributorProvider = {
+        contributorProviderCallCount++
+        listOf(object : PiSessionUpdateEventsContributor {
+          override fun createUpdateEvents(watchedProjectPathsBySessionDir: StateFlow<Map<Path, Set<String>>>) =
+            error("Disabled file watch fallback must not create contributor flows")
+        })
+      },
+    )
+
+    assertThat(source.supportsUpdates).isTrue()
+    assertThat(contributorProviderCallCount).isZero()
+  }
+
+  @Test
+  fun `enabled file watch fallback merges contributor updates`() {
     runBlocking(Dispatchers.Default) {
-      val projectDir = tempDir.resolve("project-watch")
-      val sessionDir = tempDir.resolve("watch-sessions")
-      val sessionFile = writePiSession(
-        sessionDir = sessionDir,
-        sessionId = "session-watch",
-        cwd = projectDir,
-        piUserMessageEntry(id = "user-watch", content = "Watch title", timestamp = 3_000L),
+      val updateEvent = AgentSessionSourceUpdateEvent(
+        type = AgentSessionSourceUpdate.THREADS_CHANGED,
+        scopedPaths = setOf(tempDir.resolve("project-contributor").toString()),
       )
-      val watchEvents = MutableSharedFlow<AgentWorkbenchWatchEvent>(replay = 1)
-      val watchedRoots = CompletableDeferred<Set<Path>>()
       val source = PiSessionSource(
-        sessionStore = PiSessionStore(sessionDirResolver = { sessionDir }),
-        sessionWatchEventsFactory = { roots ->
-          watchedRoots.complete(roots)
-          watchEvents
+        sessionStore = PiSessionStore(sessionDirResolver = { tempDir.resolve("unused-sessions") }),
+        extensionStatusEvents = emptyFlow(),
+        fileWatchFallbackEnabledProvider = { true },
+        sessionUpdateEventsContributorProvider = {
+          listOf(object : PiSessionUpdateEventsContributor {
+            override fun createUpdateEvents(watchedProjectPathsBySessionDir: StateFlow<Map<Path, Set<String>>>) =
+              flowOf(updateEvent)
+          })
         },
       )
-      val update = async {
-        withTimeout(5.seconds) {
-          source.updateEvents.first { event -> event.type == AgentSessionSourceUpdate.THREADS_CHANGED }
-        }
-      }
 
-      source.listThreadsFromClosedProject(projectDir.toString())
-      assertThat(watchedRoots.await()).containsExactlyInAnyOrder(
-        sessionDir.toAbsolutePath().normalize(),
-        checkNotNull(sessionDir.parent).toAbsolutePath().normalize(),
-      )
-      watchEvents.emit(
-        AgentWorkbenchWatchEvent(
-          eventType = AgentWorkbenchWatchEventType.MODIFY,
-          path = sessionFile.toAbsolutePath().normalize(),
-          rootPath = sessionDir.toAbsolutePath().normalize(),
-          isDirectory = false,
-          count = 1,
-        )
-      )
-
-      assertThat(update.await().scopedPaths).containsExactly(projectDir.toString())
+      assertThat(source.updateEvents.first { event -> event.type == AgentSessionSourceUpdate.THREADS_CHANGED }).isEqualTo(updateEvent)
     }
   }
 
   @Test
-  fun `session directory creation emits scoped thread update`() {
-    val sessionDir = tempDir.resolve("created-sessions")
-    val projectDir = tempDir.resolve("project-created")
-    val updateEvent = createPiSessionSourceUpdateEventForWatchEvent(
-      event = AgentWorkbenchWatchEvent(
-        eventType = AgentWorkbenchWatchEventType.CREATE,
-        path = sessionDir,
-        rootPath = checkNotNull(sessionDir.parent),
-        isDirectory = true,
-        count = 1,
-      ),
-      projectPathsBySessionDir = mapOf(sessionDir.toAbsolutePath().normalize() to setOf(projectDir.toString())),
+  fun `pi extension status update creates scoped activity hint`() {
+    val projectStatusDir = tempDir.resolve("project-status")
+    val updateEvent = PiExtensionStatusBridge.parseStatusUpdate(
+      content = """
+        {"sessionId":"session-status","cwd":"${projectStatusDir.toString().jsonEscape()}","activity":"processing","updatedAt":5000}
+      """.trimIndent(),
+      receivedAtMs = 6_000L,
     )
 
-    assertThat(updateEvent?.type).isEqualTo(AgentSessionSourceUpdate.THREADS_CHANGED)
-    assertThat(updateEvent?.scopedPaths).containsExactly(projectDir.toString())
+    assertThat(updateEvent?.type).isEqualTo(AgentSessionSourceUpdate.HINTS_CHANGED)
+    assertThat(updateEvent?.scopedPaths).containsExactly(projectStatusDir.toString())
+    assertThat(updateEvent?.activityUpdatesByThreadId).containsOnlyKeys("session-status")
+    assertThat(updateEvent?.activityUpdatesByThreadId?.get("session-status")?.activityReport).isEqualTo(
+      AgentThreadActivityReport(AgentThreadActivity.PROCESSING)
+    )
+    assertThat(updateEvent?.activityUpdatesByThreadId?.get("session-status")?.updatedAt).isEqualTo(5_000L)
+    assertThat(updateEvent?.threadIds).containsExactly("session-status")
   }
 
   @Test
-  fun `session watcher ignores non jsonl files`() {
-    val sessionDir = tempDir.resolve("ignore-sessions")
-    val projectDir = tempDir.resolve("project-ignore")
-    val updateEvent = createPiSessionSourceUpdateEventForWatchEvent(
-      event = AgentWorkbenchWatchEvent(
-        eventType = AgentWorkbenchWatchEventType.MODIFY,
-        path = sessionDir.resolve("notes.txt"),
-        rootPath = sessionDir,
-        isDirectory = false,
-        count = 1,
-      ),
-      projectPathsBySessionDir = mapOf(sessionDir.toAbsolutePath().normalize() to setOf(projectDir.toString())),
+  fun `pi extension done status update uses shared unread activity`() {
+    val projectStatusDir = tempDir.resolve("project-status-done")
+    val updateEvent = PiExtensionStatusBridge.parseStatusUpdate(
+      content = """
+        {"sessionId":"session-status-done","cwd":"${projectStatusDir.toString().jsonEscape()}","activity":"done","updatedAt":5000}
+      """.trimIndent(),
+      receivedAtMs = 6_000L,
     )
 
-    assertThat(updateEvent).isNull()
+    assertThat(updateEvent?.type).isEqualTo(AgentSessionSourceUpdate.HINTS_CHANGED)
+    assertThat(updateEvent?.scopedPaths).containsExactly(projectStatusDir.toString())
+    assertThat(updateEvent?.threadIds).containsExactly("session-status-done")
+    assertThat(updateEvent?.activityUpdatesByThreadId?.get("session-status-done")?.activityReport).isEqualTo(
+      AgentThreadActivityReport(AgentThreadActivity.UNREAD)
+    )
+    assertThat(updateEvent?.activityUpdatesByThreadId?.get("session-status-done")?.updatedAt).isEqualTo(5_000L)
+  }
+
+  @Test
+  fun `pi extension session info update creates scoped thread refresh`() {
+    val projectStatusDir = tempDir.resolve("project-status-name")
+    val projectStatusDirJson = projectStatusDir.toString().jsonString()
+    val updateEvent = PiExtensionStatusBridge.parseStatusUpdate(
+      content = """
+        {"sessionId":"session-status-name","cwd":$projectStatusDirJson,"event":"session_info_changed","name":"Renamed"}
+      """.trimIndent(),
+      receivedAtMs = 6_000L,
+    )
+
+    assertThat(updateEvent?.type).isEqualTo(AgentSessionSourceUpdate.THREADS_CHANGED)
+    assertThat(updateEvent?.scopedPaths).containsExactly(projectStatusDir.toString())
+    assertThat(updateEvent?.threadIds).containsExactly("session-status-name")
+    assertThat(updateEvent?.activityUpdatesByThreadId).isEmpty()
   }
 
   @Test
@@ -257,7 +289,8 @@ class PiSessionSourceTest {
         sessionDir = sessionDir,
         sessionId = "session-read",
         cwd = projectDir,
-        piUserMessageEntry(id = "user-read", content = "Read state", timestamp = 3_000L),
+        piUserMessageEntry(id = "user-read", content = "Read state", timestamp = 2_000L),
+        piAssistantMessageEntry(id = "assistant-read", parentId = "user-read", timestamp = 3_000L),
       )
       val source = sourceFor(sessionDir)
 
@@ -266,6 +299,144 @@ class PiSessionSourceTest {
 
       source.markThreadAsRead("session-read", 3_000L)
       assertThat(source.listThreadsFromClosedProject(projectDir.toString()).single().activity).isEqualTo(AgentThreadActivity.READY)
+    }
+  }
+
+  @Test
+  fun `user leaf marks session processing`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-user-leaf")
+      val sessionDir = tempDir.resolve("user-leaf-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-user-leaf",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-leaf", content = "Run task", timestamp = 3_000L),
+      )
+      val source = sourceFor(sessionDir)
+
+      val thread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+
+      assertThat(thread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+    }
+  }
+
+  @Test
+  fun `assistant tool use leaf marks session processing`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-tool-use-leaf")
+      val sessionDir = tempDir.resolve("tool-use-leaf-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-tool-use-leaf",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-tool-use", content = "Run task", timestamp = 2_000L),
+        piAssistantMessageEntry(
+          id = "assistant-tool-use",
+          parentId = "user-tool-use",
+          timestamp = 3_000L,
+          stopReason = "toolUse",
+        ),
+      )
+      val source = sourceFor(sessionDir)
+
+      val thread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+
+      assertThat(thread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+    }
+  }
+
+  @Test
+  fun `tool result leaf marks session processing`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-tool-result-leaf")
+      val sessionDir = tempDir.resolve("tool-result-leaf-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-tool-result-leaf",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-tool-result", content = "Run task", timestamp = 2_000L),
+        piToolResultMessageEntry(),
+      )
+      val source = sourceFor(sessionDir)
+
+      val thread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+
+      assertThat(thread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+    }
+  }
+
+  @Test
+  fun `custom message leaf marks session processing`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-custom-message-leaf")
+      val sessionDir = tempDir.resolve("custom-message-leaf-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-custom-message-leaf",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-custom-message", content = "Run task", timestamp = 2_000L),
+        piCustomMessageEntry(),
+      )
+      val source = sourceFor(sessionDir)
+
+      val thread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+
+      assertThat(thread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+    }
+  }
+
+  @Test
+  fun `completed observed session is marked unread until read`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-completed-observed")
+      val sessionDir = tempDir.resolve("completed-observed-sessions")
+      val sessionFile = writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-completed-observed",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-completed-observed", content = "Run task", timestamp = 3_000L),
+      )
+      val source = sourceFor(sessionDir)
+
+      val workingThread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+      assertThat(workingThread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+      appendPiSessionEntry(
+        sessionFile,
+        piAssistantMessageEntry(id = "assistant-completed-observed", parentId = "user-completed-observed", timestamp = 4_000L),
+      )
+
+      val completedThread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+      assertThat(completedThread.activity).isEqualTo(AgentThreadActivity.UNREAD)
+      source.markThreadAsRead("session-completed-observed", 4_000L)
+      val readThread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+      assertThat(readThread.activity).isEqualTo(AgentThreadActivity.READY)
+    }
+  }
+
+  @Test
+  fun `active working session completion is not premarked read`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-active-completed")
+      val sessionDir = tempDir.resolve("active-completed-sessions")
+      val sessionFile = writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-active-completed",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-active-completed", content = "Run task", timestamp = 3_000L),
+      )
+      val source = sourceFor(sessionDir)
+      source.setActiveThreadId("session-active-completed")
+
+      val workingThread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+      assertThat(workingThread.activity).isEqualTo(AgentThreadActivity.PROCESSING)
+      appendPiSessionEntry(
+        sessionFile,
+        piAssistantMessageEntry(id = "assistant-active-completed", parentId = "user-active-completed", timestamp = 4_000L),
+      )
+
+      val completedThread = source.listThreadsFromClosedProject(projectDir.toString()).single()
+      assertThat(completedThread.activity).isEqualTo(AgentThreadActivity.UNREAD)
     }
   }
 
@@ -309,23 +480,77 @@ class PiSessionSourceTest {
     return sessionFile
   }
 
+  private fun appendPiSessionEntry(sessionFile: Path, entry: String) {
+    Files.writeString(sessionFile, entry + "\n", StandardOpenOption.APPEND)
+  }
+
   private fun lineCount(path: Path): Int {
     return Files.readString(path).lineSequence().count { it.isNotBlank() }
   }
 }
 
 private fun piUserMessageEntry(id: String, content: String, timestamp: Long): String {
-  return """
-    {"type":"message","id":"$id","parentId":null,"timestamp":"2026-01-01T00:00:02Z","message":{"role":"user","content":"${content.jsonEscape()}","timestamp":$timestamp}}
-  """.trimIndent()
+  return piMessageEntry(
+    id = id,
+    parentId = null,
+    entryTimestamp = "2026-01-01T00:00:02Z",
+    messageFields = "\"role\":\"user\",\"content\":${content.jsonString()},\"timestamp\":$timestamp",
+  )
+}
+
+private fun piAssistantMessageEntry(id: String, parentId: String, timestamp: Long, stopReason: String = "stop"): String {
+  return piMessageEntry(
+    id = id,
+    parentId = parentId,
+    entryTimestamp = "2026-01-01T00:00:03Z",
+    messageFields = "\"role\":\"assistant\",\"content\":[],\"stopReason\":${stopReason.jsonString()},\"timestamp\":$timestamp",
+  )
+}
+
+private fun piToolResultMessageEntry(): String {
+  return piMessageEntry(
+    id = "tool-result",
+    parentId = "user-tool-result",
+    entryTimestamp = "2026-01-01T00:00:03Z",
+    messageFields = "\"role\":\"toolResult\",\"content\":[],\"timestamp\":3000",
+  )
+}
+
+private fun piCustomMessageEntry(): String {
+  return listOf(
+    "\"type\":\"custom_message\"",
+    "\"id\":\"custom-message\"",
+    "\"parentId\":\"user-custom-message\"",
+    "\"timestamp\":\"2026-01-01T00:00:03Z\"",
+    "\"customType\":\"status\"",
+    "\"content\":\"working\"",
+  ).joinToString(separator = ",", prefix = "{", postfix = "}")
 }
 
 private fun piNamedSessionInfoEntry(id: String = "name-new", name: String): String {
-  return """
-    {"type":"session_info","id":"$id","parentId":"user-new","timestamp":"2026-01-01T00:00:04Z","name":"${name.jsonEscape()}"}
-  """.trimIndent()
+  return listOf(
+    "\"type\":\"session_info\"",
+    "\"id\":${id.jsonString()}",
+    "\"parentId\":\"user-new\"",
+    "\"timestamp\":\"2026-01-01T00:00:04Z\"",
+    "\"name\":${name.jsonString()}",
+  ).joinToString(separator = ",", prefix = "{", postfix = "}")
+}
+
+private fun piMessageEntry(id: String, parentId: String?, entryTimestamp: String, messageFields: String): String {
+  return listOf(
+    "\"type\":\"message\"",
+    "\"id\":${id.jsonString()}",
+    "\"parentId\":${parentId?.jsonString() ?: "null"}",
+    "\"timestamp\":${entryTimestamp.jsonString()}",
+    "\"message\":{$messageFields}",
+  ).joinToString(separator = ",", prefix = "{", postfix = "}")
 }
 
 private fun String.jsonEscape(): String {
   return replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
+private fun String.jsonString(): String {
+  return "\"${jsonEscape()}\""
 }
