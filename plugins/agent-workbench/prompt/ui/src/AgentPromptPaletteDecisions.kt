@@ -1,7 +1,7 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.prompt.ui
 
-// @spec community/plugins/agent-workbench/spec/agent-workbench-telemetry.spec.md
+// @spec community/plugins/agent-workbench/spec/core/agent-workbench-telemetry.spec.md
 
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
@@ -74,6 +74,34 @@ internal fun shouldEnableContainerModeOption(
     supportsContainerMode = supportsContainerMode,
   ) && selectedProvider?.let(isContainerRuntimeAvailable) == true
 }
+
+internal fun resolveContainerModeOptionState(
+  selectedProvider: AgentSessionProvider?,
+  isExtensionTab: Boolean,
+  requestedSelection: Boolean,
+  supportsContainerMode: (AgentSessionProvider) -> Boolean,
+  isContainerRuntimeAvailable: (AgentSessionProvider) -> Boolean,
+): ContainerModeOptionState {
+  val visible = shouldShowContainerModeOption(
+    selectedProvider = selectedProvider,
+    isExtensionTab = isExtensionTab,
+    supportsContainerMode = supportsContainerMode,
+  )
+  val enabled = visible && selectedProvider?.let(isContainerRuntimeAvailable) == true
+  return ContainerModeOptionState(
+    visible = visible,
+    enabled = enabled,
+    selected = requestedSelection && enabled,
+    showUnavailableTooltip = visible && !enabled,
+  )
+}
+
+internal data class ContainerModeOptionState(
+  @JvmField val visible: Boolean,
+  @JvmField val enabled: Boolean,
+  @JvmField val selected: Boolean,
+  @JvmField val showUnavailableTooltip: Boolean,
+)
 
 internal fun shouldSubmitContainerMode(
   isSelected: Boolean,
@@ -159,11 +187,15 @@ internal fun shouldAllowPromptPopupCancellation(
   currentEvent: AWTEvent?,
   isExplicitClose: Boolean,
   resolveProject: (Component?) -> Project?,
+  autoClose: Boolean = true
 ): Boolean {
   return isExplicitClose || popupProject == null || when (currentEvent) {
-    is MouseEvent ->
+    is MouseEvent -> {
+      if (!autoClose) return false
+
       !isRecentSourceFrameActivation &&
       resolveProject(currentEvent.component) === popupProject
+    }
     is KeyEvent -> isEscapeKeyPress(currentEvent)
     is WindowEvent -> false
     else -> true
@@ -184,19 +216,4 @@ internal fun reportPromptSubmitBlocked(
     provider = provider,
     launchMode = launchMode,
   )
-}
-
-internal fun resolveRestoredPromptProvider(
-  draftProviderId: String?,
-  preferredProvider: AgentSessionProvider?,
-  availableProviders: Iterable<AgentSessionProvider>,
-): AgentSessionProvider? {
-  val availableProviderSet = availableProviders.toSet()
-  val draftProvider = draftProviderId
-    ?.let(AgentSessionProvider::fromOrNull)
-    ?.takeIf { provider -> provider in availableProviderSet }
-  if (draftProvider != null) {
-    return draftProvider
-  }
-  return preferredProvider?.takeIf { provider -> provider in availableProviderSet }
 }

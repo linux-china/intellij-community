@@ -53,7 +53,9 @@ import com.intellij.xdebugger.XSourcePosition
 import com.intellij.xdebugger.breakpoints.SuspendPolicy
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
 import com.intellij.xdebugger.breakpoints.XBreakpointType
+import com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
+import com.intellij.xdebugger.breakpoints.XLineBreakpointVerticalPlacement
 import com.intellij.xdebugger.impl.XDebuggerUtilImpl
 import com.intellij.xdebugger.impl.breakpoints.InlineBreakpointsVariantsManager
 import com.intellij.xdebugger.impl.breakpoints.InlineVariantWithMatchingBreakpoint
@@ -168,6 +170,26 @@ internal class BackendXBreakpointTypeApi : XBreakpointTypeApi {
       return XNoBreakpointPossibleResponse
     }
 
+    if (request.placement == XLineBreakpointVerticalPlacement.INTER_LINE) {
+      val lineVariant = readAction { variants.firstOrNull { !it.isMultiVariant && it.highlightRange == null } }
+      if (lineVariant == null) {
+        LOG.debug { "[$requestId] No full-line variant found for inter-line breakpoint, returning XNoBreakpointPossibleResponse" }
+        return XNoBreakpointPossibleResponse
+      }
+
+      val variantText = readAction { lineVariant.text }
+      LOG.debug { "[$requestId] Using full-line variant for inter-line breakpoint: $variantText" }
+
+      if (request.hasBreakpoints) {
+        LOG.debug { "[$requestId] Breakpoint exists, returning XRemoveBreakpointResponse" }
+        return XRemoveBreakpointResponse
+      }
+
+      val breakpoint = createBreakpointByVariant(project, lineVariant, position, request)
+      LOG.debug { "[$requestId] Created inter-line breakpoint: $breakpoint, returning XLineBreakpointInstalledResponse" }
+      return XLineBreakpointInstalledResponse(breakpoint.breakpointId)
+    }
+
     val singleVariant = variants.singleOrNull()
     if (singleVariant != null) {
       val variantText = readAction { singleVariant.text }
@@ -225,14 +247,19 @@ internal class BackendXBreakpointTypeApi : XBreakpointTypeApi {
     val breakpointManager = getBreakpointManager(project)
     val placement = request.placement
     val line = readAction { position.line }
-    val breakpoint = XDebuggerUtilImpl.addLineBreakpoint(breakpointManager, variant, position.file, line, request.isTemporary, placement)
-    if (request.isLogging) {
-      breakpoint.setSuspendPolicy(SuspendPolicy.NONE)
-      if (request.logExpression != null) {
-        breakpoint.isLogMessage = true
-        breakpoint.setLogExpression(request.logExpression)
+    val additionalInfoBuilder = XLineBreakpointAdditionalInfo.Builder().apply {
+      setVerticalPlacement(placement)
+      if (request.isLogging) {
+        setSuspendPolicy(SuspendPolicy.NONE)
+        setLogExpressionIfEnabled(request.logExpression)
       }
+      setTemporary(request.isTemporary)
     }
+    val breakpoint = XDebuggerUtilImpl.addLineBreakpoint(breakpointManager,
+                                                         variant,
+                                                         position.file,
+                                                         line,
+                                                         additionalInfoBuilder.build())
     return breakpoint as XBreakpointBase<*, *, *>
   }
 

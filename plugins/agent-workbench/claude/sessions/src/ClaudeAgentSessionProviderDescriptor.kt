@@ -6,9 +6,12 @@ import com.intellij.agent.workbench.common.icons.AgentWorkbenchCommonIcons
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.isClaudeMenuCommandPrompt
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModel
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModelGroup
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
 import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.prompt.core.AgentPromptReasoningEffort
+import com.intellij.agent.workbench.prompt.core.withGroup
 import com.intellij.agent.workbench.sessions.core.providers.AGENT_PROMPT_PROVIDER_PLAN_MODE_OPTION
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageMode
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessagePlan
@@ -43,6 +46,7 @@ internal class ClaudeAgentSessionProviderDescriptor(
     executableResolver = executableResolver,
   ),
   private val cliAvailableProbe: suspend () -> Boolean = { ClaudeCliSupport.findExecutableViaTerminalResolver() != null },
+  private val hookSettingsProvider: (String) -> String? = ClaudeHookBridge::createLaunchSettingsArgument,
 ) : AgentSessionProviderDescriptor {
   override val provider: AgentSessionProvider
     get() = AgentSessionProvider.CLAUDE
@@ -65,6 +69,9 @@ internal class ClaudeAgentSessionProviderDescriptor(
   override val yoloSessionLabelKey: String
     get() = "toolwindow.action.new.session.claude.yolo"
 
+  override val yoloSessionModeLabelKey: String
+    get() = "toolwindow.action.new.session.claude.yolo.mode"
+
   override val icon: Icon
     get() = AgentWorkbenchCommonIcons.Claude
 
@@ -85,6 +92,9 @@ internal class ClaudeAgentSessionProviderDescriptor(
       AgentPromptReasoningEffort.XHIGH,
       AgentPromptReasoningEffort.MAX,
     )
+
+  override val supportsGenerationModelSelection: Boolean
+    get() = true
 
   override val editorTabActionIds: List<String>
     get() = listOf(AgentWorkbenchActionIds.Sessions.BIND_PENDING_AGENT_THREAD_FROM_EDITOR_TAB)
@@ -140,22 +150,36 @@ internal class ClaudeAgentSessionProviderDescriptor(
       sessionId = sessionId,
       executable = executableResolver(),
       launchMode = launchMode,
+      hookSettingsArgument = hookSettingsProvider(sessionId),
     )
   }
 
   override suspend fun buildNewSessionLaunchSpec(mode: AgentSessionLaunchMode): AgentSessionTerminalLaunchSpec {
-    return buildClaudeNewSessionLaunchSpec(mode, executableResolver())
+    return buildClaudeNewSessionLaunchSpec(mode, executableResolver(), hookSettingsProvider = hookSettingsProvider)
+  }
+
+  override suspend fun listAvailableGenerationModels(project: Project?): List<AgentPromptGenerationModel> {
+    return CLAUDE_CODE_GENERATION_MODELS
   }
 
   override fun applyGenerationSettings(
     baseLaunchSpec: AgentSessionTerminalLaunchSpec,
     generationSettings: AgentPromptGenerationSettings,
+    initialMessagePlan: AgentInitialMessagePlan,
   ): AgentSessionTerminalLaunchSpec {
-    val effort = sanitizeGenerationSettings(generationSettings).reasoningEffort
-    if (effort == AgentPromptReasoningEffort.AUTO) {
+    val settings = sanitizeGenerationSettings(generationSettings)
+    var command = baseLaunchSpec.command
+    settings.modelId?.let { modelId ->
+      command = replaceOrAddModel(command, modelId)
+    }
+    val effort = settings.reasoningEffort
+    if (effort != AgentPromptReasoningEffort.AUTO) {
+      command = replaceOrAddEffort(command, effort.claudeCliValue())
+    }
+    if (command == baseLaunchSpec.command) {
       return baseLaunchSpec
     }
-    return baseLaunchSpec.copy(command = replaceOrAddEffort(baseLaunchSpec.command, effort.claudeCliValue()))
+    return baseLaunchSpec.copy(command = command)
   }
 
   override fun buildLaunchSpecWithInitialMessage(
@@ -181,6 +205,10 @@ internal class ClaudeAgentSessionProviderDescriptor(
 
   override fun onConversationOpened() {
     service<ClaudeQuotaHintStateService>().markEligible()
+  }
+
+  override fun recordTerminalSessionClosed(path: String, threadId: String) {
+    ClaudeHookBridge.invalidateSession(threadId)
   }
 
   override fun createToolWindowNorthComponent(project: Project): JComponent {
@@ -209,15 +237,39 @@ internal fun replaceOrAddPermissionMode(command: List<String>, mode: String): Li
 }
 
 internal fun replaceOrAddEffort(command: List<String>, effort: String): List<String> {
+  return replaceOrAddOption(command, EFFORT_FLAG, effort)
+}
+
+internal fun replaceOrAddModel(command: List<String>, model: String): List<String> {
+  return replaceOrAddOption(command, MODEL_FLAG, model)
+}
+
+internal fun addClaudeHookSettings(command: List<String>, settingsArgument: String?): List<String> {
+  val normalizedSettingsArgument = settingsArgument?.trim()?.takeIf { it.isNotEmpty() } ?: return command
+  if (command.any { it == CLAUDE_BARE_FLAG || it == CLAUDE_SAFE_MODE_FLAG }) {
+    return command
+  }
   val result = command.toMutableList()
-  val index = result.indexOf(EFFORT_FLAG)
-  if (index >= 0 && index + 1 < result.size) {
-    result[index + 1] = effort
+  val existingIndex = result.indexOf(SETTINGS_FLAG)
+  if (existingIndex >= 0 && existingIndex + 1 < result.size && result[existingIndex + 1] == normalizedSettingsArgument) {
     return result
   }
 
   val promptSeparatorIndex = result.indexOf("--").takeIf { it >= 0 } ?: result.size
-  result.addAll(promptSeparatorIndex, listOf(EFFORT_FLAG, effort))
+  result.addAll(promptSeparatorIndex, listOf(SETTINGS_FLAG, normalizedSettingsArgument))
+  return result
+}
+
+private fun replaceOrAddOption(command: List<String>, flag: String, value: String): List<String> {
+  val result = command.toMutableList()
+  val index = result.indexOf(flag)
+  if (index >= 0 && index + 1 < result.size) {
+    result[index + 1] = value
+    return result
+  }
+
+  val promptSeparatorIndex = result.indexOf("--").takeIf { it >= 0 } ?: result.size
+  result.addAll(promptSeparatorIndex, listOf(flag, value))
   return result
 }
 
@@ -229,12 +281,16 @@ internal fun buildClaudeResumeLaunchSpec(
   sessionId: String,
   executable: String = ClaudeCliSupport.CLAUDE_COMMAND,
   launchMode: AgentSessionLaunchMode = AgentSessionLaunchMode.STANDARD,
+  hookSettingsArgument: String? = null,
 ): AgentSessionTerminalLaunchSpec {
   return AgentSessionTerminalLaunchSpec(
-    command = ClaudeCliSupport.buildResumeCommand(
-      sessionId = sessionId,
-      yolo = launchMode == AgentSessionLaunchMode.YOLO,
-      executable = executable,
+    command = addClaudeHookSettings(
+      ClaudeCliSupport.buildResumeCommand(
+        sessionId = sessionId,
+        yolo = launchMode == AgentSessionLaunchMode.YOLO,
+        executable = executable,
+      ),
+      hookSettingsArgument,
     ),
     envVariables = mapOf(CLAUDE_DISABLE_AUTO_UPDATER_ENV to CLAUDE_DISABLE_AUTO_UPDATER_VALUE),
   )
@@ -243,13 +299,17 @@ internal fun buildClaudeResumeLaunchSpec(
 internal fun buildClaudeNewSessionLaunchSpec(
   mode: AgentSessionLaunchMode,
   executable: String = ClaudeCliSupport.CLAUDE_COMMAND,
+  hookSettingsProvider: (String) -> String? = { null },
 ): AgentSessionTerminalLaunchSpec {
   val sessionId = UUID.randomUUID().toString()
   return AgentSessionTerminalLaunchSpec(
-    command = ClaudeCliSupport.buildNewSessionCommand(
-      yolo = mode == AgentSessionLaunchMode.YOLO,
-      sessionId = sessionId,
-      executable = executable,
+    command = addClaudeHookSettings(
+      ClaudeCliSupport.buildNewSessionCommand(
+        yolo = mode == AgentSessionLaunchMode.YOLO,
+        sessionId = sessionId,
+        executable = executable,
+      ),
+      hookSettingsProvider(sessionId),
     ),
     envVariables = mapOf(CLAUDE_DISABLE_AUTO_UPDATER_ENV to CLAUDE_DISABLE_AUTO_UPDATER_VALUE),
     preallocatedSessionId = sessionId,
@@ -260,15 +320,26 @@ internal fun buildClaudeLaunchSpecWithInitialMessage(
   baseLaunchSpec: AgentSessionTerminalLaunchSpec,
   initialMessagePlan: AgentInitialMessagePlan,
 ): AgentSessionTerminalLaunchSpec {
-  val effectivePrompt = initialMessagePlan.message ?: return baseLaunchSpec
   val command = if (initialMessagePlan.mode == AgentInitialMessageMode.PLAN) {
     replaceOrAddPermissionMode(baseLaunchSpec.command, PERMISSION_MODE_PLAN)
   }
   else {
     baseLaunchSpec.command
   }
+  val effectivePrompt = initialMessagePlan.message ?: return baseLaunchSpec.copy(command = command)
   return baseLaunchSpec.copy(command = command + listOf("--", effectivePrompt))
 }
 
 private const val CLAUDE_DISABLE_AUTO_UPDATER_ENV: String = "DISABLE_AUTOUPDATER"
 private const val CLAUDE_DISABLE_AUTO_UPDATER_VALUE: String = "1"
+private const val MODEL_FLAG: String = "--model"
+private const val CLAUDE_BARE_FLAG: String = "--bare"
+private const val CLAUDE_SAFE_MODE_FLAG: String = "--safe-mode"
+
+private val CLAUDE_CODE_GENERATION_MODELS: List<AgentPromptGenerationModel> = listOf(
+  AgentPromptGenerationModel(id = "opus", displayName = "Opus"),
+  AgentPromptGenerationModel(id = "sonnet", displayName = "Sonnet", isDefault = true),
+  AgentPromptGenerationModel(id = "sonnet[1m]", displayName = "Sonnet (1M context)"),
+  AgentPromptGenerationModel(id = "haiku", displayName = "Haiku"),
+  AgentPromptGenerationModel(id = "fable", displayName = "Fable"),
+).map { model -> model.withGroup(AgentPromptGenerationModelGroup.CLAUDE_CODE) }

@@ -2,6 +2,7 @@
 package com.intellij.agent.workbench.junie.sessions
 
 import com.intellij.agent.workbench.common.icons.AgentWorkbenchCommonIcons
+import com.intellij.agent.workbench.common.AgentWorkbenchActionIds
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.junie.common.BRAVE_FLAG
@@ -53,6 +54,9 @@ internal class JunieAgentSessionProviderDescriptor(
   override val yoloSessionLabelKey: String
     get() = "toolwindow.action.new.session.junie.yolo"
 
+  override val yoloSessionModeLabelKey: String
+    get() = "toolwindow.action.new.session.junie.yolo.mode"
+
   override val icon: Icon
     get() = AgentWorkbenchCommonIcons.Junie
 
@@ -74,6 +78,18 @@ internal class JunieAgentSessionProviderDescriptor(
     )
 
   override val supportsGenerationModelSelection: Boolean
+    get() = true
+
+  override val editorTabActionIds: List<String>
+    get() = listOf(AgentWorkbenchActionIds.Sessions.BIND_PENDING_AGENT_THREAD_FROM_EDITOR_TAB)
+
+  override val supportsPendingEditorTabRebind: Boolean
+    get() = true
+
+  override val emitsScopedRefreshSignals: Boolean
+    get() = true
+
+  override val refreshPathAfterCreateNewSession: Boolean
     get() = true
 
   override val requiresCliAvailabilityForInitialMessagePlan: Boolean
@@ -143,6 +159,7 @@ internal class JunieAgentSessionProviderDescriptor(
   override fun applyGenerationSettings(
     baseLaunchSpec: AgentSessionTerminalLaunchSpec,
     generationSettings: AgentPromptGenerationSettings,
+    initialMessagePlan: AgentInitialMessagePlan,
   ): AgentSessionTerminalLaunchSpec {
     val settings = sanitizeGenerationSettings(generationSettings)
     val generationArgs = buildJunieGenerationArgs(settings)
@@ -207,7 +224,9 @@ internal class JunieAgentSessionProviderDescriptor(
 private val JUNIE_PROMPT_PROVIDER_PLAN_MODE_OPTION: AgentPromptProviderOption =
   AGENT_PROMPT_PROVIDER_PLAN_MODE_OPTION.copy(defaultSelected = false)
 
-private fun buildJunieGenerationArgs(settings: AgentPromptGenerationSettings): List<String> {
+private fun buildJunieGenerationArgs(
+  settings: AgentPromptGenerationSettings,
+): List<String> {
   val args = mutableListOf<String>()
   settings.modelId?.let { modelId -> args.addAll(listOf(MODEL_FLAG, modelId)) }
   val effort = settings.reasoningEffort

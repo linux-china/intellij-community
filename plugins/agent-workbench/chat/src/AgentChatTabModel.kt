@@ -2,8 +2,14 @@
 package com.intellij.agent.workbench.chat
 
 import com.intellij.agent.workbench.common.AgentThreadActivity
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialPromptDeliveryChannel
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialPromptDeliveryStatus
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialPromptRecord
+import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchAction
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchStep
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageTimeoutPolicy
+import com.intellij.agent.workbench.sessions.core.providers.AgentTerminalPromptDispatch
 
 internal data class AgentChatTabIdentity(
   @JvmField val projectHash: String,
@@ -20,12 +26,27 @@ internal data class AgentChatTabRuntime(
   @JvmField val pendingFirstInputAtMs: Long? = null,
   @JvmField val pendingLaunchMode: String? = null,
   @JvmField val launchMode: String? = null,
+  @JvmField val generationSettings: AgentPromptGenerationSettings = AgentPromptGenerationSettings.AUTO,
   @JvmField val newThreadRebindRequestedAtMs: Long? = null,
-  @JvmField val initialMessageDispatchSteps: List<AgentInitialMessageDispatchStep> = emptyList(),
-  @JvmField val initialMessageDispatchStepIndex: Int = 0,
-  @JvmField val initialMessageToken: String? = null,
-  @JvmField val initialMessageSent: Boolean = false,
-)
+  @JvmField val initialPromptRecord: AgentInitialPromptRecord? = null,
+  @JvmField val terminalPromptDispatch: AgentTerminalPromptDispatch? = null,
+) {
+  val initialMessageDispatchSteps: List<AgentInitialMessageDispatchStep>
+    get() = terminalPromptDispatch?.steps.orEmpty()
+
+  val initialMessageDispatchStepIndex: Int
+    get() = terminalPromptDispatch?.stepIndex ?: 0
+
+  @Suppress("unused")
+  val initialComposedMessage: String?
+    get() = initialPromptRecord?.message
+
+  val initialMessageToken: String?
+    get() = initialPromptRecord?.token
+
+  val initialMessageSent: Boolean
+    get() = initialPromptRecord?.deliveryStatus == AgentInitialPromptDeliveryStatus.DELIVERED
+}
 
 internal data class AgentChatTabSnapshot(
   val tabKey: AgentChatTabKey,
@@ -45,6 +66,7 @@ internal data class AgentChatTabSnapshot(
       pendingFirstInputAtMs: Long? = null,
       pendingLaunchMode: String? = null,
       launchMode: String? = null,
+      generationSettings: AgentPromptGenerationSettings = AgentPromptGenerationSettings.AUTO,
       newThreadRebindRequestedAtMs: Long? = null,
       initialMessageToken: String? = null,
       initialMessageSent: Boolean = false,
@@ -52,12 +74,26 @@ internal data class AgentChatTabSnapshot(
       initialMessageDispatchSteps: List<AgentInitialMessageDispatchStep> = emptyList(),
       initialMessageDispatchStepIndex: Int = 0,
       initialComposedMessage: String? = null,
+      initialPromptRecord: AgentInitialPromptRecord? = null,
+      terminalPromptDispatch: AgentTerminalPromptDispatch? = null,
     ): AgentChatTabSnapshot {
       val normalizedDispatchSteps = normalizeInitialMessageDispatchSteps(
         initialMessageDispatchSteps = initialMessageDispatchSteps,
         initialComposedMessage = initialComposedMessage,
         initialMessageTimeoutPolicy = initialMessageTimeoutPolicy,
       )
+      val resolvedPromptRecord = initialPromptRecord
+                                 ?: buildLegacyInitialPromptRecord(
+                                   initialComposedMessage = initialComposedMessage,
+                                   dispatchSteps = normalizedDispatchSteps,
+                                   token = initialMessageToken,
+                                   sent = initialMessageSent,
+                                 )
+      val resolvedTerminalDispatch = terminalPromptDispatch?.normalized()
+                                     ?: AgentTerminalPromptDispatch(
+                                       steps = normalizedDispatchSteps,
+                                       stepIndex = initialMessageDispatchStepIndex,
+                                     ).normalized()?.takeUnless { initialMessageSent }
       val identity = AgentChatTabIdentity(
         projectHash = projectHash,
         projectPath = projectPath,
@@ -75,11 +111,10 @@ internal data class AgentChatTabSnapshot(
           pendingFirstInputAtMs = pendingFirstInputAtMs,
           pendingLaunchMode = pendingLaunchMode,
           launchMode = normalizeAgentChatLaunchMode(launchMode),
+          generationSettings = generationSettings,
           newThreadRebindRequestedAtMs = newThreadRebindRequestedAtMs,
-          initialMessageDispatchSteps = normalizedDispatchSteps,
-          initialMessageDispatchStepIndex = initialMessageDispatchStepIndex.coerceIn(0, normalizedDispatchSteps.size),
-          initialMessageToken = initialMessageToken,
-          initialMessageSent = initialMessageSent,
+          initialPromptRecord = resolvedPromptRecord,
+          terminalPromptDispatch = resolvedTerminalDispatch,
         ),
       )
     }
@@ -103,6 +138,28 @@ private fun normalizeInitialMessageDispatchSteps(
       text = normalizedMessage,
       timeoutPolicy = initialMessageTimeoutPolicy,
     )
+  )
+}
+
+private fun buildLegacyInitialPromptRecord(
+  initialComposedMessage: String?,
+  dispatchSteps: List<AgentInitialMessageDispatchStep>,
+  token: String?,
+  sent: Boolean,
+): AgentInitialPromptRecord? {
+  val message = initialComposedMessage?.trim()?.takeIf { it.isNotEmpty() }
+                ?: dispatchSteps.lastOrNull { step -> step.action == AgentInitialMessageDispatchAction.SEND_TEXT && step.text.isNotBlank() }?.text
+                ?: return null
+  return AgentInitialPromptRecord(
+    message = message,
+    token = token,
+    deliveryStatus = if (sent) {
+      AgentInitialPromptDeliveryStatus.DELIVERED
+    }
+    else {
+      AgentInitialPromptDeliveryStatus.PENDING
+    },
+    deliveryChannel = AgentInitialPromptDeliveryChannel.TERMINAL,
   )
 }
 

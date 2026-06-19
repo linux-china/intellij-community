@@ -29310,6 +29310,16 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
             runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/nesessaryFunctionResult.kt");
         }
 
+        @TestMetadata("nesessaryOnClassOfCompanionObject.kt")
+        public void testNesessaryOnClassOfCompanionObject() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/nesessaryOnClassOfCompanionObject.kt");
+        }
+
+        @TestMetadata("nesessaryReceiverParameter.kt")
+        public void testNesessaryReceiverParameter() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/nesessaryReceiverParameter.kt");
+        }
+
         @TestMetadata("nesessaryTemplateParameter1.kt")
         public void testNesessaryTemplateParameter1() throws Exception {
             runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/nesessaryTemplateParameter1.kt");
@@ -29343,6 +29353,11 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @TestMetadata("redundantImportAlias.kt")
         public void testRedundantImportAlias() throws Exception {
             runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/redundantImportAlias.kt");
+        }
+
+        @TestMetadata("redundantOnClass.kt")
+        public void testRedundantOnClass() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/redundantOnClass.kt");
         }
 
         @TestMetadata("redundantOptInWithSubclassOptInRequired1.kt")
@@ -29408,6 +29423,39 @@ public abstract class K2LocalInspectionTestGenerated extends AbstractK2LocalInsp
         @TestMetadata("varargULong.kt")
         public void testVarargULong() throws Exception {
             runTest("../../../idea/tests/testData/inspectionsLocal/unnecessaryOptInAnnotation/varargULong.kt");
+        }
+    }
+
+    @RunWith(JUnit3RunnerWithInners.class)
+    @TestMetadata("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions")
+    public static class DuplicateArgumentsInSetOfAndMapOfFunctions extends AbstractK2LocalInspectionTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+        }
+
+        @TestMetadata("duplicatesInMapOf.kt")
+        public void testDuplicatesInMapOf() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions/duplicatesInMapOf.kt");
+        }
+
+        @TestMetadata("duplicatesInSetOf.kt")
+        public void testDuplicatesInSetOf() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions/duplicatesInSetOf.kt");
+        }
+
+        @TestMetadata("duplicatesInSetOfNulls.kt")
+        public void testDuplicatesInSetOfNulls() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions/duplicatesInSetOfNulls.kt");
+        }
+
+        @TestMetadata("noDuplicatesInMapOf.kt")
+        public void testNoDuplicatesInMapOf() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions/noDuplicatesInMapOf.kt");
+        }
+
+        @TestMetadata("noDuplicatesInSetOf.kt")
+        public void testNoDuplicatesInSetOf() throws Exception {
+            runTest("../../../idea/tests/testData/inspectionsLocal/duplicateArgumentsInSetOfAndMapOfFunctions/noDuplicatesInSetOf.kt");
         }
     }
 

@@ -10,7 +10,6 @@ import com.intellij.ide.ui.html.createGlobalStyleSheet
 import com.intellij.ide.ui.laf.LookAndFeelThemeAdapter
 import com.intellij.ide.ui.laf.createBaseLaF
 import com.intellij.idea.AppExitCodes
-import com.intellij.idea.AppMode
 import com.intellij.openapi.application.ex.ApplicationInfoEx
 import com.intellij.openapi.application.impl.AWTExceptionHandler
 import com.intellij.openapi.application.setUserInteractiveQosForEdt
@@ -21,15 +20,11 @@ import com.intellij.platform.icons.impl.intellij.IntelliJIconManager
 import com.intellij.ui.AppUIUtil
 import com.intellij.ui.IconManager
 import com.intellij.ui.icons.CoreIconManager
-import com.intellij.ui.isWindowIconAlreadyExternallySet
 import com.intellij.ui.scale.JBUIScale
-import com.intellij.ui.updateAppWindowIcon
 import com.intellij.util.system.LowLevelLocalMachineAccess
 import com.intellij.util.system.OS
 import com.intellij.util.ui.RawSwingDispatcher
 import com.intellij.util.ui.StartupUiUtil
-import com.intellij.util.ui.accessibility.ScreenReader.ASSISTIVE_TECHNOLOGIES_PROPERTY
-import com.intellij.util.ui.accessibility.ScreenReader.ATK_WRAPPER
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -142,10 +137,6 @@ internal fun scheduleInitAwtToolkit(scope: CoroutineScope, lockSystemDirsJob: Jo
 private suspend fun initAwtToolkit(busyThread: Thread) {
   checkHiDPISettings()
 
-  if (OS.CURRENT == OS.Linux && !AppMode.isRemoteDevHost() && System.getProperty(ASSISTIVE_TECHNOLOGIES_PROPERTY) == null) {
-    System.setProperty(ASSISTIVE_TECHNOLOGIES_PROPERTY, ATK_WRAPPER)
-  }
-
   System.setProperty("sun.awt.noerasebackground", "true")
   // mute system Cmd+`/Cmd+Shift+` shortcuts on macOS to avoid a conflict with corresponding platform actions (JBR-specific option)
   if (System.getProperty("apple.awt.captureNextAppWinKey") == null) {
@@ -251,13 +242,13 @@ internal fun scheduleUpdateFrameClassAndWindowIconAndPreloadSystemFonts(
     }
 
     // `updateWindowIcon` should be called after `initUiJob`, because it uses computed system font data for scale context
-    if (!isWindowIconAlreadyExternallySet()) {
+    if (!AppUIUtil.isWindowIconAlreadyExternallySet()) {
       launch {
         initUiScale.join()
         appInfoDeferred.join()
         // most of the time is consumed by loading SVG and can be done in parallel
         span("update window icon") {
-          updateAppWindowIcon(JOptionPane.getRootFrame())
+          AppUIUtil.updateAppWindowIcon(JOptionPane.getRootFrame())
         }
       }
     }

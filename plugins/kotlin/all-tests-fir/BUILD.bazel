@@ -61,7 +61,6 @@ jvm_library(
         "//plugins/kotlin/base/project-structure",
         "//plugins/junit/kotlin-tests-k2",
         "//jvm/jvm-analysis-kotlin-tests-k2:analysis-kotlin-tests-k2",
-        "//plugins/kotlin/base/analysis-api/analysis-api-k2-tests:kotlin-base-analysis-analysis-api-k2-tests",
         "//plugins/kotlin/uast/uast-kotlin-idea-fir/tests",
         "//plugins/kotlin/features-trainer/tests",
         "//plugins/kotlin/base/fir/project-structure",
@@ -77,6 +76,7 @@ jvm_library(
         "//plugins/kotlin/project-wizard/tests",
         "//plugins/kotlin/base/facet/tests",
         "//plugins/kotlin/compiler-plugins/compiler-plugin-support/tests",
+        "//platform/problemsView/collector",
         "//plugins/kotlin/fir/testFramework",
         "//plugins/kotlin/base/code-insight:kotlin-base-codeInsight-tests",
         "//plugins/kotlin/base/pluginTestFramework:kotlin-base-plugin-testFramework",
@@ -102,7 +102,6 @@ jvm_library(
         "//plugins/kotlin/j2k/shared/tests",
         "//plugins/kotlin/jps/graphImplementationTests",
         "//plugins/kotlin/jvm-debugger/testFramework",
-        "//plugins/kotlin/refactorings/kotlin.refactorings.common.tests:kotlin-refactorings-common-tests",
     ],
 )
 
@@ -173,7 +172,6 @@ jvm_library(
         "//plugins/kotlin/base/project-structure:project-structure_test_lib",
         "//plugins/junit/kotlin-tests-k2:kotlin-tests-k2_test_lib",
         "//jvm/jvm-analysis-kotlin-tests-k2:analysis-kotlin-tests-k2_test_lib",
-        "//plugins/kotlin/base/analysis-api/analysis-api-k2-tests:kotlin-base-analysis-analysis-api-k2-tests_test_lib",
         "//plugins/kotlin/uast/uast-kotlin-idea-fir/tests:tests_test_lib",
         "//plugins/kotlin/features-trainer/tests:tests_test_lib",
         "//plugins/kotlin/base/fir/project-structure:project-structure_test_lib",
@@ -189,6 +187,7 @@ jvm_library(
         "//plugins/kotlin/project-wizard/tests:tests_test_lib",
         "//plugins/kotlin/base/facet/tests:tests_test_lib",
         "//plugins/kotlin/compiler-plugins/compiler-plugin-support/tests:tests_test_lib",
+        "//platform/problemsView/collector:collector_test_lib",
         "//images:images-tests",
         "//images:images-tests_test_lib",
         "//RegExpSupport:regexp-tests",
@@ -252,7 +251,6 @@ jvm_library(
         "//plugins/kotlin/j2k/shared/tests:tests_test_lib",
         "//plugins/kotlin/jps/graphImplementationTests:graphImplementationTests_test_lib",
         "//plugins/kotlin/jvm-debugger/testFramework:testFramework_test_lib",
-        "//plugins/kotlin/refactorings/kotlin.refactorings.common.tests:kotlin-refactorings-common-tests_test_lib",
     ],
 )
 ### auto-generated section `build kotlin.fir-all-tests` end

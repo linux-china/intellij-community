@@ -3,7 +3,7 @@ package com.intellij.agent.workbench.prompt.ui
 
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-entry.spec.md
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-suggestions.spec.md
-// @spec community/plugins/agent-workbench/spec/agent-workbench-telemetry.spec.md
+// @spec community/plugins/agent-workbench/spec/core/agent-workbench-telemetry.spec.md
 
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AGENT_PROMPT_INITIAL_TEXT_DATA_KEY
@@ -34,6 +34,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -127,18 +128,28 @@ internal class AgentPromptPaletteSessionController(
       updateProviderOptionsVisibility = ::updateProviderOptionsVisibility,
       setTargetMode = ::setTargetMode,
       resolveTaskKey = ::resolveTaskKey,
-      getContainerModeSelected = { view.containerModeAction.selected },
-      setContainerModeSelected = { view.headerControls.setContainerModeSelected(it) },
+      getContainerModeSelected = ::isContainerModeSelectedForCurrentState,
+      restoreContainerModeSelection = ::syncContainerModeState,
     )
     generationSettingsController = AgentPromptGenerationSettingsController(
       invocationData = invocationData,
       providerSelector = providerSelector,
       generationSettingsPanel = view.generationSettingsPanel,
+      profileAction = view.profileAction,
+      launchProfileLink = view.launchProfileLink,
       modelSelectorLink = view.modelSelectorLink,
       reasoningEffortLink = view.reasoningEffortLink,
+      planReasoningEffortLink = view.planReasoningEffortLink,
+      defaultProfileActionControl = view.defaultProfileActionControl,
       modelCatalogScope = popupScope,
       launcherProvider = launcherProvider,
-      onDefaultSaved = { showInfo(AgentPromptBundle.message("popup.generation.default.saved")) },
+      onDefaultSaved = ::showInfo,
+      onLaunchProfileApplied = {
+        updateProviderOptionsVisibility()
+        updateSendAvailability()
+        refreshFooterHintForCurrentState()
+      },
+      manageProfilesDialogRunner = ::runManageProfilesDialog,
     )
     submitController = AgentPromptPaletteSubmitController(
       project = project,
@@ -156,8 +167,9 @@ internal class AgentPromptPaletteSessionController(
       onSubmitBlocked = ::showError,
       onSubmitSucceeded = ::closeAfterSuccessfulSubmit,
       onPromptSubmitted = uiStateService::saveSubmittedPromptHistoryEntry,
-      generationSettingsProvider = generationSettingsController::currentSettings,
-      isContainerModeSelected = { view.containerModeAction.selected },
+      generationSettingsProvider = generationSettingsController::currentLaunchSettings,
+      generationModelCatalogProvider = generationSettingsController::currentGenerationModelCatalog,
+      isContainerModeSelected = ::isContainerModeSelectedForCurrentState,
       isContainerModeSupported = ::isContainerModeSupported,
       isContainerModeRuntimeAvailable = ::isContainerModeRuntimeAvailable,
     )
@@ -166,16 +178,15 @@ internal class AgentPromptPaletteSessionController(
 
   fun initialize(initialAddContextRequest: AgentPromptAddContextRequest? = null) {
     contextController.configureAddContextButton()
-    generationSettingsController.restoreDefaultSettings(
-      launcherProvider()?.loadProviderPreferences()?.generationSettingsByProviderId.orEmpty()
-    )
     refreshProviders()
     contextController.loadInitialContext(initialAddContextRequest?.contextItems)
     contextController.resolveExtensionTabs()
 
     val draft = draftController.restoreDraft(restoreContextSnapshot = initialAddContextRequest == null)
     draftController.restoreTaskDrafts(draft)
-    generationSettingsController.refreshSelectedProviderModels()
+    generationSettingsController.restoreLaunchProfiles(
+      launcherProvider()?.loadProviderPreferences() ?: AgentPromptLauncherBridge.ProviderPreferences()
+    )
     refreshExtensionTaskDraftsFromContext()
 
     if (invocationData.attributes[com.intellij.agent.workbench.prompt.core.AGENT_PROMPT_INVOCATION_PREFER_EXTENSIONS_KEY] == true) {
@@ -186,7 +197,7 @@ internal class AgentPromptPaletteSessionController(
     draftController.overrideInitialTextIfProvided(initialText)
     if (initialAddContextRequest != null) {
       applyInitialAddContextTarget(initialAddContextRequest.target)
-      generationSettingsController.refreshSelectedProviderModels()
+      generationSettingsController.refreshPresentation()
       contextController.syncActiveExtensionTab(view.tabbedPane.selectedComponent as? JPanel)
     }
     draftController.loadPromptTextForSelectedTab()
@@ -246,19 +257,6 @@ internal class AgentPromptPaletteSessionController(
     }
   }
 
-  fun showProviderChooser() {
-    providerSelector.showChooser(onUnavailable = ::showError) {
-      if (currentTargetMode() == PromptTargetMode.EXISTING_TASK) {
-        existingTaskController.clearSelection()
-        reloadExistingTasks()
-      }
-      updateProviderOptionsVisibility()
-      generationSettingsController.refreshSelectedProviderModels()
-      updateSendAvailability()
-      refreshFooterHintForCurrentState()
-    }
-  }
-
   fun showPromptLibraryChooser() {
     popupScope.launch {
       val sourceEntries = collectReusablePromptSourceEntries(
@@ -274,6 +272,13 @@ internal class AgentPromptPaletteSessionController(
     }
   }
 
+  val isPinned: Boolean
+    get() = !uiStateService.autoClose
+
+  fun togglePin() {
+    uiStateService.autoClose = !uiStateService.autoClose
+  }
+
   fun onExistingTaskSelected(selected: ThreadEntry) {
     existingTaskController.onUserSelected(selected)
     updateSendAvailability()
@@ -281,6 +286,21 @@ internal class AgentPromptPaletteSessionController(
   }
 
   fun onExistingTaskStateChanged() {
+    updateSendAvailability()
+    refreshFooterHintForCurrentState()
+  }
+
+  fun onProviderOptionsChanged() {
+    generationSettingsController.refreshPresentation()
+    updateSendAvailability()
+  }
+
+  fun onProviderSelectionChanged() {
+    generationSettingsController.refreshPresentation()
+    updateProviderOptionsVisibility()
+    if (contextState.activeExtensionTab == null && currentTargetMode() == PromptTargetMode.EXISTING_TASK) {
+      reloadExistingTasks()
+    }
     updateSendAvailability()
     refreshFooterHintForCurrentState()
   }
@@ -575,38 +595,48 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun updateProviderOptionsVisibility() {
-    providerSelector.setProviderOptionsVisible(contextState.activeExtensionTab == null)
-    generationSettingsController.setGenerationControlsVisible(
-      contextState.activeExtensionTab == null && currentTargetMode() == PromptTargetMode.NEW_TASK
+    val extensionTab = contextState.activeExtensionTab
+    val isStandardTab = extensionTab == null
+    val isNewTaskLaunch = isStandardTab && currentTargetMode() == PromptTargetMode.NEW_TASK
+    providerSelector.setProviderOptionsVisible(isStandardTab)
+    generationSettingsController.setControlsVisibility(
+      providerSelectorVisible = extensionTab == null || extensionTab.extension.showsProviderSelector(),
+      generationControlsVisible = isNewTaskLaunch || extensionTab?.extension?.showsGenerationControls() == true,
     )
+    syncContainerModeState()
+  }
 
-    val selectedProvider = providerSelector.selectedProvider?.bridge?.provider
-    val showContainerMode = shouldShowContainerModeOption(
-      selectedProvider = selectedProvider,
+  private fun syncContainerModeState(requestedSelection: Boolean = view.containerModeAction.selected) {
+    val state = resolveContainerModeOptionState(
+      selectedProvider = providerSelector.selectedProvider?.bridge?.provider,
       isExtensionTab = contextState.activeExtensionTab != null,
-      supportsContainerMode = ::isContainerModeSupported,
-    )
-    val enableContainerMode = shouldEnableContainerModeOption(
-      selectedProvider = selectedProvider,
-      isExtensionTab = contextState.activeExtensionTab != null,
+      requestedSelection = requestedSelection,
       supportsContainerMode = ::isContainerModeSupported,
       isContainerRuntimeAvailable = ::isContainerModeRuntimeAvailable,
     )
-    view.headerControls.setContainerModeVisible(showContainerMode)
-    view.headerControls.setContainerModeEnabled(enableContainerMode)
-    if (!enableContainerMode) {
-      view.headerControls.setContainerModeSelected(false)
-    }
-    view.headerControls.setContainerModeTooltip(
-      if (showContainerMode && !enableContainerMode) {
+    view.headerControls.setContainerModeState(
+      visible = state.visible,
+      enabled = state.enabled,
+      selected = state.selected,
+      tooltipText = if (state.showUnavailableTooltip) {
         AgentPromptBundle.message("popup.option.container.mode.unavailable.tooltip")
       }
       else {
         null
-      }
+      },
     )
     view.rightHeaderPanel.revalidate()
     view.rightHeaderPanel.repaint()
+  }
+
+  private fun isContainerModeSelectedForCurrentState(): Boolean {
+    return resolveContainerModeOptionState(
+      selectedProvider = providerSelector.selectedProvider?.bridge?.provider,
+      isExtensionTab = contextState.activeExtensionTab != null,
+      requestedSelection = view.containerModeAction.selected,
+      supportsContainerMode = ::isContainerModeSupported,
+      isContainerRuntimeAvailable = ::isContainerModeRuntimeAvailable,
+    ).selected
   }
 
   private fun isContainerModeSupported(provider: AgentSessionProvider): Boolean {
@@ -814,6 +844,18 @@ internal class AgentPromptPaletteSessionController(
 
   private fun closeAfterSuccessfulSubmit() {
     closePopup()
+  }
+
+  private fun runManageProfilesDialog(openDialog: AgentPromptLaunchProfileEditorOpenDialog) {
+    closePopup()
+    ApplicationManager.getApplication().invokeLater {
+      if (project.isDisposed) return@invokeLater
+      openDialog {
+        if (!project.isDisposed) {
+          project.service<AgentPromptPalettePopupService>().show(invocationData)
+        }
+      }
+    }
   }
 
   private fun showError(message: @Nls String) {

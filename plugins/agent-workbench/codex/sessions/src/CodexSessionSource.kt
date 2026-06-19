@@ -1,8 +1,9 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.codex.sessions
 
-// @spec community/plugins/agent-workbench/spec/agent-sessions.spec.md
-// @spec community/plugins/agent-workbench/spec/agent-sessions-codex-rollout-source.spec.md
+// @spec community/plugins/agent-workbench/spec/sessions/agent-sessions.spec.md
+// @spec community/plugins/agent-workbench/spec/sessions/agent-sessions-codex-rollout-source.spec.md
+// @spec community/plugins/agent-workbench/spec/chat/agent-chat-structure-view.spec.md
 
 import com.intellij.agent.workbench.codex.common.CodexThread
 import com.intellij.agent.workbench.codex.sessions.backend.CodexBackendThread
@@ -16,6 +17,7 @@ import com.intellij.agent.workbench.codex.sessions.backend.appserver.SharedCodex
 import com.intellij.agent.workbench.codex.sessions.backend.createDefaultCodexSessionBackend
 import com.intellij.agent.workbench.codex.sessions.backend.rollout.CodexExactRolloutThreadLoader
 import com.intellij.agent.workbench.codex.sessions.backend.rollout.CodexRolloutRefreshHintsProvider
+import com.intellij.agent.workbench.codex.sessions.backend.rollout.CodexRolloutParser
 import com.intellij.agent.workbench.codex.sessions.backend.rollout.CodexRolloutSessionBackend
 import com.intellij.agent.workbench.codex.sessions.backend.toAgentSessionRefreshHints
 import com.intellij.agent.workbench.codex.sessions.backend.toAgentThreadActivity
@@ -24,20 +26,25 @@ import com.intellij.agent.workbench.common.AgentThreadActivityReport
 import com.intellij.agent.workbench.common.isWorking
 import com.intellij.agent.workbench.common.session.AgentSessionCost
 import com.intellij.agent.workbench.common.session.AgentSessionCostKind
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItem
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
+import com.intellij.agent.workbench.common.session.AgentSessionThreadOutline
 import com.intellij.agent.workbench.common.session.AgentSubAgent
 import com.intellij.agent.workbench.sessions.core.cost.AgentSessionUsageSnapshot
-import com.intellij.agent.workbench.sessions.core.cost.OpenRouterPriceCatalogService
+import com.intellij.agent.workbench.sessions.core.cost.LiteLlmPriceCatalogService
 import com.intellij.agent.workbench.sessions.core.normalizeConcreteAgentSessionThreadId
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRebindCandidate
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshHints
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshThreadSeed
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionOutlineForkResult
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceRefreshRequest
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceRefreshResult
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionThreadPresentationUpdate
 import com.intellij.agent.workbench.sessions.core.providers.BaseAgentSessionSource
+import com.intellij.agent.workbench.sessions.core.providers.mergeAgentSessionThreadPresentationUpdates
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.diagnostic.logger
@@ -47,6 +54,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import java.math.BigDecimal
+import java.nio.file.Path
 
 private val LOG = logger<CodexSessionSource>()
 
@@ -55,7 +63,10 @@ internal class CodexSessionSource internal constructor(
   private val appServerRefreshHintsProvider: CodexRefreshHintsProvider,
   private val rolloutRefreshHintsProvider: CodexRefreshHintsProvider,
   private val rolloutBackend: CodexSessionBackend? = null,
-  private val calculateCost: (AgentSessionUsageSnapshot) -> AgentSessionCost = { AgentSessionCost(amountUsd = null, kind = AgentSessionCostKind.UNAVAILABLE) },
+  private val calculateCost: (AgentSessionUsageSnapshot) -> AgentSessionCost = {
+    AgentSessionCost(amountUsd = null,
+                     kind = AgentSessionCostKind.UNAVAILABLE)
+  },
   private val threadPathIndex: CodexThreadPathIndex = InMemoryCodexThreadPathIndex(),
   private val exactRolloutThreadLoader: CodexExactRolloutThreadLoader = CodexExactRolloutThreadLoader(),
 ) : BaseAgentSessionSource(provider = AgentSessionProvider.CODEX, canReportExactThreadCount = false) {
@@ -72,11 +83,14 @@ internal class CodexSessionSource internal constructor(
     ),
     rolloutRefreshHintsProvider = CodexRolloutRefreshHintsProvider(rolloutBackend = rolloutBackend),
     rolloutBackend = rolloutBackend,
-    calculateCost = service<OpenRouterPriceCatalogService>()::calculateCost,
+    calculateCost = service<LiteLlmPriceCatalogService>()::calculateCost,
     threadPathIndex = threadPathIndex,
   )
 
   override val supportsUpdates: Boolean
+    get() = true
+
+  override val supportsActiveThreadUpdateEvents: Boolean
     get() = true
 
   override val supportsArchivedThreads: Boolean
@@ -181,10 +195,103 @@ internal class CodexSessionSource internal constructor(
                    threadPathIndex = threadPathIndex,
                  )
                  ?: AgentSessionCost(amountUsd = null, kind = AgentSessionCostKind.UNAVAILABLE)
-                     .also { unavailableCost -> threadPathIndex.recordFrozenCost(thread.threadId, thread.updatedAt, unavailableCost) }
+                   .also { unavailableCost -> threadPathIndex.recordFrozenCost(thread.threadId, thread.updatedAt, unavailableCost) }
       costsByThreadId[thread.threadId] = cost
     }
     return costsByThreadId
+  }
+
+  override suspend fun loadThreadOutline(path: String, threadId: String, subAgentId: String?): AgentSessionThreadOutline? {
+    return loadThreadOutlineFromBackend(backend, path, threadId)
+           ?: rolloutBackend
+             ?.takeIf { fallbackBackend -> fallbackBackend !== backend }
+             ?.let { fallbackBackend -> loadThreadOutlineFromBackend(fallbackBackend, path, threadId) }
+           ?: loadIndexedRolloutThreadOutline(threadId)
+  }
+
+  override fun canShowThreadOutlineForkAction(
+    path: String,
+    threadId: String,
+    itemId: String,
+    subAgentId: String?,
+    tabKey: String?,
+  ): Boolean {
+    return subAgentId == null && parseCodexUserPromptOutlineItemIndex(itemId) != null
+  }
+
+  override fun canForkThreadFromOutlineItem(
+    path: String,
+    threadId: String,
+    itemId: String,
+    subAgentId: String?,
+    tabKey: String?,
+  ): Boolean {
+    return canShowThreadOutlineForkAction(
+      path = path,
+      threadId = threadId,
+      itemId = itemId,
+      subAgentId = subAgentId,
+      tabKey = tabKey,
+    )
+  }
+
+  override suspend fun forkThreadFromOutlineItem(
+    project: Project,
+    path: String,
+    threadId: String,
+    itemId: String,
+    subAgentId: String?,
+    tabKey: String?,
+  ): AgentSessionOutlineForkResult? {
+    if (!canForkThreadFromOutlineItem(path = path, threadId = threadId, itemId = itemId, subAgentId = subAgentId, tabKey = tabKey)) {
+      return null
+    }
+    val selectedUserPromptIndex = parseCodexUserPromptOutlineItemIndex(itemId) ?: return null
+    val outline = loadThreadOutline(path = path, threadId = threadId, subAgentId = subAgentId) ?: return null
+    val userPromptIndexes = outline.items.collectCodexUserPromptIndexes()
+    if (selectedUserPromptIndex !in userPromptIndexes) {
+      return null
+    }
+    val userPromptCount = (userPromptIndexes.maxOrNull() ?: return null) + 1
+    val rollbackTurns = userPromptCount - selectedUserPromptIndex
+    if (rollbackTurns < 1) {
+      return null
+    }
+    val forkedThread = backend.forkThread(
+      path = path,
+      threadId = threadId,
+      rollbackTurns = rollbackTurns,
+      openProject = project,
+    ) ?: return null
+    rememberThreadMetadata(listOf(forkedThread))
+    return AgentSessionOutlineForkResult(thread = toAgentSessionThread(forkedThread))
+  }
+
+  private suspend fun loadThreadOutlineFromBackend(
+    backend: CodexSessionBackend,
+    path: String,
+    threadId: String,
+  ): AgentSessionThreadOutline? {
+    return try {
+      backend.loadThreadOutline(path = path, threadId = threadId)?.takeIf { outline -> outline.threadId == threadId }
+    }
+    catch (e: Throwable) {
+      if (e is CancellationException) throw e
+      LOG.warn("Failed to load Codex backend outline", e)
+      null
+    }
+  }
+
+  private fun loadIndexedRolloutThreadOutline(threadId: String): AgentSessionThreadOutline? {
+    val rolloutPath = threadPathIndex.entry(threadId)?.rolloutPath ?: return null
+    return try {
+      CodexRolloutParser().parseOutline(Path.of(rolloutPath))?.takeIf { outline -> outline.threadId == threadId }
+    }
+    catch (e: Throwable) {
+      if (e is CancellationException) throw e
+      LOG.warn("Failed to load Codex rollout outline", e)
+      null
+    }
   }
 
   override suspend fun prefetchThreads(paths: List<String>): Map<String, List<AgentSessionThread>> {
@@ -394,7 +501,7 @@ internal class CodexSessionSource internal constructor(
 
     return try {
       val refreshedThreads = backend.refreshThreads(path = path, threadIds = threadIds, openProject = null)?.threads
-                           ?: backend.listThreads(path = path, openProject = null)
+                             ?: backend.listThreads(path = path, openProject = null)
       rememberThreadMetadata(refreshedThreads)
       refreshedThreads.asSequence()
         .filter { thread -> thread.thread.id in threadIds }
@@ -420,7 +527,7 @@ internal class CodexSessionSource internal constructor(
     val rolloutBackend = rolloutBackend ?: return emptyMap()
     val recoveredThreads = try {
       val refreshedThreads = rolloutBackend.refreshThreads(path = path, threadIds = missingThreadIds, openProject = null)?.threads
-                           ?: rolloutBackend.listThreads(path = path, openProject = null)
+                             ?: rolloutBackend.listThreads(path = path, openProject = null)
       refreshedThreads.asSequence()
         .filter { thread -> thread.thread.id in missingThreadIds }
         .associateBy { thread -> thread.thread.id }
@@ -437,8 +544,6 @@ internal class CodexSessionSource internal constructor(
     path: String,
     threads: List<RequestedCodexThreadCost>,
   ): Map<String, CodexBackendThread> {
-    val workingDirectory = resolveProjectDirectoryFromPath(path) ?: return emptyMap()
-    val cwdFilter = com.intellij.agent.workbench.codex.common.normalizeRootPath(workingDirectory.toString().replace('\\', '/'))
     val fullyMappedThreads = threads.filter { thread ->
       thread.relatedThreadIds().all { threadId -> threadPathIndex.entry(threadId)?.rolloutPath != null }
     }
@@ -454,9 +559,15 @@ internal class CodexSessionSource internal constructor(
       return emptyMap()
     }
 
+    val aggregateThreadIds = fullyMappedThreads.asSequence()
+      .filter { thread -> thread.subAgentIds.isNotEmpty() }
+      .mapTo(LinkedHashSet()) { thread -> thread.threadId }
+    val cwdFilter = resolveProjectDirectoryFromPath(path)
+      ?.let { workingDirectory -> com.intellij.agent.workbench.codex.common.normalizeRootPath(workingDirectory.toString().replace('\\', '/')) }
     return exactRolloutThreadLoader.loadThreads(
       cwdFilter = cwdFilter,
       threadIds = fullyMappedThreads.mapTo(LinkedHashSet()) { thread -> thread.threadId },
+      aggregateThreadIds = aggregateThreadIds,
       rolloutPaths = rolloutPaths,
     )
   }
@@ -598,12 +709,13 @@ internal class CodexSessionSource internal constructor(
         }
       }
 
-      if (hints.rebindCandidates.isEmpty() && filteredActivityHintsByThreadId.isEmpty()) {
+      if (hints.rebindCandidates.isEmpty() && filteredActivityHintsByThreadId.isEmpty() && hints.presentationUpdatesByThreadId.isEmpty()) {
         continue
       }
       filtered[path] = CodexRefreshHints(
         rebindCandidates = hints.rebindCandidates,
         activityHintsByThreadId = filteredActivityHintsByThreadId,
+        presentationUpdatesByThreadId = hints.presentationUpdatesByThreadId,
       )
     }
     return filtered
@@ -655,14 +767,36 @@ internal fun mergeCodexRefreshHints(
         mergedActivityHintsByThreadId[threadId] = hint
       }
     }
+    val mergedPresentationUpdatesByThreadId = mergeCodexPresentationUpdates(
+      appHints?.presentationUpdatesByThreadId.orEmpty(),
+      rolloutHints?.presentationUpdatesByThreadId.orEmpty(),
+    )
 
-    if (mergedRebindCandidates.isEmpty() && mergedActivityHintsByThreadId.isEmpty()) {
+    if (mergedRebindCandidates.isEmpty() && mergedActivityHintsByThreadId.isEmpty() && mergedPresentationUpdatesByThreadId.isEmpty()) {
       continue
     }
     merged[path] = CodexRefreshHints(
       rebindCandidates = mergedRebindCandidates,
       activityHintsByThreadId = mergedActivityHintsByThreadId,
+      presentationUpdatesByThreadId = mergedPresentationUpdatesByThreadId,
     )
+  }
+  return merged
+}
+
+private fun mergeCodexPresentationUpdates(
+  primary: Map<String, AgentSessionThreadPresentationUpdate>,
+  fallback: Map<String, AgentSessionThreadPresentationUpdate>,
+): Map<String, AgentSessionThreadPresentationUpdate> {
+  val merged = LinkedHashMap<String, AgentSessionThreadPresentationUpdate>(primary.size + fallback.size)
+  for (threadId in primary.keys + fallback.keys) {
+    val primaryUpdate = primary[threadId]
+    val fallbackUpdate = fallback[threadId]
+    merged[threadId] = when {
+      primaryUpdate == null -> checkNotNull(fallbackUpdate)
+      fallbackUpdate == null -> primaryUpdate
+      else -> mergeAgentSessionThreadPresentationUpdates(primaryUpdate, fallbackUpdate)
+    }
   }
   return merged
 }
@@ -734,6 +868,18 @@ private fun RequestedCodexThreadCost.relatedThreadIds(): Set<String> {
   }
 }
 
+private fun Iterable<AgentSessionOutlineItem>.collectCodexUserPromptIndexes(): Set<Int> {
+  val result = LinkedHashSet<Int>()
+  val stack = ArrayDeque<AgentSessionOutlineItem>()
+  forEach(stack::addLast)
+  while (!stack.isEmpty()) {
+    val item = stack.removeFirst()
+    parseCodexUserPromptOutlineItemIndex(item.id)?.let(result::add)
+    item.children.forEach(stack::addLast)
+  }
+  return result
+}
+
 private fun List<AgentSessionUsageSnapshot>?.toFrozenThreadCost(
   threadId: String,
   updatedAt: Long,
@@ -752,6 +898,7 @@ private fun toAgentSessionThread(thread: CodexBackendThread, cost: AgentSessionC
     thread = thread.thread,
     activity = thread.activity,
     summaryActivity = thread.summaryActivity,
+    subAgentActivitiesById = thread.subAgentActivitiesById,
     cost = cost,
   )
 }
@@ -783,6 +930,7 @@ private fun toAgentSessionThread(
   thread: CodexThread,
   activity: CodexSessionActivity,
   summaryActivity: CodexSessionActivity?,
+  subAgentActivitiesById: Map<String, CodexSessionActivity> = emptyMap(),
   cost: AgentSessionCost? = null,
 ): AgentSessionThread {
   return AgentSessionThread(
@@ -791,7 +939,13 @@ private fun toAgentSessionThread(
     updatedAt = thread.updatedAt,
     archived = thread.archived,
     provider = AgentSessionProvider.CODEX,
-    subAgents = thread.subAgents.map { AgentSubAgent(it.id, it.name) },
+    subAgents = thread.subAgents.map { subAgent ->
+      AgentSubAgent(
+        id = subAgent.id,
+        name = subAgent.name,
+        activity = subAgentActivitiesById[subAgent.id]?.toAgentThreadActivity() ?: AgentThreadActivity.READY,
+      )
+    },
     originBranch = thread.gitBranch,
     activity = activity.toAgentThreadActivity(),
     summaryActivity = summaryActivity?.toAgentThreadActivity(),

@@ -7,6 +7,7 @@ import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextRendererIds
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModelGroup
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
 import com.intellij.agent.workbench.prompt.core.AgentPromptInitialMessageRequest
 import com.intellij.agent.workbench.prompt.core.AgentPromptReasoningEffort
@@ -27,14 +28,20 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 
 @TestApplication
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
 class ClaudeAgentSessionProviderDescriptorTest {
+  @TempDir
+  lateinit var tempDir: Path
+
   private val bridge = ClaudeAgentSessionProviderDescriptor(
     executableResolver = { ClaudeCliSupport.CLAUDE_COMMAND },
+    hookSettingsProvider = { TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT },
   )
 
   private fun assertValidUuid(sessionId: String?): String {
@@ -46,7 +53,7 @@ class ClaudeAgentSessionProviderDescriptorTest {
   @Test
   fun buildResumeLaunchSpec(): Unit = runBlocking(Dispatchers.Default) {
     assertThat(bridge.buildResumeLaunchSpec("session-1").command)
-      .containsExactly("claude", "--resume", "session-1")
+      .containsExactly("claude", "--resume", "session-1", "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
     assertThat(bridge.buildResumeLaunchSpec("session-1").envVariables)
       .containsExactlyEntriesOf(mapOf("DISABLE_AUTOUPDATER" to "1"))
   }
@@ -54,7 +61,12 @@ class ClaudeAgentSessionProviderDescriptorTest {
   @Test
   fun buildYoloResumeLaunchSpec(): Unit = runBlocking(Dispatchers.Default) {
     assertThat(bridge.buildResumeLaunchSpec("session-1", AgentSessionLaunchMode.YOLO).command)
-      .containsExactly("claude", "--resume", "session-1", "--dangerously-skip-permissions")
+      .containsExactly("claude",
+                       "--resume",
+                       "session-1",
+                       "--dangerously-skip-permissions",
+                       "--settings",
+                       TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
     assertThat(bridge.buildResumeLaunchSpec("session-1", AgentSessionLaunchMode.YOLO).envVariables)
       .containsExactlyEntriesOf(mapOf("DISABLE_AUTOUPDATER" to "1"))
   }
@@ -65,7 +77,12 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--dangerously-skip-permissions", "--session-id", sessionId)
+      .containsExactly("claude",
+                       "--dangerously-skip-permissions",
+                       "--session-id",
+                       sessionId,
+                       "--settings",
+                       TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
   }
 
   @Test
@@ -74,7 +91,7 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId)
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
   }
 
   @Test
@@ -82,10 +99,10 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val launchSpec = bridge.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
     val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
 
-    val updatedLaunchSpec = bridge.applyGenerationSettings(launchSpec, AgentPromptGenerationSettings.AUTO)
+    val updatedLaunchSpec = bridge.applyGenerationSettings(launchSpec, AgentPromptGenerationSettings.AUTO, STANDARD_INITIAL_MESSAGE_PLAN)
 
     assertThat(updatedLaunchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId)
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
     assertThat(updatedLaunchSpec.preallocatedSessionId).isEqualTo(sessionId)
   }
 
@@ -97,10 +114,67 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val updatedLaunchSpec = bridge.applyGenerationSettings(
       launchSpec,
       AgentPromptGenerationSettings(reasoningEffort = AgentPromptReasoningEffort.MAX),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId, "--effort", "max")
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT, "--effort", "max")
+    assertThat(updatedLaunchSpec.preallocatedSessionId).isEqualTo(sessionId)
+  }
+
+  @Test
+  fun applyGenerationSettingsAddsModelFlag(): Unit = runBlocking(Dispatchers.Default) {
+    val launchSpec = bridge.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
+    val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
+
+    val updatedLaunchSpec = bridge.applyGenerationSettings(
+      launchSpec,
+      AgentPromptGenerationSettings(modelId = "sonnet"),
+      STANDARD_INITIAL_MESSAGE_PLAN,
+    )
+
+    assertThat(updatedLaunchSpec.command)
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT, "--model", "sonnet")
+    assertThat(updatedLaunchSpec.preallocatedSessionId).isEqualTo(sessionId)
+  }
+
+  @Test
+  fun applyGenerationSettingsAddsModelAndReasoningEffortFlags(): Unit = runBlocking(Dispatchers.Default) {
+    val launchSpec = bridge.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
+    val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
+
+    val updatedLaunchSpec = bridge.applyGenerationSettings(
+      launchSpec,
+      AgentPromptGenerationSettings(modelId = "opus", reasoningEffort = AgentPromptReasoningEffort.HIGH),
+      STANDARD_INITIAL_MESSAGE_PLAN,
+    )
+
+    assertThat(updatedLaunchSpec.command)
+      .containsExactly("claude",
+                       "--session-id",
+                       sessionId,
+                       "--settings",
+                       TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+                       "--model",
+                       "opus",
+                       "--effort",
+                       "high")
+    assertThat(updatedLaunchSpec.preallocatedSessionId).isEqualTo(sessionId)
+  }
+
+  @Test
+  fun applyGenerationSettingsIgnoresPlanReasoningEffort(): Unit = runBlocking(Dispatchers.Default) {
+    val launchSpec = bridge.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
+    val sessionId = assertValidUuid(launchSpec.preallocatedSessionId)
+
+    val updatedLaunchSpec = bridge.applyGenerationSettings(
+      launchSpec,
+      AgentPromptGenerationSettings(planReasoningEffort = AgentPromptReasoningEffort.MAX),
+      STANDARD_INITIAL_MESSAGE_PLAN,
+    )
+
+    assertThat(updatedLaunchSpec.command)
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT)
     assertThat(updatedLaunchSpec.preallocatedSessionId).isEqualTo(sessionId)
   }
 
@@ -114,6 +188,78 @@ class ClaudeAgentSessionProviderDescriptorTest {
   fun replaceOrAddEffortReplacesExistingFlag() {
     assertThat(replaceOrAddEffort(listOf("claude", "--effort", "low", "--session-id", "session-1"), "high"))
       .containsExactly("claude", "--effort", "high", "--session-id", "session-1")
+  }
+
+  @Test
+  fun replaceOrAddModelInsertsBeforePromptSeparator() {
+    assertThat(replaceOrAddModel(listOf("claude", "--", "Refactor this"), "sonnet"))
+      .containsExactly("claude", "--model", "sonnet", "--", "Refactor this")
+  }
+
+  @Test
+  fun replaceOrAddModelReplacesExistingFlag() {
+    assertThat(replaceOrAddModel(listOf("claude", "--model", "opus", "--session-id", "session-1"), "sonnet"))
+      .containsExactly("claude", "--model", "sonnet", "--session-id", "session-1")
+  }
+
+  @Test
+  fun addClaudeHookSettingsInsertsBeforePromptSeparator() {
+    assertThat(
+      addClaudeHookSettings(
+        listOf("claude", "--session-id", "session-1", "--", "Refactor this"),
+        TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+      )
+    ).containsExactly("claude",
+                      "--session-id",
+                      "session-1",
+                      "--settings",
+                      TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+                      "--",
+                      "Refactor this")
+  }
+
+  @Test
+  fun addClaudeHookSettingsSkipsHookDisabledModes() {
+    assertThat(
+      addClaudeHookSettings(
+        listOf("claude", "--bare", "--session-id", "session-1"),
+        TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+      )
+    )
+      .containsExactly("claude", "--bare", "--session-id", "session-1")
+    assertThat(
+      addClaudeHookSettings(
+        listOf("claude", "--safe-mode", "--session-id", "session-1"),
+        TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+      )
+    )
+      .containsExactly("claude", "--safe-mode", "--session-id", "session-1")
+  }
+
+  @Test
+  fun recordTerminalSessionClosedInvalidatesClaudeHookToken() {
+    val sessionId = "session-closed-hook"
+    val settings = checkNotNull(
+      ClaudeHookBridge.createLaunchSettings(
+        sessionId = sessionId,
+        portProvider = { 4321 },
+        settingsDirectoryProvider = { tempDir.resolve("hook-settings") },
+      )
+    )
+
+    try {
+      bridge.recordTerminalSessionClosed(path = "/work/project", threadId = sessionId)
+
+      assertThat(
+        ClaudeHookBridge.handleHookRequest(
+          token = settings.token,
+          content = """{"hook_event_name":"PreToolUse","session_id":"$sessionId","cwd":"/work/project","tool_name":"AskUserQuestion","tool_input":{}}""",
+        )
+      ).isEqualTo(ClaudeHookRequestResult.UNAUTHORIZED)
+    }
+    finally {
+      ClaudeHookBridge.invalidateSession(sessionId)
+    }
   }
 
   @Test
@@ -147,7 +293,7 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val sessionId = checkNotNull(baseLaunchSpec.preallocatedSessionId)
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId, "--", "Refactor this")
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT, "--", "Refactor this")
     assertThat(launchSpec.preallocatedSessionId).isEqualTo(sessionId)
   }
 
@@ -165,7 +311,30 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val sessionId = checkNotNull(baseLaunchSpec.preallocatedSessionId)
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId, "--permission-mode", "plan", "--", "Refactor this")
+      .containsExactly("claude",
+                       "--session-id",
+                       sessionId,
+                       "--settings",
+                       TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+                       "--permission-mode",
+                       "plan",
+                       "--",
+                       "Refactor this")
+    assertThat(launchSpec.preallocatedSessionId).isEqualTo(sessionId)
+  }
+
+  @Test
+  fun buildLaunchSpecWithEmptyPlanModeSwitchesToPlanMode(): Unit = runBlocking(Dispatchers.Default) {
+    val baseLaunchSpec = bridge.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
+
+    val launchSpec = bridge.buildLaunchSpecWithInitialMessage(
+      baseLaunchSpec = baseLaunchSpec,
+      initialMessagePlan = AgentInitialMessagePlan(message = null, mode = AgentInitialMessageMode.PLAN),
+    )
+    val sessionId = checkNotNull(baseLaunchSpec.preallocatedSessionId)
+
+    assertThat(launchSpec.command)
+      .containsExactly("claude", "--session-id", sessionId, "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT, "--permission-mode", "plan")
     assertThat(launchSpec.preallocatedSessionId).isEqualTo(sessionId)
   }
 
@@ -180,7 +349,13 @@ class ClaudeAgentSessionProviderDescriptorTest {
     val sessionId = checkNotNull(baseLaunchSpec.preallocatedSessionId)
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--session-id", sessionId, "--", "/planner Refactor this")
+      .containsExactly("claude",
+                       "--session-id",
+                       sessionId,
+                       "--settings",
+                       TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT,
+                       "--",
+                       "/planner Refactor this")
     assertThat(launchSpec.preallocatedSessionId).isEqualTo(sessionId)
   }
 
@@ -194,7 +369,7 @@ class ClaudeAgentSessionProviderDescriptorTest {
     )
 
     assertThat(launchSpec.command)
-      .containsExactly("claude", "--resume", "session-1", "--", "-summarize\nchanges")
+      .containsExactly("claude", "--resume", "session-1", "--settings", TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT, "--", "-summarize\nchanges")
     assertThat(launchSpec.envVariables)
       .containsExactlyEntriesOf(mapOf("DISABLE_AUTOUPDATER" to "1"))
   }
@@ -310,6 +485,17 @@ class ClaudeAgentSessionProviderDescriptorTest {
   }
 
   @Test
+  fun generationModelCatalogUsesClaudeCodeAliases(): Unit = runBlocking(Dispatchers.Default) {
+    val models = bridge.listAvailableGenerationModels()
+
+    assertThat(bridge.supportsGenerationModelSelection).isTrue()
+    assertThat(models.map { model -> model.id }).containsExactly("opus", "sonnet", "sonnet[1m]", "haiku", "fable")
+    assertThat(models.map { model -> model.displayName }).containsExactly("Opus", "Sonnet", "Sonnet (1M context)", "Haiku", "Fable")
+    assertThat(models.map { model -> model.group }).containsOnly(AgentPromptGenerationModelGroup.CLAUDE_CODE)
+    assertThat(models.single { model -> model.id == "sonnet" }.isDefault).isTrue()
+  }
+
+  @Test
   fun archiveAndRenameDelegateToRenameEngine() {
     runBlocking(Dispatchers.Default) {
       var archivedPath: String? = null
@@ -358,6 +544,9 @@ class ClaudeAgentSessionProviderDescriptorTest {
     }
   }
 }
+
+private val STANDARD_INITIAL_MESSAGE_PLAN: AgentInitialMessagePlan = AgentInitialMessagePlan(message = "Refactor this")
+private const val TEST_CLAUDE_HOOK_SETTINGS_ARGUMENT: String = "/tmp/agent-workbench-claude-hooks.json"
 
 private fun emptyBackend(): ClaudeSessionBackend {
   return object : ClaudeSessionBackend {

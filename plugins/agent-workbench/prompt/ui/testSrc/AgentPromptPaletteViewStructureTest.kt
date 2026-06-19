@@ -2,6 +2,9 @@
 package com.intellij.agent.workbench.prompt.ui
 
 import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.toolbarLayout.ToolbarLayoutStrategy
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -34,7 +37,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = promptArea,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 
@@ -58,7 +60,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = promptArea,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 
@@ -86,7 +87,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = promptArea,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setProviderOptionActions(listOf(planModeAction))
@@ -111,7 +111,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = promptArea,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setProviderOptionActions(listOf(planModeAction))
@@ -121,17 +120,12 @@ class AgentPromptPaletteViewStructureTest {
 
       val tabbedPaneX = xInRoot(view.tabbedPane, view.rootPanel)
       val rightHeaderX = xInRoot(view.rightHeaderPanel, view.rootPanel)
-      val providerX = xInRoot(view.providerIconLabel, view.rootPanel)
-      val promptLibraryX = xInRoot(view.promptLibraryIconLabel, view.rootPanel)
       assertThat(view.headerToolbar.layoutStrategy).isSameAs(ToolbarLayoutStrategy.AUTOLAYOUT_STRATEGY)
-      assertThat(SwingUtilities.isDescendingFrom(view.providerIconLabel, view.rightHeaderPanel)).isTrue()
-      assertThat(SwingUtilities.isDescendingFrom(view.providerIconLabel, view.headerControls.toolbarComponent)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.profileAction.customComponent, view.rightHeaderPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.promptLibraryIconLabel, view.rightHeaderPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.headerControls.toolbarComponent, view.rightHeaderPanel)).isTrue()
       assertThat(rightHeaderX).isGreaterThan(tabbedPaneX)
-      assertThat(providerX).isGreaterThan(tabbedPaneX)
-      assertThat(promptLibraryX).isGreaterThan(tabbedPaneX)
-      assertThat(promptLibraryX + view.promptLibraryIconLabel.width).isLessThanOrEqualTo(view.rootPanel.width)
+      assertThat(rightHeaderX + view.rightHeaderPanel.width).isLessThanOrEqualTo(view.rootPanel.width)
     }
   }
 
@@ -142,7 +136,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setProviderOptionActions(listOf(planModeAction))
@@ -166,7 +159,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setProviderOptionActions(listOf(planModeAction))
@@ -188,7 +180,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setContainerModeVisible(true)
@@ -216,7 +207,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       view.headerControls.setProviderOptionActions(listOf(planModeAction))
@@ -243,7 +233,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
       val referenceAdvertiser = Advertiser().apply {
@@ -254,11 +243,22 @@ class AgentPromptPaletteViewStructureTest {
       }
 
       layoutPopupRoot(view.rootPanel)
+      val referenceAdvertiserHeight = referenceAdvertiser.adComponent.preferredSize.height
+      val footerPinToolbarSize = view.footerPinToolbar.component.preferredSize
+      val footerPinToolbarInsets = view.footerPinToolbar.component.insets
 
+      assertThat(SwingUtilities.isDescendingFrom(view.footerPanel, view.bottomPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.statusStrip.component, view.footerPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.statusStrip.component, view.bottomPanel)).isTrue()
-      assertThat(view.statusStrip.component.preferredSize.height)
-        .isEqualTo(referenceAdvertiser.adComponent.preferredSize.height)
-      assertThat(view.statusStrip.component.preferredSize.height)
+      assertThat(view.footerPanel.background).isEqualTo(referenceAdvertiser.adComponent.background)
+      assertThat(view.statusStrip.component.border.getBorderInsets(view.statusStrip.component))
+        .isEqualTo(referenceAdvertiser.adComponent.border.getBorderInsets(referenceAdvertiser.adComponent))
+      assertThat(footerPinToolbarSize.height).isEqualTo(referenceAdvertiserHeight)
+      assertThat(footerPinToolbarSize.width)
+        .isLessThanOrEqualTo(referenceAdvertiserHeight + footerPinToolbarInsets.left + footerPinToolbarInsets.right)
+      assertThat(view.footerPanel.preferredSize.height)
+        .isEqualTo(referenceAdvertiserHeight)
+      assertThat(view.footerPanel.preferredSize.height)
         .isLessThan(view.rootPanel.preferredSize.height / 10)
     }
   }
@@ -270,7 +270,6 @@ class AgentPromptPaletteViewStructureTest {
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
         onPromptLibraryClicked = {},
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 
@@ -278,7 +277,7 @@ class AgentPromptPaletteViewStructureTest {
 
       assertThat(SwingUtilities.isDescendingFrom(view.promptLibraryIconLabel, view.rootPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.promptLibraryIconLabel, view.rightHeaderPanel)).isTrue()
-      assertThat(view.promptLibraryIconLabel.toolTipText).contains("Open prompt library")
+      assertThat(view.promptLibraryIconLabel.toolTipText).isEqualTo(AgentPromptBundle.message("popup.prompt.library.tooltip"))
       assertThat(view.promptLibraryIconLabel.preferredSize).isEqualTo(ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE)
       assertThat(view.promptLibraryIconLabel.width).isEqualTo(ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE.width)
       assertThat(view.promptLibraryIconLabel.horizontalAlignment).isEqualTo(SwingConstants.CENTER)
@@ -286,31 +285,77 @@ class AgentPromptPaletteViewStructureTest {
   }
 
   @Test
-  fun generationSettingsControlsAreInsidePromptEditor() {
+  fun keepOpenControlIsASecondaryFooterEntry() {
+    runInEdtAndWait {
+      var pinned = false
+      val view = createAgentPromptPaletteView(
+        promptArea = EditorTextField(),
+        contextChipsPanel = JPanel(),
+        pinned = { pinned },
+        onPinClicked = { pinned = !pinned },
+        onExistingTaskSelected = {},
+      )
+      layoutPopupRoot(view.rootPanel)
+      val event = AnActionEvent.createEvent(
+        view.footerPinAction,
+        DataContext.EMPTY_CONTEXT,
+        null,
+        "",
+        ActionUiKind.TOOLBAR,
+        null,
+      )
+
+      assertThat(view.footerPinToolbar.component.parent).isSameAs(view.footerPanel)
+      assertThat(SwingUtilities.isDescendingFrom(view.footerPinToolbar.component, view.footerPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.footerPinToolbar.component, view.bottomPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.footerPinToolbar.component, view.rightHeaderPanel)).isFalse()
+      assertThat(SwingUtilities.isDescendingFrom(view.footerPinToolbar.component, view.headerControls.toolbarComponent)).isFalse()
+      assertThat(view.footerPinToolbar.component.isOpaque).isFalse()
+      assertThat(view.footerPinAction.templatePresentation.text).isEqualTo("Keep Popup Open")
+      assertThat(view.footerPinAction.isSelected(event)).isFalse()
+
+      view.footerPinAction.actionPerformed(event)
+
+      assertThat(pinned).isTrue()
+      assertThat(view.footerPinAction.isSelected(event)).isTrue()
+    }
+  }
+
+  @Test
+  fun taskCostProfileControlIsSingleHeaderEntryAndGenerationControlsAreInsidePromptEditor() {
     runInEdtAndWait {
       val promptArea = EditorTextField()
       val view = createAgentPromptPaletteView(
         promptArea = promptArea,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
+      view.headerControls.updateActions()
       layoutPopupRoot(view.rootPanel)
       val promptAreaInRoot = checkNotNull(findPromptArea(view.rootPanel, promptArea))
 
-      assertThat(SwingUtilities.isDescendingFrom(view.providerIconLabel, view.rightHeaderPanel)).isTrue()
-      assertThat(SwingUtilities.isDescendingFrom(view.providerIconLabel, view.generationSettingsPanel)).isFalse()
-      assertThat(SwingUtilities.isDescendingFrom(view.providerIconLabel, view.promptEditorPanel)).isFalse()
-      assertThat(view.providerIconLabel.toolTipText).contains("Change provider")
-      assertThat(view.providerIconLabel.preferredSize).isEqualTo(ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE)
-      assertThat(view.providerIconLabel.width).isEqualTo(ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE.width)
-      assertThat(view.providerIconLabel.horizontalAlignment).isEqualTo(SwingConstants.CENTER)
+      val profileActionComponent = view.profileAction.customComponent
+      assertThat(profileActionComponent).isSameAs(view.launchProfileLink)
+      assertThat(SwingUtilities.isDescendingFrom(view.launchProfileLink, view.rootPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(profileActionComponent, view.rootPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(profileActionComponent, view.rightHeaderPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(profileActionComponent, view.headerControls.toolbarComponent)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.launchProfileLink, view.generationSettingsPanel)).isFalse()
+      assertThat(SwingUtilities.isDescendingFrom(view.launchProfileLink, view.promptEditorPanel)).isFalse()
+      assertThat(view.profileAction.templatePresentation.description).contains("Choose a task profile")
+      assertThat(SwingUtilities.isDescendingFrom(profileActionComponent, view.generationSettingsPanel)).isFalse()
+      assertThat(SwingUtilities.isDescendingFrom(view.modelSelectorLink, view.rootPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.reasoningEffortLink, view.rootPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.planReasoningEffortLink, view.rootPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.modelSelectorLink, view.generationSettingsPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.reasoningEffortLink, view.generationSettingsPanel)).isTrue()
-      assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.promptEditorPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.planReasoningEffortLink, view.generationSettingsPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.defaultProfileActionControl.component, view.generationSettingsPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.defaultProfileActionControl.component, view.rightHeaderPanel)).isFalse()
       assertThat(view.generationSettingsPanel.parent).isSameAs(view.promptEditorPanel)
       assertThat(SwingUtilities.isDescendingFrom(promptAreaInRoot, view.promptEditorPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.promptPanel)).isTrue()
+      assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.promptEditorPanel)).isTrue()
       assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.rightHeaderPanel)).isFalse()
       assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.bottomPanel)).isFalse()
       assertThat(view.promptEditorPanel.border).isNotNull()
@@ -320,6 +365,9 @@ class AgentPromptPaletteViewStructureTest {
       assertThat(bottomInRoot(view.generationSettingsPanel, view.rootPanel)).isLessThanOrEqualTo(bottomInRoot(view.promptEditorPanel, view.rootPanel))
       assertThat(promptAreaInRoot.border.getBorderInsets(promptAreaInRoot).bottom).isZero()
       assertThat(view.generationSettingsPanel.isVisible).isTrue()
+      assertThat(view.launchProfileLink.text).isEqualTo("Standard")
+      assertThat(view.profileAction.textForTest).isEqualTo("Standard")
+      assertThat(view.launchProfileLink.icon).isNotNull()
       assertThat(view.modelSelectorLink.foreground).isEqualTo(view.reasoningEffortLink.foreground)
       assertThat(view.modelSelectorLink.text).isEqualTo("Model Default")
       assertThat(view.reasoningEffortLink.text).isEqualTo("Effort Default")
@@ -346,7 +394,6 @@ class AgentPromptPaletteViewStructureTest {
         val view = createAgentPromptPaletteView(
           promptArea = promptArea,
           contextChipsPanel = JPanel(),
-          onProviderIconClicked = {},
           onExistingTaskSelected = {},
         )
 
@@ -354,6 +401,9 @@ class AgentPromptPaletteViewStructureTest {
         val editor = checkNotNull(promptArea.getEditor(true))
         assertThat(editor.scrollPane.verticalScrollBarPolicy).isEqualTo(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED)
         assertThat(promptArea.border.getBorderInsets(promptArea).bottom).isZero()
+        assertThat(view.generationSettingsPanel.parent).isSameAs(view.promptEditorPanel)
+        assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.rootPanel)).isTrue()
+        assertThat(SwingUtilities.isDescendingFrom(view.generationSettingsPanel, view.promptEditorPanel)).isTrue()
         assertThat(yInRoot(view.generationSettingsPanel, view.rootPanel)).isGreaterThanOrEqualTo(bottomInRoot(promptArea, view.rootPanel))
         val modelSelectorCenter = SwingUtilities.convertPoint(
           view.modelSelectorLink,
@@ -376,7 +426,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 
@@ -395,7 +444,6 @@ class AgentPromptPaletteViewStructureTest {
       val view = createAgentPromptPaletteView(
         promptArea = EditorTextField(),
         contextChipsPanel = contextChipsPanel,
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 
@@ -416,7 +464,6 @@ class AgentPromptPaletteViewStructureTest {
         promptArea = EditorTextField(),
         suggestionsPanel = suggestionsPanel,
         contextChipsPanel = JPanel(),
-        onProviderIconClicked = {},
         onExistingTaskSelected = {},
       )
 

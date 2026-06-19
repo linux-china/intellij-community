@@ -3,7 +3,7 @@ package com.intellij.agent.workbench.prompt.ui
 
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-entry.spec.md
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-suggestions.spec.md
-// @spec community/plugins/agent-workbench/spec/agent-workbench-telemetry.spec.md
+// @spec community/plugins/agent-workbench/spec/core/agent-workbench-telemetry.spec.md
 
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextResolverService
@@ -88,6 +88,7 @@ internal class AgentPromptPalettePopup(
           currentEvent = IdeEventQueue.getInstance().trueCurrentEvent,
           isExplicitClose = isExplicitCloseInProgress,
           resolveProject = ::resolveProjectForComponent,
+          autoClose = uiStateService.autoClose
         )
       }
       .setCancelOnWindowDeactivation(false)
@@ -176,17 +177,19 @@ internal class AgentPromptPalettePopup(
       promptArea = promptArea,
       suggestionsPanel = suggestions.component,
       contextChipsPanel = contextChips.component,
+      pinned = { controllerRef.isPinned },
       onPromptLibraryClicked = { controllerRef.showPromptLibraryChooser() },
-      onProviderIconClicked = { controllerRef.showProviderChooser() },
       onExistingTaskSelected = { selected -> controllerRef.onExistingTaskSelected(selected) },
+      onPinClicked = { controllerRef.togglePin() }
     )
     providerSelector = AgentPromptProviderSelector(
       invocationData = invocationData,
-      providerIconLabel = view.providerIconLabel,
       headerControls = view.headerControls,
       providersProvider = providersProvider,
       sessionsMessageResolver = sessionsMessageResolver,
       asyncRefreshScope = popupScope,
+      onProviderOptionsChanged = { controllerRef.onProviderOptionsChanged() },
+      onProviderSelectionChanged = { controllerRef.onProviderSelectionChanged() },
     )
     val existingTaskController = AgentPromptExistingTaskController(
       existingTaskListModel = view.existingTaskListModel,

@@ -3,7 +3,7 @@
 
 package com.intellij.agent.workbench.chat
 
-// @spec community/plugins/agent-workbench/spec/agent-chat-editor.spec.md
+// @spec community/plugins/agent-workbench/spec/chat/agent-chat-editor.spec.md
 
 import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.AgentThreadActivityReport
@@ -12,7 +12,10 @@ import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AgentPromptAddContextToTargetResult
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
-import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchSpecs
+import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
+import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchIntent
+import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchOperation
+import com.intellij.agent.workbench.sessions.core.launch.AgentSessionLaunchPlanner
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchPlan
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
@@ -210,6 +213,7 @@ suspend fun openChat(
   newSessionProvider: AgentSessionProvider? = null,
   newSessionLaunchMode: AgentSessionLaunchMode? = null,
   initialMessageDispatchPlan: AgentInitialMessageDispatchPlan = AgentInitialMessageDispatchPlan.EMPTY,
+  generationSettings: AgentPromptGenerationSettings = AgentPromptGenerationSettings.AUTO,
   persistSnapshot: Boolean = true,
   deferredStartState: AgentChatDeferredStartState? = null,
   startupLaunchSpec: AgentSessionTerminalLaunchSpec? = null,
@@ -228,6 +232,12 @@ suspend fun openChat(
                  ?: findExistingChat(manager.openFiles, threadIdentity, subAgentId)
   val launchSpec = startupLaunchSpec ?: AgentSessionTerminalLaunchSpec(command = shellCommand, envVariables = shellEnvVariables)
   val isNewTab = existing == null
+  val effectiveGenerationSettings = if (generationSettings == AgentPromptGenerationSettings.AUTO) {
+    existing?.generationSettings ?: AgentPromptGenerationSettings.AUTO
+  }
+  else {
+    generationSettings
+  }
   val startupOverrideForTab = if (isNewTab) {
     initialMessageDispatchPlan.startupLaunchSpecOverride ?: launchSpec.takeIf(::shouldUseStartupLaunchSpecOverride)
   }
@@ -245,10 +255,15 @@ suspend fun openChat(
   else {
     null
   }
-  val snapshotInitialMessageDispatchSteps = initialMessageDispatchPlan.postStartDispatchSteps
-  val snapshotInitialMessageToken = initialMessageDispatchPlan.initialMessageToken
-  val snapshotInitialMessageSent = false
-  val hasExplicitInitialMessageDispatch = snapshotInitialMessageDispatchSteps.isNotEmpty() || snapshotInitialMessageToken != null
+  val effectiveInitialMessageDispatchPlan = if (isNewTab) {
+    initialMessageDispatchPlan
+  }
+  else {
+    initialMessageDispatchPlan.withStartupDeliveryIgnored()
+  }
+  val snapshotInitialPromptRecord = effectiveInitialMessageDispatchPlan.promptRecord
+  val snapshotTerminalPromptDispatch = effectiveInitialMessageDispatchPlan.terminalDispatch
+  val hasExplicitInitialPromptDelivery = snapshotInitialPromptRecord != null || snapshotTerminalPromptDispatch != null
   val snapshot = AgentChatTabSnapshot.create(
     projectHash = project.locationHash,
     projectPath = projectPath,
@@ -261,10 +276,10 @@ suspend fun openChat(
     pendingFirstInputAtMs = pendingFirstInputAtMs,
     pendingLaunchMode = pendingLaunchMode,
     launchMode = launchMode ?: existing?.launchMode,
+    generationSettings = effectiveGenerationSettings,
     newThreadRebindRequestedAtMs = existing?.newThreadRebindRequestedAtMs,
-    initialMessageDispatchSteps = snapshotInitialMessageDispatchSteps,
-    initialMessageToken = snapshotInitialMessageToken,
-    initialMessageSent = snapshotInitialMessageSent,
+    initialPromptRecord = snapshotInitialPromptRecord,
+    terminalPromptDispatch = snapshotTerminalPromptDispatch,
   )
   LOG.debug {
     "openChat(project=${project.name}, path=$projectPath, identity=$threadIdentity, " +
@@ -289,12 +304,10 @@ suspend fun openChat(
                            pendingLaunchMode = pendingLaunchMode,
                          )
     val launchModeUpdated = oldLaunchMode != existing.launchMode
-    if (hasExplicitInitialMessageDispatch) {
-      existing.updateInitialMessageMetadata(
-        initialMessageDispatchSteps = initialMessageDispatchPlan.postStartDispatchSteps,
-        initialMessageDispatchStepIndex = 0,
-        initialMessageToken = initialMessageDispatchPlan.initialMessageToken,
-        initialMessageSent = false,
+    if (hasExplicitInitialPromptDelivery) {
+      existing.updateInitialPromptDelivery(
+        promptRecord = snapshotInitialPromptRecord,
+        terminalDispatch = snapshotTerminalPromptDispatch,
       )
     }
     LOG.debug {
@@ -303,7 +316,7 @@ suspend fun openChat(
       "currentName=${existing.name}," +
       " currentTitle=${existing.threadTitle}, currentActivity=${existing.threadActivity}"
     }
-    if (titleUpdated || activityUpdated || pendingUpdated || launchModeUpdated || hasExplicitInitialMessageDispatch ||
+    if (titleUpdated || activityUpdated || pendingUpdated || launchModeUpdated || hasExplicitInitialPromptDelivery ||
         deferredStartStateUpdated) {
       withContext(Dispatchers.EDT) {
         manager.updateFilePresentation(existing)
@@ -332,7 +345,7 @@ suspend fun openChat(
     file.putUserData(FileEditorProvider.KEY, AgentChatFileEditorProvider())
   }
   manager.openFile(file = file, options = FileEditorOpenOptions(requestFocus = true, reuseOpen = true))
-  if (existing != null && hasExplicitInitialMessageDispatch && !file.initialMessageSent) {
+  if (existing != null && hasExplicitInitialPromptDelivery && !file.initialMessageSent) {
     flushPendingInitialMessageForOpenEditors(manager = manager, file = file)
   }
   LOG.debug {
@@ -409,11 +422,9 @@ suspend fun updateAgentChatDeferredStartState(
     chatFile.updateBootstrapThreadActivity(it)
   }
   initialMessageDispatchPlan?.let { dispatchPlan ->
-    chatFile.updateInitialMessageMetadata(
-      initialMessageDispatchSteps = dispatchPlan.postStartDispatchSteps,
-      initialMessageDispatchStepIndex = 0,
-      initialMessageToken = dispatchPlan.initialMessageToken,
-      initialMessageSent = false,
+    chatFile.updateInitialPromptDelivery(
+      promptRecord = dispatchPlan.promptRecord,
+      terminalDispatch = dispatchPlan.terminalDispatch,
     )
   }
   if (persistSnapshot) {
@@ -460,32 +471,16 @@ fun agentChatScopedRefreshSignals(provider: AgentSessionProvider): Flow<AgentSes
   return AgentChatScopedRefreshSignalBus.signals(provider)
 }
 
-fun notifyCodexScopedRefresh(projectPath: String) {
-  notifyAgentChatScopedRefresh(provider = AgentSessionProvider.CODEX, projectPath = projectPath)
-}
-
-fun codexScopedRefreshSignals(): Flow<AgentSessionSourceUpdateEvent> {
-  return agentChatScopedRefreshSignals(AgentSessionProvider.CODEX)
-}
-
 suspend fun collectOpenPendingAgentChatTabsByPath(
   provider: AgentSessionProvider,
 ): Map<String, List<AgentChatPendingTabSnapshot>> {
   return collectOpenAgentChatTabsSnapshotOnUi().pendingTabsByPath(provider)
 }
 
-suspend fun collectOpenPendingCodexTabsByPath(): Map<String, List<AgentChatPendingTabSnapshot>> {
-  return collectOpenPendingAgentChatTabsByPath(AgentSessionProvider.CODEX)
-}
-
 suspend fun collectOpenConcreteAgentChatTabsAwaitingNewThreadRebindByPath(
   provider: AgentSessionProvider,
 ): Map<String, List<AgentChatConcreteTabSnapshot>> {
   return collectOpenAgentChatTabsSnapshotOnUi().concreteTabsAwaitingNewThreadRebindByPath(provider)
-}
-
-suspend fun collectOpenConcreteCodexTabsAwaitingNewThreadRebindByPath(): Map<String, List<AgentChatConcreteTabSnapshot>> {
-  return collectOpenConcreteAgentChatTabsAwaitingNewThreadRebindByPath(AgentSessionProvider.CODEX)
 }
 
 suspend fun collectOpenConcreteAgentChatThreadIdentitiesByPath(): Map<String, Set<String>> {
@@ -544,18 +539,21 @@ private fun AgentChatTabRebindTarget.toRebindLaunchSpecKey(): AgentChatRebindLau
 
 private suspend fun resolveRebindLaunchSpec(target: AgentChatTabRebindTarget): AgentSessionTerminalLaunchSpec? {
   return try {
-    AgentSessionLaunchSpecs.resolveResume(
-      projectPath = normalizeAgentWorkbenchPath(target.projectPath),
-      provider = target.provider,
-      sessionId = target.threadId,
-    )
+    AgentSessionLaunchPlanner.plan(
+      intent = AgentSessionLaunchIntent(
+        projectPath = normalizeAgentWorkbenchPath(target.projectPath),
+        provider = target.provider,
+        operation = AgentSessionLaunchOperation.RESUME,
+        sessionId = target.threadId,
+      ),
+    ).launchSpec
   }
   catch (t: Throwable) {
     LOG.warn(
       "Failed to resolve chat rebind launch spec for ${target.provider.value}:${target.projectPath}:${target.threadId}",
       t,
     )
-    null
+    AgentSessionTerminalLaunchSpec(command = listOf(target.provider.value, "resume", target.threadId))
   }
 }
 
@@ -755,26 +753,17 @@ suspend fun rebindOpenPendingAgentChatTabs(
   return report
 }
 
-suspend fun rebindOpenPendingCodexTabs(
-  requestsByProjectPath: Map<String, List<AgentChatPendingTabRebindRequest>>,
-): AgentChatPendingTabRebindReport {
-  return rebindOpenPendingAgentChatTabs(
-    provider = AgentSessionProvider.CODEX,
-    requestsByProjectPath = requestsByProjectPath,
-  )
-}
-
 suspend fun rebindOpenConcreteAgentChatTabs(
   provider: AgentSessionProvider,
   requestsByProjectPath: Map<String, List<AgentChatConcreteTabRebindRequest>>,
 ): AgentChatConcreteTabRebindReport {
   if (requestsByProjectPath.isEmpty()) {
-    return emptyConcreteCodexTabRebindReport()
+    return emptyConcreteTabRebindReport()
   }
 
   val normalizedRequestsByPath = normalizePathToListMap(requestsByProjectPath)
   if (normalizedRequestsByPath.isEmpty()) {
-    return emptyConcreteCodexTabRebindReport()
+    return emptyConcreteTabRebindReport()
   }
 
   val launchSpecsByTarget = resolveRebindLaunchSpecs(
@@ -785,6 +774,7 @@ suspend fun rebindOpenConcreteAgentChatTabs(
 
     var reboundBindings = 0
     val changedFiles = LinkedHashSet<AgentChatVirtualFile>()
+    val restartLaunchSpecsByFile = LinkedHashMap<AgentChatVirtualFile, AgentSessionTerminalLaunchSpec>()
     val outcomesByPath = LinkedHashMap<String, MutableList<AgentChatConcreteTabRebindOutcome>>()
     for ((normalizedPath, requests) in normalizedRequestsByPath) {
       val outcomes = outcomesByPath.computeIfAbsent(normalizedPath) { ArrayList(requests.size) }
@@ -891,6 +881,7 @@ suspend fun rebindOpenConcreteAgentChatTabs(
 
         reboundBindings++
         changedFiles.add(concreteFile)
+        restartLaunchSpecsByFile[concreteFile] = launchSpec
         openTabsSnapshot.replaceConcreteThreadIdentity(
           normalizedPath = normalizedPath,
           managers = managers,
@@ -915,6 +906,9 @@ suspend fun rebindOpenConcreteAgentChatTabs(
         manager.updateFilePresentation(changedFile)
         updatedPresentations++
       }
+      restartLaunchSpecsByFile[changedFile]?.let { launchSpec ->
+        restartOpenEditors(managers = managers, file = changedFile, startupLaunchSpec = launchSpec)
+      }
     }
 
     val requestedBindings = normalizedRequestsByPath.values.sumOf { it.size }
@@ -927,16 +921,10 @@ suspend fun rebindOpenConcreteAgentChatTabs(
     )
   }
   LOG.debug {
-    "rebindOpenConcreteCodexTabs requestedBindings=${report.requestedBindings}, reboundBindings=${report.reboundBindings}, " +
+    "rebindOpenConcreteAgentChatTabs requestedBindings=${report.requestedBindings}, reboundBindings=${report.reboundBindings}, " +
     "reboundFiles=${report.reboundFiles}, updatedPresentations=${report.updatedPresentations}, paths=${report.outcomesByPath.size}"
   }
   return report
-}
-
-suspend fun rebindOpenConcreteCodexTabs(
-  requestsByProjectPath: Map<String, List<AgentChatConcreteTabRebindRequest>>,
-): AgentChatConcreteTabRebindReport {
-  return rebindOpenConcreteAgentChatTabs(AgentSessionProvider.CODEX, requestsByProjectPath)
 }
 
 fun clearOpenConcreteAgentChatNewThreadRebindAnchors(
@@ -998,7 +986,7 @@ private fun emptyPendingTabRebindReport(): AgentChatPendingTabRebindReport {
   )
 }
 
-private fun emptyConcreteCodexTabRebindReport(): AgentChatConcreteTabRebindReport {
+private fun emptyConcreteTabRebindReport(): AgentChatConcreteTabRebindReport {
   return AgentChatConcreteTabRebindReport(
     requestedBindings = 0,
     reboundBindings = 0,
@@ -1055,4 +1043,25 @@ private fun refreshOpenEditors(
     .forEach { editor ->
       editor.refreshForFileStateChange()
     }
+}
+
+private suspend fun restartOpenEditors(
+  managers: Set<FileEditorManagerEx>,
+  file: AgentChatVirtualFile,
+  startupLaunchSpec: AgentSessionTerminalLaunchSpec,
+) {
+  var replaceRetainedTerminal = true
+  for (manager in managers) {
+    manager.getAllEditors(file)
+      .filterIsInstance<AgentChatFileEditor>()
+      .forEach { editor ->
+        val replaced = editor.restartForFileStateChange(
+          startupLaunchSpec = startupLaunchSpec,
+          replaceRetainedTerminal = replaceRetainedTerminal,
+        )
+        if (replaced) {
+          replaceRetainedTerminal = false
+        }
+      }
+  }
 }

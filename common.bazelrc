@@ -63,6 +63,11 @@ common:windows --disk_cache=~/AppData/Local/Temp/JetBrains/monorepo-bazel-cache
 common --@rules_jvm//:default-javac-opts=@community//:default-javac-opts
 common --@rules_jvm//:default-kotlinc-opts=@community//:k25
 
+# rules_jvm / rules_kotlin compilation backend switch (see rules_jvm backend_config.bzl). Default = JPS / rules_jvm.
+# Use --config=bta to compile with the rules_kotlin (BTA) backend instead.
+common:jps --repo_env=IJ_JVM_USE_RULES_KOTLIN_BACKEND=0
+common:bta --repo_env=IJ_JVM_USE_RULES_KOTLIN_BACKEND=1
+
 # configure resources
 common --local_resources=memory=HOST_RAM*.77 --local_resources=cpu=HOST_CPUS*2
 common --jobs=HOST_CPUS*2 --worker_max_multiplex_instances=JvmCompile=HOST_CPUS*2
@@ -108,6 +113,10 @@ build:windows --@rules_kotlin//kotlin/settings:jvm_emit_jdeps=False
 
 # Prune transitive deps to match jvm_library behavior and avoid classpath conflicts
 common --@rules_kotlin//kotlin/settings:experimental_prune_transitive_deps=True
+
+# Force ijar ABIs instead of turbine source-level header jars, effective when compiling with upstream rules_kotlin
+# Turbine omits synthetic bridge methods, while ijar (of the full javac output) keeps the bridges
+build --nojava_header_compilation
 
 # https://bazel.build/docs/bazel-and-java#config-build-tools-java
 # A second pair of JDK and JVM used to build and execute tools, which are used in the build process, but are not in the build results.
@@ -190,6 +199,10 @@ test --test_timeout=60,300,900,14400
 
 # A workaround for https://github.com/bazelbuild/rules_kotlin/issues/1352
 common --repo_env=ANDROID_HOME=
+
+# Forward NETRC so both Bazel's downloader and Coursier (maven_install use_credentials_from_home_netrc_file)
+# can authenticate to packages.jetbrains.team, e.g. on CI where NETRC points to a file outside $HOME.
+common --repo_env=NETRC
 
 # Use prebuilt protoc instead of building from source, https://protobuf.dev/news/2026-01-16/
 common --incompatible_enable_proto_toolchain_resolution

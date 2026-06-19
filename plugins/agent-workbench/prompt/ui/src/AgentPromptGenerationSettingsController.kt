@@ -1,79 +1,125 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.prompt.ui
 
+// @spec community/plugins/agent-workbench/spec/actions/global-prompt-task-cost-profiles.spec.md
+
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModel
 import com.intellij.agent.workbench.prompt.core.AgentPromptInvocationData
+import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfile
+import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfileKind
 import com.intellij.agent.workbench.prompt.core.AgentPromptLauncherBridge
 import com.intellij.agent.workbench.prompt.core.AgentPromptReasoningEffort
-import com.intellij.agent.workbench.prompt.ui.context.dataContextOrNull
-import com.intellij.ide.DataManager
+import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
+import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuItem
+import com.intellij.agent.workbench.sessions.core.providers.generationSettingsForPlanMode
+import com.intellij.agent.workbench.sessions.providerItemMonochromeIconWithMode
+import com.intellij.agent.workbench.sessions.setLaunchProfileIcon
+import com.intellij.agent.workbench.ui.AgentWorkbenchPopupRow
+import com.intellij.agent.workbench.ui.AgentWorkbenchPopupStep
+import com.intellij.agent.workbench.ui.createAgentWorkbenchListPopup
+import com.intellij.icons.AllIcons
 import com.intellij.ide.setToolTipText
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.Separator
-import com.intellij.openapi.application.EDT
+import com.intellij.openapi.actionSystem.Toggleable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.DumbAwareToggleAction
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.ListPopup
+import com.intellij.openapi.ui.popup.ListPopupStepEx
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
+import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.util.text.HtmlChunk
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.ActionLink
+import com.intellij.util.ui.LafIconLookup
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import org.jetbrains.annotations.Nls
 import org.jetbrains.annotations.TestOnly
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JPanel
-import kotlin.time.Duration.Companion.seconds
-
-private val MODEL_CATALOG_REFRESH_STATUS_DELAY = 3.seconds
 
 internal class AgentPromptGenerationSettingsController(
   private val invocationData: AgentPromptInvocationData,
   private val providerSelector: AgentPromptProviderSelector,
   private val generationSettingsPanel: JPanel,
+  private val profileAction: AgentPromptToolbarProfileAction? = null,
+  private val launchProfileLink: ActionLink = ActionLink(AgentPromptBundle.message("popup.profile.header.standard")),
   private val modelSelectorLink: ActionLink,
   private val reasoningEffortLink: ActionLink,
+  private val planReasoningEffortLink: ActionLink = ActionLink(AgentPromptBundle.message("popup.generation.plan.reasoning.same")),
+  defaultProfileActionControl: AgentPromptDefaultProfileActionControl = AgentPromptDefaultProfileActionControl(),
   private val modelCatalogScope: CoroutineScope,
   private val modelCatalogService: AgentPromptGenerationModelCatalogService = invocationData.project.service(),
   private val launcherProvider: () -> AgentPromptLauncherBridge?,
-  private val onDefaultSaved: () -> Unit,
+  private val onDefaultSaved: (String) -> Unit,
+  private val onLaunchProfileApplied: () -> Unit = {},
+  private val manageProfilesDialogRunner: (AgentPromptLaunchProfileEditorOpenDialog) -> Unit = { openDialog ->
+    ApplicationManager.getApplication().invokeLater { openDialog(null) }
+  },
 ) {
-  private val defaultSettingsByProviderId = LinkedHashMap<String, AgentPromptGenerationSettings>()
   private val transientSettingsByProviderId = LinkedHashMap<String, AgentPromptGenerationSettings>()
-  private val modelCatalogsByProviderId = LinkedHashMap<String, ModelCatalogState>()
   private var generationControlsVisible = true
+  private var providerSelectorVisible = true
   private var activeModelPopup: JBPopup? = null
   private var activeModelPopupProviderId: String? = null
+  private val launchProfileState = AgentPromptLaunchProfileState(
+    builtInProfiles = ::builtInLaunchProfiles,
+    canApplyProfile = ::canApplyProfile,
+  )
+  private val defaultProfileActionController = AgentPromptDefaultProfileActionController(
+    actionControl = defaultProfileActionControl,
+    actionProvider = { launchProfileState.defaultAction(currentProfileDraft()) },
+    onMakeDefault = ::setDefaultProfile,
+    onUpdateProfile = ::saveProfile,
+    onSaveAsDefault = ::saveDraftProfileAsDefault,
+  )
 
   init {
+    if (profileAction == null) {
+      launchProfileLink.addActionListener { showLaunchProfilePopup() }
+    }
+    profileAction?.setPopupHandler { _, anchor -> showLaunchProfilePopup(anchor) }
     modelSelectorLink.addActionListener { showModelPopup() }
     reasoningEffortLink.addActionListener { showReasoningEffortPopup() }
+    planReasoningEffortLink.addActionListener { showPlanReasoningEffortPopup() }
   }
 
-  fun restoreDefaultSettings(settingsByProviderId: Map<String, AgentPromptGenerationSettings>) {
-    defaultSettingsByProviderId.clear()
-    defaultSettingsByProviderId.putAll(settingsByProviderId)
-    refreshPresentation()
-  }
-
-  fun refreshSelectedProviderModels() {
-    providerSelector.selectedProvider?.let(::requestModelCatalogRefresh)
+  fun restoreLaunchProfiles(preferences: AgentPromptLauncherBridge.ProviderPreferences) {
+    launchProfileState.restore(
+      preferences = preferences,
+      implicitDefaultProfileId = implicitBuiltInDefaultProfileId(),
+    )
+    val activeProfile = launchProfileState.selectedProfile()
+    if (activeProfile != null) {
+      if (!applyProfile(activeProfile)) {
+        launchProfileState.clearSelectedProfile()
+      }
+    }
     refreshPresentation()
   }
 
   fun setGenerationControlsVisible(visible: Boolean) {
-    generationControlsVisible = visible
+    setControlsVisibility(providerSelectorVisible = visible, generationControlsVisible = visible)
+  }
+
+  /**
+   * Decouples the provider selector from the per-task generation controls so an extension tab can keep the
+   * provider chooser while hiding model/reasoning controls that its submit action does not consume.
+   */
+  fun setControlsVisibility(providerSelectorVisible: Boolean, generationControlsVisible: Boolean) {
+    this.providerSelectorVisible = providerSelectorVisible
+    this.generationControlsVisible = generationControlsVisible
     refreshPresentation()
   }
 
@@ -81,99 +127,106 @@ internal class AgentPromptGenerationSettingsController(
     val provider = providerSelector.selectedProvider ?: return AgentPromptGenerationSettings.AUTO
     val providerId = provider.bridge.provider.value
     val configuredSettings = transientSettingsByProviderId[providerId]
-                             ?: defaultSettingsByProviderId[providerId]
                              ?: AgentPromptGenerationSettings.AUTO
     val sanitizedSettings = provider.bridge.sanitizeGenerationSettings(configuredSettings)
     return sanitizeSettingsForLoadedModelCatalog(providerId, sanitizedSettings)
   }
 
+  fun currentGenerationModelCatalog(): List<AgentPromptGenerationModel> {
+    val provider = providerSelector.selectedProvider ?: return emptyList()
+    return loadedModelCatalog(provider.bridge.provider.value).orEmpty()
+  }
+
+  fun currentLaunchSettings(): AgentPromptGenerationSettings {
+    val currentSettings = currentSettings()
+    return generationSettingsForPlanMode(
+      generationSettings = currentSettings,
+      startInPlanMode = providerSelector.isPlanModeSelected(),
+    )
+  }
+
   fun refreshPresentation() {
     val selectedProvider = providerSelector.selectedProvider
     val showGenerationControls = generationControlsVisible
+    val showProviderSelector = providerSelectorVisible
     val modelCatalog = selectedProvider?.bridge?.provider?.value?.let(::loadedModelCatalog)
     val modelSelectionAvailable = selectedProvider?.bridge?.supportsGenerationModelSelection == true
     val currentSettings = currentSettings()
     val reasoningEfforts = availableReasoningEfforts(currentSettings, modelCatalog)
+    val currentPlanReasoningEffort = sanitizePlanReasoningEffort(currentSettings.planReasoningEffort, reasoningEfforts)
     val reasoningEffortAvailable = reasoningEfforts.isNotEmpty()
+    val planModeSelected = providerSelector.isPlanModeSelected()
+    val planEffortSupported = reasoningEffortAvailable && selectedProvider?.bridge?.supportsPlanReasoningEffort == true
     generationSettingsPanel.isVisible = showGenerationControls
+    launchProfileLink.isVisible = showProviderSelector
+    launchProfileLink.isEnabled = showProviderSelector
+    val profileDraft = currentProfileDraft()
+    val profile = launchProfileState.profileForPresentation(profileDraft)
+    val profileText = launchProfileText(profile)
+    val profileTooltip = AgentPromptBundle.message("popup.profile.tooltip")
+    profileAction?.setPresentation(
+      text = profileText,
+      description = profileTooltip,
+      icon = profileIcon(profile),
+      visible = showProviderSelector,
+      enabled = showProviderSelector,
+    )
     modelSelectorLink.isVisible = showGenerationControls && modelSelectionAvailable
     modelSelectorLink.isEnabled = showGenerationControls && modelSelectionAvailable
     reasoningEffortLink.isVisible = showGenerationControls
     reasoningEffortLink.isEnabled = showGenerationControls && reasoningEffortAvailable
+    planReasoningEffortLink.isVisible = showGenerationControls && planEffortSupported
+    planReasoningEffortLink.isEnabled = showGenerationControls && planEffortSupported && planModeSelected
+    defaultProfileActionController.refreshPresentation(showGenerationControls)
+    if (showProviderSelector) {
+      launchProfileLink.text = profileText
+      launchProfileLink.setToolTipText(HtmlChunk.text(profileTooltip))
+      launchProfileLink.accessibleContext.accessibleName = AgentPromptBundle.message("popup.profile.accessible.name") + ": " + profileText
+    }
     if (showGenerationControls) {
-      modelSelectorLink.text = modelText(currentSettings.modelId, modelCatalog.orEmpty())
+      modelSelectorLink.text = modelText(
+        modelId = currentSettings.modelId,
+        models = modelCatalog.orEmpty(),
+        displayNameForSavedModel = ::displayNameForSavedModel,
+      )
       modelSelectorLink.setToolTipText(HtmlChunk.text(AgentPromptBundle.message("popup.generation.model.tooltip")))
       modelSelectorLink.accessibleContext.accessibleName = modelSelectorLink.text
       reasoningEffortLink.text = reasoningEffortText(currentSettings.reasoningEffort)
       reasoningEffortLink.setToolTipText(HtmlChunk.text(reasoningEffortTooltipText(reasoningEffortAvailable)))
       reasoningEffortLink.accessibleContext.accessibleName = reasoningEffortLink.text
+      planReasoningEffortLink.text = planReasoningEffortText(currentPlanReasoningEffort)
+      val planReasoningEffortTooltipKey = if (planModeSelected) {
+        "popup.generation.plan.reasoning.tooltip"
+      }
+      else {
+        "popup.generation.plan.reasoning.disabled.tooltip"
+      }
+      planReasoningEffortLink.setToolTipText(HtmlChunk.text(AgentPromptBundle.message(planReasoningEffortTooltipKey)))
+      planReasoningEffortLink.accessibleContext.accessibleName =
+        AgentPromptBundle.message("popup.generation.plan.reasoning.accessible.name") + ": " + planReasoningEffortLink.text
     }
     generationSettingsPanel.revalidate()
     generationSettingsPanel.repaint()
   }
 
   private fun requestModelCatalogRefresh(selectedProvider: ProviderEntry) {
-    if (!selectedProvider.bridge.supportsGenerationModelSelection) {
-      return
-    }
     val providerId = selectedProvider.bridge.provider.value
-    when (modelCatalogsByProviderId[providerId]) {
-      ModelCatalogState.Loading,
-      is ModelCatalogState.Refreshing,
-        -> return
-      is ModelCatalogState.Loaded,
-      is ModelCatalogState.RefreshFailed,
-      ModelCatalogState.Failed,
-      null,
-        -> Unit
-    }
-
-    val cachedModels = loadedModelCatalog(providerId)
-    modelCatalogsByProviderId[providerId] = if (cachedModels == null) {
-      ModelCatalogState.Loading
-    }
-    else {
-      ModelCatalogState.Loaded(cachedModels)
-    }
-    val refresh = modelCatalogService.requestRefresh(selectedProvider.bridge, invocationData.project)
-    if (cachedModels != null) {
-      modelCatalogScope.launch {
-        delay(MODEL_CATALOG_REFRESH_STATUS_DELAY)
-        withContext(Dispatchers.EDT) {
-          if (!refresh.isCompleted && modelCatalogsByProviderId[providerId] == ModelCatalogState.Loaded(cachedModels)) {
-            modelCatalogsByProviderId[providerId] = ModelCatalogState.Refreshing(cachedModels)
-            refreshPresentation()
-            refreshModelPopupIfOpen(providerId)
-          }
-        }
+    modelCatalogService.requestStateRefresh(selectedProvider.bridge, invocationData.project) {
+      if (!modelCatalogScope.isActive) {
+        return@requestStateRefresh
       }
-    }
-    modelCatalogScope.launch {
-      val result = runCatching { refresh.await() }
-      withContext(Dispatchers.EDT) {
-        modelCatalogsByProviderId[providerId] = result.fold(
-          onSuccess = { models ->
-            ModelCatalogState.Loaded(models)
-          },
-          onFailure = {
-            val fallbackModels = modelCatalogService.cachedCatalog(providerId) ?: cachedModels
-            if (fallbackModels == null) {
-              ModelCatalogState.Failed
-            }
-            else {
-              ModelCatalogState.RefreshFailed(fallbackModels)
-            }
-          },
-        )
-        refreshPresentation()
-        refreshModelPopupIfOpen(providerId)
-      }
+      refreshPresentation()
+      refreshModelPopupIfOpen(providerId)
     }
   }
 
-  private fun modelCatalogState(providerId: String): ModelCatalogState? {
-    return modelCatalogsByProviderId[providerId]
-           ?: modelCatalogService.cachedCatalog(providerId)?.let { models -> ModelCatalogState.Loaded(models) }
+  private fun requestModelCatalogRefresh(providerId: String, onStateChanged: () -> Unit) {
+    val provider = providerSelector.providerEntries().firstOrNull { entry -> entry.bridge.provider.value == providerId } ?: return
+    modelCatalogService.requestStateRefresh(provider.bridge, invocationData.project, onStateChanged)
+  }
+
+  private fun modelCatalogState(providerId: String): AgentPromptGenerationModelCatalogState? {
+    return modelCatalogService.catalogState(providerId)
   }
 
   private fun loadedModelCatalog(providerId: String): List<AgentPromptGenerationModel>? {
@@ -199,7 +252,16 @@ internal class AgentPromptGenerationSettingsController(
     else {
       settings.reasoningEffort
     }
-    return settings.copy(modelId = modelId, reasoningEffort = reasoningEffort)
+    val planReasoningEffort = if (supportedEfforts != null &&
+                                  settings.planReasoningEffort != null &&
+                                  settings.planReasoningEffort != AgentPromptReasoningEffort.AUTO &&
+                                  settings.planReasoningEffort !in supportedEfforts) {
+      AgentPromptReasoningEffort.AUTO
+    }
+    else {
+      settings.planReasoningEffort
+    }
+    return settings.copy(modelId = modelId, reasoningEffort = reasoningEffort, planReasoningEffort = planReasoningEffort)
   }
 
   private fun availableReasoningEfforts(
@@ -213,6 +275,18 @@ internal class AgentPromptGenerationSettingsController(
     return modelEfforts
            ?: models?.catalogReasoningEfforts()
            ?: providerSelector.selectedProvider?.bridge?.supportedReasoningEfforts.orEmpty()
+  }
+
+  private fun sanitizePlanReasoningEffort(
+    planReasoningEffort: AgentPromptReasoningEffort?,
+    supportedEfforts: Set<AgentPromptReasoningEffort>,
+  ): AgentPromptReasoningEffort? {
+    return when (planReasoningEffort) {
+      null -> null
+      AgentPromptReasoningEffort.AUTO -> AgentPromptReasoningEffort.AUTO
+      in supportedEfforts -> planReasoningEffort
+      else -> AgentPromptReasoningEffort.AUTO
+    }
   }
 
   private fun showModelPopup() {
@@ -231,18 +305,9 @@ internal class AgentPromptGenerationSettingsController(
       return
     }
 
-    val group = createModelActionGroup(providerId, modelCatalogState(providerId))
+    val rows = createModelPopupRows(providerId, modelCatalogState(providerId))
 
-    val popup = JBPopupFactory.getInstance()
-      .createActionGroupPopup(
-        null,
-        group,
-        invocationData.dataContextOrNull() ?: DataManager.getInstance().getDataContext(modelSelectorLink),
-        JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-        true,
-        null,
-        Int.MAX_VALUE,
-      )
+    val popup = createAgentPromptPopup(rows)
     activeModelPopup = popup
     activeModelPopupProviderId = providerId
     popup.addListener(object : JBPopupListener {
@@ -275,19 +340,33 @@ internal class AgentPromptGenerationSettingsController(
       return
     }
 
-    val group = createReasoningEffortActionGroup(supportedEfforts)
-
-    JBPopupFactory.getInstance()
-      .createActionGroupPopup(
-        null,
-        group,
-        invocationData.dataContextOrNull() ?: DataManager.getInstance().getDataContext(reasoningEffortLink),
-        JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-        true,
-        null,
-        Int.MAX_VALUE,
-      )
+    createAgentPromptPopup(createReasoningEffortPopupRows(supportedEfforts))
       .showUnderneathOf(reasoningEffortLink)
+  }
+
+  private fun showPlanReasoningEffortPopup() {
+    val selectedProvider = providerSelector.selectedProvider ?: return
+    val providerId = selectedProvider.bridge.provider.value
+    val supportedEfforts = availableReasoningEfforts(currentSettings(), loadedModelCatalog(providerId))
+    if (supportedEfforts.isEmpty()) {
+      return
+    }
+
+    createAgentPromptPopup(createPlanReasoningEffortPopupRows(supportedEfforts))
+      .showUnderneathOf(planReasoningEffortLink)
+  }
+
+  private fun showLaunchProfilePopup() {
+    showLaunchProfilePopup(launchProfileLink)
+  }
+
+  private fun showLaunchProfilePopup(anchor: JComponent) {
+    createAgentPromptPopup(createLaunchProfilePopupRows())
+      .showUnderneathOf(anchor)
+  }
+
+  private fun createAgentPromptPopup(rows: List<AgentPromptPopupRow>): ListPopup {
+    return createAgentWorkbenchListPopup(invocationData.project, rows.toWorkbenchPopupRows(::onPopupRowChosen))
   }
 
   private fun selectModel(modelId: String?) {
@@ -307,54 +386,11 @@ internal class AgentPromptGenerationSettingsController(
     refreshPresentation()
   }
 
-  private fun saveCurrentSettingsAsDefault() {
+  private fun selectPlanReasoningEffort(planReasoningEffort: AgentPromptReasoningEffort?) {
     val providerId = providerSelector.selectedProvider?.bridge?.provider?.value ?: return
-    val settings = currentSettings()
-    updateStoredDefaultSettings { defaults ->
-      if (settings.isAuto()) {
-        defaults.remove(providerId)
-      }
-      else {
-        defaults[providerId] = settings
-      }
-    }
-  }
-
-  private fun clearCurrentSettingsDefault() {
-    val providerId = providerSelector.selectedProvider?.bridge?.provider?.value ?: return
-    updateStoredDefaultSettings { defaults ->
-      defaults.remove(providerId)
-    }
-  }
-
-  private fun updateStoredDefaultSettings(update: (MutableMap<String, AgentPromptGenerationSettings>) -> Unit) {
-    val launcher = launcherProvider() ?: return
-    val currentPreferences = launcher.loadProviderPreferences()
-    val updatedDefaults = LinkedHashMap(currentPreferences.generationSettingsByProviderId)
-    update(updatedDefaults)
-    launcher.saveProviderPreferences(currentPreferences.copy(generationSettingsByProviderId = updatedDefaults))
-    defaultSettingsByProviderId.clear()
-    defaultSettingsByProviderId.putAll(updatedDefaults)
-    onDefaultSaved()
+    val currentSettings = currentSettings()
+    transientSettingsByProviderId[providerId] = currentSettings.copy(planReasoningEffort = planReasoningEffort)
     refreshPresentation()
-  }
-
-  private enum class DefaultActionOperation {
-    SAVE,
-    CLEAR,
-  }
-
-  private fun defaultActionOperation(
-    currentSettings: AgentPromptGenerationSettings,
-    savedEffectiveSettings: AgentPromptGenerationSettings?,
-  ): DefaultActionOperation? {
-    if (savedEffectiveSettings != null && (currentSettings.isAuto() || currentSettings == savedEffectiveSettings)) {
-      return DefaultActionOperation.CLEAR
-    }
-    if (!currentSettings.isAuto()) {
-      return DefaultActionOperation.SAVE
-    }
-    return null
   }
 
   @TestOnly
@@ -382,45 +418,182 @@ internal class AgentPromptGenerationSettingsController(
     return createReasoningEffortActionGroup(supportedEfforts)
   }
 
-  private fun createModelActionGroup(providerId: String, modelCatalogState: ModelCatalogState?): DefaultActionGroup {
+  @TestOnly
+  internal fun createPlanReasoningEffortActionGroupForTest(): DefaultActionGroup? {
+    val selectedProvider = providerSelector.selectedProvider ?: return null
+    if (!selectedProvider.bridge.supportsPlanReasoningEffort || !providerSelector.isPlanModeSelected()) {
+      return null
+    }
+    val providerId = selectedProvider.bridge.provider.value
+    val supportedEfforts = availableReasoningEfforts(currentSettings(), loadedModelCatalog(providerId))
+    if (supportedEfforts.isEmpty()) {
+      return null
+    }
+    return createPlanReasoningEffortActionGroup(supportedEfforts)
+  }
+
+  @TestOnly
+  internal fun createLaunchProfilePopupRowsForTest(): List<AgentPromptPopupRow> {
+    return createLaunchProfilePopupRows()
+  }
+
+  @TestOnly
+  internal fun createLaunchProfilePopupStepForTest(): ListPopupStepEx<AgentWorkbenchPopupRow> {
+    return AgentWorkbenchPopupStep(createLaunchProfilePopupRows().toWorkbenchPopupRows(::onPopupRowChosen))
+  }
+
+  private fun createModelPopupRows(
+    providerId: String,
+    modelCatalogState: AgentPromptGenerationModelCatalogState?,
+  ): List<AgentPromptPopupRow> {
+    return buildList {
+      buildGenerationModelSelectorEntries(providerId,
+                                          modelCatalogState,
+                                          currentSettings().modelId,
+                                          ::displayNameForSavedModel).forEach { entry ->
+        when (entry) {
+          is AgentPromptGenerationModelSelectorEntry.Model -> {
+            add(AgentPromptPopupRow.Model(
+              text = entry.displayName,
+              separatorText = entry.separatorGroup?.modelSelectorText(),
+              modelId = entry.modelId,
+              selected = currentSettings().modelId == entry.modelId,
+            ))
+          }
+          is AgentPromptGenerationModelSelectorEntry.Status -> {
+            add(AgentPromptPopupRow.Status(
+              text = entry.displayName,
+              secondaryIcon = modelCatalogStatusIcon(entry.kind),
+            ))
+          }
+          is AgentPromptGenerationModelSelectorEntry.Retry -> {
+            add(AgentPromptPopupRow.RetryModelCatalog(
+              text = AgentPromptBundle.message("popup.generation.model.retry"),
+              tooltipText = AgentPromptBundle.message("popup.generation.model.retry.description"),
+              providerId = entry.providerId,
+            ))
+          }
+        }
+      }
+    }
+  }
+
+  private fun createReasoningEffortPopupRows(supportedEfforts: Set<AgentPromptReasoningEffort>): List<AgentPromptPopupRow> {
+    return reasoningEffortOrder()
+      .filter { effort -> effort == AgentPromptReasoningEffort.AUTO || effort in supportedEfforts }
+      .map { effort ->
+        AgentPromptPopupRow.ReasoningEffort(
+          text = reasoningEffortPopupText(effort),
+          effort = effort,
+          selected = currentSettings().reasoningEffort == effort,
+        )
+      }
+  }
+
+  private fun createPlanReasoningEffortPopupRows(supportedEfforts: Set<AgentPromptReasoningEffort>): List<AgentPromptPopupRow> {
+    return buildList {
+      add(AgentPromptPopupRow.PlanReasoningEffort(
+        text = planReasoningEffortPopupText(null),
+        planReasoningEffort = null,
+        selected = currentSettings().planReasoningEffort == null,
+      ))
+      add(AgentPromptPopupRow.PlanReasoningEffort(
+        text = planReasoningEffortPopupText(AgentPromptReasoningEffort.AUTO),
+        planReasoningEffort = AgentPromptReasoningEffort.AUTO,
+        selected = currentSettings().planReasoningEffort == AgentPromptReasoningEffort.AUTO,
+      ))
+      reasoningEffortOrder()
+        .filter { effort -> effort != AgentPromptReasoningEffort.AUTO && effort in supportedEfforts }
+        .forEach { effort ->
+          add(AgentPromptPopupRow.PlanReasoningEffort(
+            text = planReasoningEffortPopupText(effort),
+            planReasoningEffort = effort,
+            selected = currentSettings().planReasoningEffort == effort,
+          ))
+        }
+    }
+  }
+
+  private fun createLaunchProfilePopupRows(): List<AgentPromptPopupRow> {
+    return buildList {
+      val profiles = launchableProfiles()
+      val standardProfiles = profiles.filter { profile -> profile.launchMode != AgentSessionLaunchMode.YOLO }
+      val yoloProfiles = profiles.filter { profile -> profile.launchMode == AgentSessionLaunchMode.YOLO }
+      standardProfiles.forEach { profile -> add(createLaunchProfilePopupRow(profile)) }
+      if (yoloProfiles.isNotEmpty()) {
+        yoloProfiles.forEachIndexed { index, profile ->
+          add(createLaunchProfilePopupRow(
+            profile = profile,
+            separatorText = if (index == 0) AgentPromptBundle.message("popup.provider.section.auto") else null,
+          ))
+        }
+      }
+      add(AgentPromptPopupRow.ManageProfiles(
+        text = AgentPromptBundle.message("popup.profile.manage"),
+        separatorText = "",
+        tooltipText = AgentPromptBundle.message("popup.profile.manage.description"),
+      ))
+    }
+  }
+
+  private fun createLaunchProfilePopupRow(
+    profile: AgentPromptLaunchProfile,
+    separatorText: @Nls String? = null,
+  ): AgentPromptPopupRow.LaunchProfile {
+    val isDefaultProfile = profile.id == launchProfileState.effectiveDefaultProfileId
+    return AgentPromptPopupRow.LaunchProfile(
+      text = profile.name,
+      separatorText = separatorText,
+      primaryIcon = profileIcon(profile),
+      profile = profile,
+      selected = selectedProfileIdForPresentation() == profile.id,
+      marksDefaultProfile = isDefaultProfile,
+      secondaryIcon = if (isDefaultProfile) LafIconLookup.getIcon("checkmark") else null,
+      tooltipText = if (isDefaultProfile) AgentPromptBundle.message("popup.profile.default.tooltip") else null,
+    )
+  }
+
+  private fun onPopupRowChosen(row: AgentPromptPopupRow) {
+    when (row) {
+      is AgentPromptPopupRow.LaunchProfile -> applyProfile(row.profile)
+      is AgentPromptPopupRow.ManageProfiles -> showManageProfilesDialog()
+      is AgentPromptPopupRow.Model -> selectModel(row.modelId)
+      is AgentPromptPopupRow.PlanReasoningEffort -> selectPlanReasoningEffort(row.planReasoningEffort)
+      is AgentPromptPopupRow.ReasoningEffort -> selectReasoningEffort(row.effort)
+      is AgentPromptPopupRow.RetryModelCatalog -> {
+        val selectedProvider = providerSelector.selectedProvider ?: return
+        if (selectedProvider.bridge.provider.value != row.providerId) {
+          return
+        }
+
+        requestModelCatalogRefresh(selectedProvider)
+        refreshPresentation()
+        refreshModelPopupIfOpen(row.providerId)
+      }
+      is AgentPromptPopupRow.Status -> Unit
+    }
+  }
+
+  private fun createModelActionGroup(providerId: String, modelCatalogState: AgentPromptGenerationModelCatalogState?): DefaultActionGroup {
     val group = DefaultActionGroup()
-    group.add(ModelAction(modelId = null, text = AgentPromptBundle.message("popup.generation.model.popup.auto")))
-    when (modelCatalogState) {
-      is ModelCatalogState.Loaded -> {
-        addModelActions(group, modelCatalogState.models)
+    buildGenerationModelSelectorEntries(providerId,
+                                        modelCatalogState,
+                                        currentSettings().modelId,
+                                        ::displayNameForSavedModel).forEach { entry ->
+      when (entry) {
+        is AgentPromptGenerationModelSelectorEntry.Model -> {
+          entry.separatorGroup?.let { group.add(Separator.create(it.modelSelectorText())) }
+          group.add(ModelAction(modelId = entry.modelId, text = entry.displayName))
+        }
+        is AgentPromptGenerationModelSelectorEntry.Status -> {
+          group.add(ModelCatalogStatusAction(entry.displayName, modelCatalogStatusIcon(entry.kind)))
+        }
+        is AgentPromptGenerationModelSelectorEntry.Retry -> {
+          group.add(RetryModelCatalogAction(entry.providerId))
+        }
       }
-      is ModelCatalogState.Refreshing -> {
-        addModelActions(group, modelCatalogState.models)
-        group.add(ModelCatalogStatusAction(AgentPromptBundle.message("popup.generation.model.refreshing"), AnimatedIcon.Default.INSTANCE))
-      }
-      is ModelCatalogState.RefreshFailed -> {
-        addModelActions(group, modelCatalogState.models)
-        addModelCatalogRetryActions(group, providerId, AgentPromptBundle.message("popup.generation.model.refresh.failed"))
-      }
-      ModelCatalogState.Loading -> {
-        group.add(ModelCatalogStatusAction(AgentPromptBundle.message("popup.generation.model.loading"), AnimatedIcon.Default.INSTANCE))
-      }
-      ModelCatalogState.Failed -> {
-        addModelCatalogRetryActions(group, providerId, AgentPromptBundle.message("popup.generation.model.load.failed"))
-      }
-      null -> Unit
     }
-    addSaveDefaultAction(group)
     return group
-  }
-
-  private fun addModelActions(group: DefaultActionGroup, models: List<AgentPromptGenerationModel>) {
-    if (models.isEmpty()) {
-      group.add(ModelCatalogStatusAction(AgentPromptBundle.message("popup.generation.model.empty")))
-    }
-    else {
-      models.forEach { model -> group.add(ModelAction(modelId = model.id, text = model.displayName)) }
-    }
-  }
-
-  private fun addModelCatalogRetryActions(group: DefaultActionGroup, providerId: String, statusText: @Nls String) {
-    group.add(ModelCatalogStatusAction(statusText))
-    group.add(RetryModelCatalogAction(providerId))
   }
 
   private fun createReasoningEffortActionGroup(supportedEfforts: Set<AgentPromptReasoningEffort>): DefaultActionGroup {
@@ -428,48 +601,309 @@ internal class AgentPromptGenerationSettingsController(
     reasoningEffortOrder()
       .filter { effort -> effort == AgentPromptReasoningEffort.AUTO || effort in supportedEfforts }
       .forEach { effort -> group.add(ReasoningEffortAction(effort)) }
-    addSaveDefaultAction(group)
     return group
   }
 
-  private fun addSaveDefaultAction(group: DefaultActionGroup) {
-    val action = createSaveDefaultAction() ?: return
-    group.add(Separator.getInstance())
-    group.add(action)
+  private fun createPlanReasoningEffortActionGroup(supportedEfforts: Set<AgentPromptReasoningEffort>): DefaultActionGroup {
+    val group = DefaultActionGroup()
+    group.add(PlanReasoningEffortAction(null))
+    group.add(PlanReasoningEffortAction(AgentPromptReasoningEffort.AUTO))
+    reasoningEffortOrder()
+      .filter { effort -> effort != AgentPromptReasoningEffort.AUTO && effort in supportedEfforts }
+      .forEach { effort -> group.add(PlanReasoningEffortAction(effort)) }
+    return group
   }
 
-  private fun createSaveDefaultAction(): SaveDefaultAction? {
-    val selectedProvider = providerSelector.selectedProvider ?: return null
-    val providerId = selectedProvider.bridge.provider.value
-    val currentSettings = currentSettings()
-    val savedSettings = defaultSettingsByProviderId[providerId]
-    val savedEffectiveSettings = if (savedSettings != null && !savedSettings.isAuto()) {
-      sanitizeSettingsForLoadedModelCatalog(
-        providerId = providerId,
-        settings = selectedProvider.bridge.sanitizeGenerationSettings(savedSettings),
-      )
+  @TestOnly
+  internal fun createLaunchProfileActionGroupForTest(): DefaultActionGroup {
+    return createLaunchProfileActionGroup()
+  }
+
+  private fun createLaunchProfileActionGroup(): DefaultActionGroup {
+    val group = DefaultActionGroup()
+    val profiles = launchableProfiles()
+    val standardProfiles = profiles.filter { profile -> profile.launchMode != AgentSessionLaunchMode.YOLO }
+    val yoloProfiles = profiles.filter { profile -> profile.launchMode == AgentSessionLaunchMode.YOLO }
+    standardProfiles.forEach { profile -> group.add(LaunchProfileAction(profile)) }
+    if (yoloProfiles.isNotEmpty()) {
+      if (standardProfiles.isNotEmpty()) {
+        group.add(Separator.getInstance())
+      }
+      group.add(Separator.create(AgentPromptBundle.message("popup.provider.section.auto")))
+      yoloProfiles.forEach { profile -> group.add(LaunchProfileAction(profile)) }
+    }
+    group.add(Separator.getInstance())
+    group.add(ManageProfilesAction())
+    return group
+  }
+
+  private fun applyProfile(profile: AgentPromptLaunchProfile): Boolean {
+    val providerEntry = findApplicableProviderEntry(profile) ?: return false
+    val provider = providerEntry.bridge.provider
+    val planModeSelected = providerSelector.isPlanModeSelected()
+    providerSelector.selectProvider(provider, profile.launchMode)
+    providerSelector.setPlanModeSelected(planModeSelected)
+    onLaunchProfileApplied()
+    transientSettingsByProviderId[profile.providerId] = profile.generationSettings
+    launchProfileState.selectProfile(profile)
+    refreshPresentation()
+    return true
+  }
+
+  private fun canApplyProfile(profile: AgentPromptLaunchProfile): Boolean {
+    return findApplicableProviderEntry(profile) != null
+  }
+
+  private fun findApplicableProviderEntry(profile: AgentPromptLaunchProfile): ProviderEntry? {
+    val provider = AgentSessionProvider.fromOrNull(profile.providerId) ?: return null
+    val providerEntry = providerSelector.findProviderEntry(provider) ?: return null
+    return providerEntry.takeIf { entry ->
+      entry.isCliAvailable && profile.launchMode in entry.bridge.supportedLaunchModes
+    }
+  }
+
+  private fun saveNewProfile(profile: AgentPromptLaunchProfile) {
+    launchProfileState.saveNewProfile(profile)
+    saveProfiles()
+    onDefaultSaved(AgentPromptBundle.message("popup.profile.saved"))
+    refreshPresentation()
+  }
+
+  private fun saveProfile(profile: AgentPromptLaunchProfile) {
+    if (!launchProfileState.saveProfile(profile)) {
+      return
+    }
+    saveProfiles()
+    onDefaultSaved(AgentPromptBundle.message("popup.profile.updated"))
+    refreshPresentation()
+  }
+
+  private fun setDefaultProfile(profile: AgentPromptLaunchProfile) {
+    launchProfileState.setDefaultProfile(profile)
+    saveProfiles()
+    onDefaultSaved(AgentPromptBundle.message("popup.profile.default.saved"))
+    refreshPresentation()
+  }
+
+  private fun saveDraftProfileAsDefault() {
+    val draft = currentDraftProfile(
+      id = newUserProfileId(),
+      name = generatedDraftProfileName(),
+    ) ?: return
+    if (!canApplyProfile(draft)) {
+      return
+    }
+    launchProfileState.saveDraftAsDefault(draft)
+    saveProfiles()
+    onDefaultSaved(AgentPromptBundle.message("popup.profile.saved.default"))
+    refreshPresentation()
+  }
+
+  private fun deleteProfile(profile: AgentPromptLaunchProfile): Boolean {
+    if (!launchProfileState.canDeleteProfile(profile)) {
+      return false
+    }
+    val resetsBuiltInProfile = builtInLaunchProfiles().any { item -> item.id == profile.id }
+    val message = if (resetsBuiltInProfile) {
+      AgentPromptBundle.message("popup.profile.reset.message", profile.name)
     }
     else {
-      null
+      AgentPromptBundle.message("popup.profile.delete.message", profile.name)
     }
-    return when (defaultActionOperation(currentSettings, savedEffectiveSettings)) {
-      DefaultActionOperation.SAVE -> SaveDefaultAction(
-        text = AgentPromptBundle.message("popup.generation.save.default"),
-        description = AgentPromptBundle.message("popup.generation.save.default.description"),
-        operation = DefaultActionOperation.SAVE,
-      )
-      DefaultActionOperation.CLEAR -> SaveDefaultAction(
-        text = AgentPromptBundle.message("popup.generation.clear.default"),
-        description = AgentPromptBundle.message("popup.generation.clear.default.description"),
-        operation = DefaultActionOperation.CLEAR,
-      )
-      null -> null
+    val title = if (resetsBuiltInProfile) AgentPromptBundle.message("popup.profile.reset.title")
+    else AgentPromptBundle.message("popup.profile.delete.title")
+    if (Messages.showYesNoDialog(
+        invocationData.project,
+        message,
+        title,
+        Messages.getQuestionIcon(),
+      ) != Messages.YES) {
+      return false
     }
+    if (!launchProfileState.deleteProfile(profile)) {
+      return false
+    }
+    saveProfiles()
+    onDefaultSaved(AgentPromptBundle.message(if (resetsBuiltInProfile) "popup.profile.reset" else "popup.profile.deleted"))
+    refreshPresentation()
+    return true
+  }
+
+  private fun saveProfiles() {
+    val launcher = launcherProvider() ?: return
+    val currentPreferences = launcher.loadProviderPreferences()
+    launcher.saveProviderPreferences(
+      currentPreferences.copy(
+        launchProfiles = launchProfileState.userProfiles(),
+        activeLaunchProfileId = launchProfileState.persistedDefaultProfileId,
+      )
+    )
+  }
+
+  private fun showManageProfilesDialog() {
+    manageProfilesDialogRunner { restorePromptOnClose ->
+      ApplicationManager.getApplication().service<AgentPromptLaunchProfileEditorWindowService>().openOrFocus(
+        request = createManageProfilesDialogRequest(),
+        restorePromptOnClose = restorePromptOnClose,
+      )
+    }
+  }
+
+  @TestOnly
+  internal fun createManageProfilesDialogForTest(): AgentPromptLaunchProfileEditorDialog {
+    return createManageProfilesDialog()
+  }
+
+  @TestOnly
+  internal fun openManageProfilesDialogForTest(restorePromptOnClose: (() -> Unit)? = null) {
+    ApplicationManager.getApplication().service<AgentPromptLaunchProfileEditorWindowService>().openOrFocusForTest(
+      request = createManageProfilesDialogRequest(),
+      restorePromptOnClose = restorePromptOnClose,
+    )
+  }
+
+  private fun createManageProfilesDialogRequest(): AgentPromptLaunchProfileEditorRequest {
+    return AgentPromptLaunchProfileEditorRequest(
+      project = invocationData.project,
+      profiles = allManagedProfiles(),
+      activeProfileId = launchProfileState.selectedProfileId,
+      defaultProfileId = launchProfileState.effectiveDefaultProfileId,
+      builtInProfiles = builtInLaunchProfiles(),
+      providerEntries = providerSelector.providerEntries(),
+      modelCatalogProvider = ::loadedModelCatalog,
+      modelCatalogStateProvider = ::modelCatalogState,
+      requestModelCatalogRefresh = ::requestModelCatalogRefresh,
+      newUserProfileId = ::newUserProfileId,
+      onCreateProfile = ::saveNewProfile,
+      onUpdateProfile = ::saveProfile,
+      onDeleteProfile = ::deleteProfile,
+      onSetDefaultProfile = ::setDefaultProfile,
+    )
+  }
+
+  private fun createManageProfilesDialog(
+    onDispose: (AgentPromptLaunchProfileEditorDialog) -> Unit = {},
+  ): AgentPromptLaunchProfileEditorDialog {
+    val request = createManageProfilesDialogRequest()
+    lateinit var dialog: AgentPromptLaunchProfileEditorDialog
+    dialog = AgentPromptLaunchProfileEditorDialog(
+      project = request.project,
+      profiles = request.profiles,
+      activeProfileId = request.activeProfileId,
+      defaultProfileId = request.defaultProfileId,
+      builtInProfiles = request.builtInProfiles,
+      providerEntries = request.providerEntries,
+      modelCatalogProvider = request.modelCatalogProvider,
+      modelCatalogStateProvider = request.modelCatalogStateProvider,
+      requestModelCatalogRefresh = request.requestModelCatalogRefresh,
+      newUserProfileId = request.newUserProfileId,
+      onCreateProfile = request.onCreateProfile,
+      onUpdateProfile = request.onUpdateProfile,
+      onDeleteProfile = request.onDeleteProfile,
+      onSetDefaultProfile = request.onSetDefaultProfile,
+      onSelectProfile = {},
+      onDispose = { onDispose(dialog) },
+    )
+    return dialog
+  }
+
+  private fun currentDraftProfile(
+    id: String,
+    name: String,
+  ): AgentPromptLaunchProfile? {
+    val provider = providerSelector.selectedProvider?.bridge?.provider ?: return null
+    val currentSettings = currentSettings()
+    return AgentPromptLaunchProfile(
+      id = id,
+      name = name,
+      kind = AgentPromptLaunchProfileKind.USER,
+      providerId = provider.value,
+      launchMode = providerSelector.selectedLaunchMode,
+      generationSettings = currentSettings,
+    )
+  }
+
+  private fun findProfile(profileId: String?): AgentPromptLaunchProfile? {
+    return launchProfileState.findProfile(profileId)
+  }
+
+  private fun profileIcon(profile: AgentPromptLaunchProfile?): Icon {
+    val item = profileMenuItem(profile) ?: providerSelector.selectedMenuItem()
+    return item?.let(::providerItemMonochromeIconWithMode) ?: AllIcons.Toolwindows.ToolWindowMessages
+  }
+
+  private fun profileMenuItem(profile: AgentPromptLaunchProfile?): AgentSessionProviderMenuItem? {
+    if (profile == null) {
+      return null
+    }
+    return providerSelector.findMenuItem(AgentSessionProvider.fromOrNull(profile.providerId), profile.launchMode)
+  }
+
+  private fun displayNameForSavedModel(modelId: String): @NlsSafe String {
+    return providerSelector.selectedProvider?.bridge?.displayNameForGenerationModelId(modelId)
+           ?: unknownGenerationModelDisplayName(modelId)
+  }
+
+  private fun selectedProfileIdForPresentation(): String? {
+    return launchProfileState.selectedProfileIdForPresentation(currentProfileDraft())
+  }
+
+  private fun currentProfileDraft(): AgentPromptLaunchProfile? {
+    return currentDraftProfile(id = "", name = "")
+  }
+
+  private fun generatedDraftProfileName(): @NlsSafe String {
+    val draft = currentProfileDraft() ?: return AgentPromptBundle.message("popup.profile.name.default")
+    val providerId = providerSelector.selectedProvider?.bridge?.provider?.value
+    return generatedLaunchProfileName(
+      profile = draft,
+      existingProfiles = allManagedProfiles(),
+      models = providerId?.let(::loadedModelCatalog).orEmpty(),
+      compactLaunchModeLabel = providerSelector.compactBuiltInProfileLabel(draft),
+    )
+  }
+
+  private fun newUserProfileId(): String {
+    val base = "user:${System.currentTimeMillis()}"
+    if (findProfile(base) == null) return base
+    var suffix = 2
+    while (findProfile("$base:$suffix") != null) {
+      suffix++
+    }
+    return "$base:$suffix"
+  }
+
+  @TestOnly
+  internal fun manageProfilesRowsForTest(): List<AgentPromptLaunchProfile> {
+    return allManagedProfiles()
+  }
+
+  @TestOnly
+  internal fun setDefaultProfileForTest(profileId: String): Boolean {
+    val profile = findProfile(profileId) ?: return false
+    setDefaultProfile(profile)
+    return true
+  }
+
+  private fun launchableProfiles(): List<AgentPromptLaunchProfile> {
+    return launchProfileState.launchableProfiles()
+  }
+
+  private fun allManagedProfiles(): List<AgentPromptLaunchProfile> {
+    return launchProfileState.allManagedProfiles()
+  }
+
+  private fun builtInLaunchProfiles(): List<AgentPromptLaunchProfile> {
+    return providerSelector.builtInLaunchProfiles()
+  }
+
+  private fun implicitBuiltInDefaultProfileId(): String? {
+    return builtInLaunchProfiles().firstOrNull(::canApplyProfile)?.id
   }
 
   private inner class ModelAction(
     private val modelId: String?,
-    text: @Nls String,
+    text: @NlsSafe String,
   ) : DumbAwareToggleAction(text) {
     init {
       templatePresentation.keepPopupOnPerform = KeepPopupOnPerform.Never
@@ -545,67 +979,100 @@ internal class AgentPromptGenerationSettingsController(
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
   }
 
-  private inner class SaveDefaultAction(
-    text: @Nls String,
-    description: @Nls String,
-    private val operation: DefaultActionOperation,
-  ) : DumbAwareAction(text) {
+  private inner class PlanReasoningEffortAction(
+    private val planReasoningEffort: AgentPromptReasoningEffort?,
+  ) : DumbAwareToggleAction(planReasoningEffortPopupText(planReasoningEffort)) {
     init {
-      templatePresentation.description = description
+      templatePresentation.keepPopupOnPerform = KeepPopupOnPerform.Never
     }
 
-    override fun actionPerformed(e: AnActionEvent) {
-      when (operation) {
-        DefaultActionOperation.SAVE -> saveCurrentSettingsAsDefault()
-        DefaultActionOperation.CLEAR -> clearCurrentSettingsDefault()
+    override fun isSelected(e: AnActionEvent): Boolean {
+      return currentSettings().planReasoningEffort == planReasoningEffort
+    }
+
+    override fun setSelected(e: AnActionEvent, state: Boolean) {
+      if (state) {
+        selectPlanReasoningEffort(planReasoningEffort)
       }
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
   }
-}
 
-private sealed interface ModelCatalogState {
-  data object Loading : ModelCatalogState
+  private inner class LaunchProfileAction(
+    private val profile: AgentPromptLaunchProfile,
+  ) : DumbAwareToggleAction(profile.name, null, profileIcon(profile)) {
+    init {
+      templatePresentation.keepPopupOnPerform = KeepPopupOnPerform.Never
+      setLaunchProfileIcon(templatePresentation, profileIcon(profile), isProfileSelected())
+    }
 
-  data class Loaded(@JvmField val models: List<AgentPromptGenerationModel>) : ModelCatalogState
+    private fun isProfileSelected(): Boolean {
+      return selectedProfileIdForPresentation() == profile.id
+    }
 
-  data class Refreshing(@JvmField val models: List<AgentPromptGenerationModel>) : ModelCatalogState
+    override fun isSelected(e: AnActionEvent): Boolean {
+      return isProfileSelected()
+    }
 
-  data object Failed : ModelCatalogState
+    override fun setSelected(e: AnActionEvent, state: Boolean) {
+      if (state) {
+        applyProfile(profile)
+      }
+    }
 
-  data class RefreshFailed(@JvmField val models: List<AgentPromptGenerationModel>) : ModelCatalogState
-}
+    override fun update(e: AnActionEvent) {
+      super.update(e)
+      setLaunchProfileIcon(e.presentation, profileIcon(profile), Toggleable.isSelected(e.presentation))
+    }
 
-private fun ModelCatalogState.modelsOrNull(): List<AgentPromptGenerationModel>? {
-  return when (this) {
-    is ModelCatalogState.Loaded -> models
-    is ModelCatalogState.Refreshing -> models
-    is ModelCatalogState.RefreshFailed -> models
-    ModelCatalogState.Loading,
-    ModelCatalogState.Failed,
-      -> null
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
   }
+
+  private fun launchProfileText(profile: AgentPromptLaunchProfile?): @Nls String {
+    val profileName = when {
+      profile == null -> AgentPromptBundle.message("popup.profile.header.custom")
+      profile.kind == AgentPromptLaunchProfileKind.BUILT_IN -> {
+        providerSelector.compactBuiltInProfileLabel(profile) ?: AgentPromptBundle.message("popup.profile.header.standard")
+      }
+      else -> profile.name
+    }
+    return AgentPromptBundle.message("popup.profile.selected", profileName)
+  }
+
+  private inner class ManageProfilesAction : DumbAwareAction(AgentPromptBundle.message("popup.profile.manage")) {
+    init {
+      templatePresentation.description = AgentPromptBundle.message("popup.profile.manage.description")
+      templatePresentation.keepPopupOnPerform = KeepPopupOnPerform.Never
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+      showManageProfilesDialog()
+    }
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+  }
+
 }
 
-private fun AgentPromptGenerationSettings.isAuto(): Boolean {
-  return modelId == null && reasoningEffort == AgentPromptReasoningEffort.AUTO
-}
-
-private fun List<AgentPromptGenerationModel>.catalogReasoningEfforts(): Set<AgentPromptReasoningEffort>? {
+internal fun List<AgentPromptGenerationModel>.catalogReasoningEfforts(): Set<AgentPromptReasoningEffort>? {
   val efforts = flatMapTo(LinkedHashSet()) { model -> model.supportedReasoningEfforts }
   return efforts.takeIf { it.isNotEmpty() }
 }
 
-private fun modelText(modelId: String?, models: List<AgentPromptGenerationModel>): @Nls String {
+private fun modelText(
+  modelId: String?,
+  models: List<AgentPromptGenerationModel>,
+  displayNameForSavedModel: (String) -> @NlsSafe String,
+): @Nls String {
   if (modelId == null) {
     return AgentPromptBundle.message("popup.generation.model.auto")
   }
-  val displayName = models.firstOrNull { model -> model.id == modelId }?.displayName ?: modelId
+  val displayName = models.firstOrNull { model -> model.id == modelId }?.displayName ?: displayNameForSavedModel(modelId)
   return AgentPromptBundle.message("popup.generation.model.selected", displayName)
 }
 
-private fun reasoningEffortOrder(): List<AgentPromptReasoningEffort> {
+internal fun reasoningEffortOrder(): List<AgentPromptReasoningEffort> {
   return listOf(
     AgentPromptReasoningEffort.AUTO,
     AgentPromptReasoningEffort.LOW,
@@ -636,7 +1103,7 @@ private fun reasoningEffortText(effort: AgentPromptReasoningEffort): @Nls String
   }
 }
 
-private fun reasoningEffortPopupText(effort: AgentPromptReasoningEffort): @Nls String {
+internal fun reasoningEffortPopupText(effort: AgentPromptReasoningEffort): @Nls String {
   return when (effort) {
     AgentPromptReasoningEffort.AUTO -> AgentPromptBundle.message("popup.generation.reasoning.popup.auto")
     AgentPromptReasoningEffort.LOW -> AgentPromptBundle.message("popup.generation.reasoning.popup.low")
@@ -645,4 +1112,114 @@ private fun reasoningEffortPopupText(effort: AgentPromptReasoningEffort): @Nls S
     AgentPromptReasoningEffort.XHIGH -> AgentPromptBundle.message("popup.generation.reasoning.popup.xhigh")
     AgentPromptReasoningEffort.MAX -> AgentPromptBundle.message("popup.generation.reasoning.popup.max")
   }
+}
+
+private fun planReasoningEffortText(planReasoningEffort: AgentPromptReasoningEffort?): @Nls String {
+  return when (planReasoningEffort) {
+    null -> AgentPromptBundle.message("popup.generation.plan.reasoning.same")
+    AgentPromptReasoningEffort.AUTO -> AgentPromptBundle.message("popup.generation.plan.reasoning.provider.default")
+    AgentPromptReasoningEffort.LOW -> AgentPromptBundle.message("popup.generation.plan.reasoning.low")
+    AgentPromptReasoningEffort.MEDIUM -> AgentPromptBundle.message("popup.generation.plan.reasoning.medium")
+    AgentPromptReasoningEffort.HIGH -> AgentPromptBundle.message("popup.generation.plan.reasoning.high")
+    AgentPromptReasoningEffort.XHIGH -> AgentPromptBundle.message("popup.generation.plan.reasoning.xhigh")
+    AgentPromptReasoningEffort.MAX -> AgentPromptBundle.message("popup.generation.plan.reasoning.max")
+  }
+}
+
+private fun planReasoningEffortPopupText(planReasoningEffort: AgentPromptReasoningEffort?): @Nls String {
+  return when (planReasoningEffort) {
+    null -> AgentPromptBundle.message("popup.generation.plan.reasoning.popup.same")
+    AgentPromptReasoningEffort.AUTO -> AgentPromptBundle.message("popup.generation.plan.reasoning.popup.provider.default")
+    else -> reasoningEffortPopupText(planReasoningEffort)
+  }
+}
+
+private fun List<AgentPromptPopupRow>.toWorkbenchPopupRows(onChosen: (AgentPromptPopupRow) -> Unit): List<AgentWorkbenchPopupRow> {
+  return map { row -> row.toWorkbenchPopupRow(onChosen) }
+}
+
+private fun AgentPromptPopupRow.toWorkbenchPopupRow(onChosen: (AgentPromptPopupRow) -> Unit): AgentWorkbenchPopupRow {
+  return AgentWorkbenchPopupRow(
+    text = text,
+    separatorText = separatorText,
+    primaryIcon = primaryIcon,
+    secondaryIcon = secondaryIcon,
+    tooltipText = tooltipText,
+    selected = selected,
+    selectable = selectable,
+    onChosen = { onChosen(this) },
+  )
+}
+
+internal sealed interface AgentPromptPopupRow {
+  val text: @Nls String
+  val separatorText: @Nls String?
+  val primaryIcon: Icon?
+    get() = null
+  val secondaryIcon: Icon?
+    get() = null
+  val tooltipText: @Nls String?
+    get() = null
+  val selected: Boolean
+    get() = false
+  val selectable: Boolean
+    get() = true
+  val marksDefaultProfile: Boolean
+    get() = false
+
+  data class Model(
+    override val text: @Nls String,
+    override val separatorText: @Nls String?,
+    val modelId: String?,
+    override val selected: Boolean,
+  ) : AgentPromptPopupRow
+
+  data class Status(
+    override val text: @Nls String,
+    override val secondaryIcon: Icon?,
+  ) : AgentPromptPopupRow {
+    override val separatorText: String? = null
+    override val selectable: Boolean = false
+  }
+
+  data class RetryModelCatalog(
+    override val text: @Nls String,
+    override val tooltipText: @Nls String?,
+    val providerId: String,
+  ) : AgentPromptPopupRow {
+    override val separatorText: String? = null
+  }
+
+  data class ReasoningEffort(
+    override val text: @Nls String,
+    val effort: AgentPromptReasoningEffort,
+    override val selected: Boolean,
+  ) : AgentPromptPopupRow {
+    override val separatorText: String? = null
+  }
+
+  data class PlanReasoningEffort(
+    override val text: @Nls String,
+    val planReasoningEffort: AgentPromptReasoningEffort?,
+    override val selected: Boolean,
+  ) : AgentPromptPopupRow {
+    override val separatorText: String? = null
+  }
+
+  data class LaunchProfile(
+    override val text: @Nls String,
+    override val separatorText: @Nls String?,
+    override val primaryIcon: Icon?,
+    val profile: AgentPromptLaunchProfile,
+    override val selected: Boolean,
+    override val marksDefaultProfile: Boolean,
+    override val secondaryIcon: Icon?,
+    override val tooltipText: @Nls String?,
+  ) : AgentPromptPopupRow
+
+  data class ManageProfiles(
+    override val text: @Nls String,
+    override val separatorText: @Nls String?,
+    override val tooltipText: @Nls String?,
+  ) : AgentPromptPopupRow
 }

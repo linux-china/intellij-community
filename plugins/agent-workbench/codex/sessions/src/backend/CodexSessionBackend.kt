@@ -3,6 +3,7 @@ package com.intellij.agent.workbench.codex.sessions.backend
 
 import com.intellij.agent.workbench.codex.common.CodexThread
 import com.intellij.agent.workbench.sessions.core.cost.AgentSessionUsageSnapshot
+import com.intellij.agent.workbench.common.session.AgentSessionThreadOutline
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -12,11 +13,10 @@ data class CodexBackendThread(
   @JvmField val activity: CodexSessionActivity = CodexSessionActivity.READY,
   @JvmField val requiresResponse: Boolean = false,
   @JvmField val summaryActivity: CodexSessionActivity? = activity,
+  @JvmField val subAgentActivitiesById: Map<String, CodexSessionActivity> = emptyMap(),
   @JvmField val usageSnapshots: List<AgentSessionUsageSnapshot> = emptyList(),
-) {
-  val usageSnapshot: AgentSessionUsageSnapshot?
-    get() = usageSnapshots.singleOrNull()
-}
+  @JvmField val hasExplicitTitle: Boolean = true,
+)
 
 data class CodexBackendThreadRefreshResult(
   @JvmField val threads: List<CodexBackendThread> = emptyList(),
@@ -38,6 +38,10 @@ interface CodexSessionBackend {
   suspend fun listArchivedThreads(path: String, openProject: Project?): List<CodexBackendThread> = emptyList()
 
   suspend fun refreshThreads(path: String, threadIds: Set<String>, openProject: Project?): CodexBackendThreadRefreshResult? = null
+
+  suspend fun loadThreadOutline(path: String, threadId: String): AgentSessionThreadOutline? = null
+
+  suspend fun forkThread(path: String, threadId: String, rollbackTurns: Int, openProject: Project?): CodexBackendThread? = null
 
   val updates: Flow<Unit>
     get() = emptyFlow()

@@ -1,7 +1,6 @@
 <idea-plugin>
   <!-- region Generated dependencies - run `Generate Product Layouts` to regenerate -->
   <dependencies>
-    <module name="intellij.agent.workbench.chat"/>
     <module name="intellij.agent.workbench.codex.common"/>
     <module name="intellij.agent.workbench.common"/>
     <module name="intellij.agent.workbench.filewatch"/>
@@ -20,10 +19,10 @@
       id="agentWorkbenchCodex"
       order="before agentWorkbenchClaude"
       implementation="com.intellij.agent.workbench.codex.sessions.CodexAgentSessionProviderDescriptor"/>
-    <agent.workbench.chatTerminalTitleThreadRebindContributor
-      implementation="com.intellij.agent.workbench.codex.sessions.CodexTerminalTitleThreadRebindContributor"/>
     <agent.workbench.mcpConfigProviderContributor
       implementation="com.intellij.agent.workbench.codex.sessions.CodexAwbMcpConfigProviderContributor"/>
+    <agent.workbench.sessionLaunchContributor
+      implementation="com.intellij.agent.workbench.codex.sessions.CodexMcpConfigLaunchContributor"/>
     <advancedSetting
       id="agent.workbench.codex.prompt.suggestion.model"
       default="off"

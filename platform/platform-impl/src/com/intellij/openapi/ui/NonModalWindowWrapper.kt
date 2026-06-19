@@ -8,10 +8,12 @@ import com.intellij.ide.IdeBundle
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.CommonShortcuts
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
@@ -23,12 +25,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.WindowStateService
 import com.intellij.openapi.wm.WindowManager
-import com.intellij.openapi.wm.ex.IdeFocusTraversalPolicy
+import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.openapi.wm.impl.IdeFrameDecorator
 import com.intellij.openapi.wm.impl.IdeGlassPaneImpl
 import com.intellij.openapi.wm.impl.customFrameDecorations.header.CustomFrameDialogContent
 import com.intellij.ui.ComponentUtil
 import com.intellij.ui.FullScreenSupport
+import com.intellij.ui.ScreenUtil
 import com.intellij.ui.ToolbarService
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.launchOnShow
@@ -46,6 +49,7 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.Frame
+import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.Window
 import java.awt.event.AWTEventListener
@@ -57,7 +61,7 @@ import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JFrame
 import javax.swing.JRootPane
-import javax.swing.KeyStroke
+import javax.swing.LayoutFocusTraversalPolicy
 import javax.swing.RootPaneContainer
 import kotlin.time.Duration.Companion.seconds
 
@@ -202,6 +206,7 @@ abstract class NonModalWindowWrapper(
     this.minWindowSize = minSize
     activeWindow = createAwtWindow(isFloat, content, minSize, initialSize)
     loadAndRegisterWindowState(activeWindow)
+    fitWindowToScreen(activeWindow)
     installWindowListeners()
     installToolkitListener()
   }
@@ -210,6 +215,36 @@ abstract class NonModalWindowWrapper(
     val key = dimensionKey ?: return
     val state = WindowStateService.getInstance(project).getState(key, window)
     state?.applyTo(window)
+  }
+
+  /**
+   * Clamps the window's `minimumSize` to the available screen area. This prevents the window
+   * manager from re-expanding the window beyond the screen after it has been shrunk.
+   *
+   * Called at init and on pin/unpin, plus continuously from the `setBounds` overrides in
+   * [FloatDialog] and [WindowFrame] so that dragging the window to a smaller monitor also
+   * re-clamps the minimum size (otherwise the user cannot resize the window down to fit).
+   *
+   * Continuous **bounds** fitting is enforced by those same `setSize`/`setBounds` overrides,
+   * mirroring [DialogWrapperPeerImpl][com.intellij.openapi.ui.impl.DialogWrapperPeerImpl].
+   */
+  private fun fitWindowToScreen(window: Window) {
+    clampMinimumSizeToScreen(window)
+  }
+
+  /**
+   * If the window's `minimumSize` exceeds the screen it currently occupies, shrink it.
+   * This is intentionally cheap: only two [Dimension] and one [Rectangle] allocation.
+   */
+  private fun clampMinimumSizeToScreen(window: Window) {
+    val screenBounds = ScreenUtil.getScreenRectangle(window.location)
+    val minSize = window.minimumSize
+    if (minSize.width > screenBounds.width || minSize.height > screenBounds.height) {
+      window.minimumSize = Dimension(
+        minOf(minSize.width, screenBounds.width),
+        minOf(minSize.height, screenBounds.height),
+      )
+    }
   }
 
   // ── Window creation and mode switching ──────────────────────────────────────
@@ -271,8 +306,30 @@ abstract class NonModalWindowWrapper(
     init {
       defaultCloseOperation = DO_NOTHING_ON_CLOSE
       background = UIUtil.getPanelBackground()
-      focusTraversalPolicy = IdeFocusTraversalPolicy()
+      focusTraversalPolicy = LayoutFocusTraversalPolicy()
       UIUtil.markAsPossibleOwner(this)
+    }
+
+    override fun setSize(width: Int, height: Int) {
+      val rect = Rectangle(location.x, location.y, width, height)
+      ScreenUtil.fitToScreen(rect)
+      super.setSize(rect.width, rect.height)
+      if (location.x != rect.x || location.y != rect.y) {
+        setLocation(rect.x, rect.y)
+      }
+    }
+
+    override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
+      clampMinimumSizeToScreen(this)
+      val rect = Rectangle(x, y, width, height)
+      ScreenUtil.fitToScreen(rect)
+      super.setBounds(rect.x, rect.y, rect.width, rect.height)
+    }
+
+    override fun setBounds(r: Rectangle) {
+      clampMinimumSizeToScreen(this)
+      ScreenUtil.fitToScreen(r)
+      super.setBounds(r)
     }
 
     override fun uiDataSnapshot(sink: DataSink): Unit = this@NonModalWindowWrapper.uiDataSnapshot(sink)
@@ -282,7 +339,29 @@ abstract class NonModalWindowWrapper(
     init {
       defaultCloseOperation = DO_NOTHING_ON_CLOSE
       background = UIUtil.getPanelBackground()
-      focusTraversalPolicy = IdeFocusTraversalPolicy()
+      focusTraversalPolicy = LayoutFocusTraversalPolicy()
+    }
+
+    override fun setSize(width: Int, height: Int) {
+      val rect = Rectangle(location.x, location.y, width, height)
+      ScreenUtil.fitToScreen(rect)
+      super.setSize(rect.width, rect.height)
+      if (location.x != rect.x || location.y != rect.y) {
+        setLocation(rect.x, rect.y)
+      }
+    }
+
+    override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
+      clampMinimumSizeToScreen(this)
+      val rect = Rectangle(x, y, width, height)
+      ScreenUtil.fitToScreen(rect)
+      super.setBounds(rect.x, rect.y, rect.width, rect.height)
+    }
+
+    override fun setBounds(r: Rectangle) {
+      clampMinimumSizeToScreen(this)
+      ScreenUtil.fitToScreen(r)
+      super.setBounds(r)
     }
 
     override fun uiDataSnapshot(sink: DataSink): Unit = this@NonModalWindowWrapper.uiDataSnapshot(sink)
@@ -299,10 +378,11 @@ abstract class NonModalWindowWrapper(
     windowListener?.let { activeWindow.removeWindowListener(it) }
     windowListener = null
     content.parent?.remove(content)
-    activeWindow.dispose()
+    disposeWindow(activeWindow)
     windowDisposable?.let { Disposer.dispose(it) }
     windowDisposable = null
     activeWindow = createAwtWindow(toFloat, content, minWindowSize, bounds.size)
+    fitWindowToScreen(activeWindow)
     installWindowListeners()
     savedDefaultButton?.let { (activeWindow as RootPaneContainer).rootPane.defaultButton = it }
     activeWindow.bounds = bounds
@@ -346,13 +426,23 @@ abstract class NonModalWindowWrapper(
     activeWindow.addWindowListener(adapter)
 
     // ESC / Cmd-W: ask the subclass whether it is safe to close.
-    val closeHandler = ActionListener { e ->
+    // Register ESC as an AnAction so that IdeGlassPaneImpl dispatches it before
+    // Swing component-level key bindings (e.g. combo box editor) can consume the event.
+    val escAction = object : AnAction() {
+      override fun actionPerformed(e: AnActionEvent) {
+        if (PopupUtil.handleEscKeyEvent()) return
+        val event = e.inputEvent ?: EventQueue.getCurrentEvent() ?: return
+        if (canClose(event)) close()
+      }
+    }
+    escAction.registerCustomShortcutSet(ActionUtil.getShortcutSet(IdeActions.ACTION_EDITOR_ESCAPE), rootPane)
+
+    val cmdWHandler = ActionListener { e ->
+      if (PopupUtil.handleEscKeyEvent()) return@ActionListener
       val current = EventQueue.getCurrentEvent()
       if (canClose(current as? KeyEvent ?: e)) close()
     }
-    rootPane.registerKeyboardAction(
-      closeHandler, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW)
-    ActionUtil.registerForEveryKeyboardShortcut(rootPane, closeHandler, CommonShortcuts.getCloseActiveWindow())
+    ActionUtil.registerForEveryKeyboardShortcut(rootPane, cmdWHandler, CommonShortcuts.getCloseActiveWindow())
 
     installAdditionalShortcuts(rootPane)
   }
@@ -465,8 +555,17 @@ abstract class NonModalWindowWrapper(
   override fun dispose() {
     isDisposed = true
     windowListener?.let { activeWindow.removeWindowListener(it) }
+    windowListener = null
     Disposer.dispose(frameDisposable)
-    activeWindow.dispose()
+    disposeWindow(activeWindow)
+  }
+
+  private fun disposeWindow(window: Window) {
+    window.dispose()
+    val rootPane = (window as? RootPaneContainer)?.rootPane
+    rootPane?.resetKeyboardActions()
+    DialogWrapper.cleanupRootPane(rootPane)
+    DialogWrapper.cleanupWindowListeners(window)
   }
 }
 

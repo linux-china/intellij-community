@@ -1,18 +1,26 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.claude.sessions.backend.store
 
+// @spec community/plugins/agent-workbench/spec/chat/agent-chat-structure-view.spec.md
+
 import com.intellij.agent.workbench.claude.common.ClaudeSessionActivity
 import com.intellij.agent.workbench.claude.common.ClaudeProjectFileChangeEvidence
+import com.intellij.agent.workbench.claude.common.ClaudeSessionOutline
+import com.intellij.agent.workbench.claude.common.ClaudeSessionOutlineItem
+import com.intellij.agent.workbench.claude.common.ClaudeSessionOutlineItemKind
 import com.intellij.agent.workbench.claude.common.ClaudeSessionThread
 import com.intellij.agent.workbench.claude.common.ClaudeSessionsStore
 import com.intellij.agent.workbench.claude.sessions.ClaudeBackendThread
 import com.intellij.agent.workbench.claude.sessions.ClaudeBackendThreadRefreshResult
+import com.intellij.agent.workbench.claude.sessions.ClaudeHookBridge
 import com.intellij.agent.workbench.claude.sessions.ClaudeSessionBackend
 import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.AgentThreadActivityReport
 import com.intellij.agent.workbench.common.normalizeAgentWorkbenchPath
 import com.intellij.agent.workbench.common.parseAgentWorkbenchPathOrNull
-import com.intellij.agent.workbench.filewatch.agentWorkbenchImmediateFileChangeFlow
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItem
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItemKind
+import com.intellij.agent.workbench.common.session.AgentSessionThreadOutline
 import com.intellij.agent.workbench.json.filebacked.FileBackedSessionChangeSet
 import com.intellij.agent.workbench.json.filebacked.createFileBackedSessionChangeFlow
 import com.intellij.agent.workbench.json.filebacked.toFileBackedSessionPathKey
@@ -25,10 +33,8 @@ import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
@@ -38,14 +44,11 @@ private val LOG = logger<ClaudeStoreSessionBackend>()
 internal class ClaudeStoreSessionBackend(
   private val claudeHomeProvider: () -> Path = { Path.of(System.getProperty("user.home"), ".claude") },
   changeSource: (() -> Flow<FileBackedSessionChangeSet>)? = null,
-  private val immediateFileChangeFlow: (Collection<Path>) -> Flow<Path> = { paths -> agentWorkbenchImmediateFileChangeFlow(paths) },
 ) : ClaudeSessionBackend {
   private val store = ClaudeSessionsStore(claudeHomeProvider)
   private val threadIndex = ClaudeThreadIndex(store = store)
   private val projectFilesChangedAtByPathKey = HashMap<String, Long>()
   private val projectFilesChangedAtLock = Any()
-  private val activeThreadActivityByPathKey = HashMap<String, AgentThreadActivity>()
-  private val activeThreadActivityLock = Any()
 
   private val sessionUpdateFlow: Flow<AgentSessionSourceUpdateEvent> = (changeSource?.invoke() ?: createWatcherUpdates())
     .map { changeSet ->
@@ -56,22 +59,9 @@ internal class ClaudeStoreSessionBackend(
     }
     .conflate()
 
-  override val sessionUpdates: Flow<AgentSessionSourceUpdateEvent> = sessionUpdateFlow
+  override val sessionUpdates: Flow<AgentSessionSourceUpdateEvent> = merge(sessionUpdateFlow, ClaudeHookBridge.updateEvents).conflate()
 
-  override val updates: Flow<Unit> = sessionUpdateFlow.map {}
-
-  override fun activeThreadUpdateEvents(path: String, threadId: String): Flow<AgentSessionSourceUpdateEvent> {
-    return flow {
-      val files = withContext(Dispatchers.IO) {
-        resolveActiveThreadFilePaths(path = path, threadId = threadId)
-      }
-      emitAll(immediateFileChangeFlow(files).mapNotNull { changedPath ->
-        withContext(Dispatchers.IO) {
-          buildActiveThreadUpdate(changedPath)
-        }
-      })
-    }
-  }
+  override val updates: Flow<Unit> = sessionUpdates.map {}
 
   internal fun resolveActiveThreadFilePaths(path: String, threadId: String): List<Path> {
     val normalizedThreadId = threadId.trim().takeIf { id -> id.isNotEmpty() && '/' !in id && '\\' !in id } ?: return emptyList()
@@ -170,46 +160,6 @@ internal class ClaudeStoreSessionBackend(
     )
   }
 
-  private fun buildActiveThreadUpdate(path: Path): AgentSessionSourceUpdateEvent? {
-    if (!isClaudeJsonlPath(path)) {
-      return null
-    }
-    val parsedThread = store.parseJsonlFile(path)
-    val projectPath = parsedThread?.projectPath?.takeIf { it.isNotBlank() } ?: return null
-    val consumedProjectFileChangeEvidence = consumeProjectFileChangeEvidence(path = path, parsedThread = parsedThread)
-    val activityHint = parsedThread.toAgentThreadActivityHint()
-    val hasActivityChange = rememberActiveThreadActivityHint(path = path, activityHint = activityHint)
-    if (consumedProjectFileChangeEvidence == null && !hasActivityChange) {
-      return null
-    }
-
-    val mayHaveChangedProjectFiles = consumedProjectFileChangeEvidence != null
-    return AgentSessionSourceUpdateEvent(
-      type = AgentSessionSourceUpdate.HINTS_CHANGED,
-      scopedPaths = setOf(projectPath),
-      activityUpdatesByThreadId = mapOf(
-        parsedThread.id to AgentSessionThreadActivityUpdate(
-          activityReport = AgentThreadActivityReport(activityHint),
-        )
-      ),
-      mayHaveChangedProjectFiles = mayHaveChangedProjectFiles,
-      changedProjectFilePaths = consumedProjectFileChangeEvidence?.changedProjectFilePaths,
-    )
-  }
-
-  private fun rememberActiveThreadActivityHint(path: Path, activityHint: AgentThreadActivity): Boolean {
-    val pathKey = toFileBackedSessionPathKey(path)
-    return synchronized(activeThreadActivityLock) {
-      if (activeThreadActivityByPathKey[pathKey] == activityHint) {
-        false
-      }
-      else {
-        activeThreadActivityByPathKey[pathKey] = activityHint
-        true
-      }
-    }
-  }
-
   private fun consumeProjectFileChangeEvidence(path: Path, parsedThread: ClaudeSessionThread): ConsumedProjectFileChangeEvidence? {
     val pathKey = toFileBackedSessionPathKey(path)
     return synchronized(projectFilesChangedAtLock) {
@@ -293,6 +243,16 @@ internal class ClaudeStoreSessionBackend(
       )
     }
   }
+
+  override suspend fun loadThreadOutline(path: String, threadId: String): AgentSessionThreadOutline? {
+    return withContext(Dispatchers.IO) {
+      resolveActiveThreadFilePaths(path = path, threadId = threadId)
+        .asSequence()
+        .mapNotNull(store::parseOutlineJsonlFile)
+        .firstOrNull { outline -> outline.sessionId == threadId }
+        ?.toAgentSessionThreadOutline()
+    }
+  }
 }
 
 private val UNSCOPED_CLAUDE_SESSION_UPDATE = claudeSessionUpdate()
@@ -361,4 +321,29 @@ private fun ClaudeSessionThread.toAgentThreadActivityHint(): AgentThreadActivity
     ClaudeSessionActivity.NEEDS_INPUT -> AgentThreadActivity.NEEDS_INPUT
     ClaudeSessionActivity.READY -> if (awaitingAssistantTurn) AgentThreadActivity.READY else AgentThreadActivity.UNREAD
   }
+}
+
+private fun ClaudeSessionOutline.toAgentSessionThreadOutline(): AgentSessionThreadOutline {
+  return AgentSessionThreadOutline(
+    provider = com.intellij.agent.workbench.common.session.AgentSessionProvider.CLAUDE,
+    threadId = sessionId,
+    title = title,
+    updatedAt = updatedAt,
+    items = items.map(ClaudeSessionOutlineItem::toAgentSessionOutlineItem),
+  )
+}
+
+private fun ClaudeSessionOutlineItem.toAgentSessionOutlineItem(): AgentSessionOutlineItem {
+  return AgentSessionOutlineItem(
+    id = id,
+    kind = kind.toAgentSessionOutlineItemKind(),
+    title = title,
+    preview = preview,
+    timestampMs = timestampMillis,
+    children = children.map(ClaudeSessionOutlineItem::toAgentSessionOutlineItem),
+  )
+}
+
+private fun ClaudeSessionOutlineItemKind.toAgentSessionOutlineItemKind(): AgentSessionOutlineItemKind {
+  return this
 }

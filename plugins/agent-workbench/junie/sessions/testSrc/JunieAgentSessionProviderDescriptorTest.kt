@@ -3,6 +3,7 @@ package com.intellij.agent.workbench.junie.sessions
 
 import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.agent.workbench.common.AgentWorkbenchActionIds
 import com.intellij.agent.workbench.junie.common.JunieCliInfo
 import com.intellij.agent.workbench.junie.common.JunieCliSupport
 import com.intellij.agent.workbench.junie.common.JunieCliVersion
@@ -44,6 +45,11 @@ class JunieAgentSessionProviderDescriptorTest {
     assertThat(descriptor.promptOptions.map { it.id }).containsExactly(AGENT_PROMPT_PROVIDER_OPTION_PLAN_MODE)
     assertThat(descriptor.promptOptions.single().defaultSelected).isFalse()
     assertThat(descriptor.supportsGenerationModelSelection).isTrue()
+    assertThat(descriptor.editorTabActionIds).containsExactly(AgentWorkbenchActionIds.Sessions.BIND_PENDING_AGENT_THREAD_FROM_EDITOR_TAB)
+    assertThat(descriptor.supportsPendingEditorTabRebind).isTrue()
+    assertThat(descriptor.supportsNewThreadRebind).isFalse()
+    assertThat(descriptor.emitsScopedRefreshSignals).isTrue()
+    assertThat(descriptor.refreshPathAfterCreateNewSession).isTrue()
     assertThat(descriptor.supportsArchiveThread).isTrue()
     assertThat(descriptor.supportsUnarchiveThread).isTrue()
     assertThat(descriptor.archiveRefreshDelayMs).isEqualTo(1_000L)
@@ -329,7 +335,8 @@ class JunieAgentSessionProviderDescriptorTest {
     val descriptor = JunieAgentSessionProviderDescriptor(executableResolver = { "junie-test" })
     val baseLaunchSpec = descriptor.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
 
-    val updatedLaunchSpec = descriptor.applyGenerationSettings(baseLaunchSpec, AgentPromptGenerationSettings.AUTO)
+    val updatedLaunchSpec =
+      descriptor.applyGenerationSettings(baseLaunchSpec, AgentPromptGenerationSettings.AUTO, STANDARD_INITIAL_MESSAGE_PLAN)
 
     assertThat(updatedLaunchSpec.command).containsExactly("junie-test", "--skip-update-check")
   }
@@ -342,6 +349,7 @@ class JunieAgentSessionProviderDescriptorTest {
     val updatedLaunchSpec = descriptor.applyGenerationSettings(
       baseLaunchSpec,
       AgentPromptGenerationSettings(modelId = "chatgpt-5.5"),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly("junie-test", "--skip-update-check", "--model", "chatgpt-5.5")
@@ -355,9 +363,24 @@ class JunieAgentSessionProviderDescriptorTest {
     val updatedLaunchSpec = descriptor.applyGenerationSettings(
       baseLaunchSpec,
       AgentPromptGenerationSettings(reasoningEffort = AgentPromptReasoningEffort.XHIGH),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly("junie-test", "--skip-update-check", "--effort", "xhigh")
+  }
+
+  @Test
+  fun `apply generation settings ignores plan effort`(): Unit = runBlocking(Dispatchers.Default) {
+    val descriptor = JunieAgentSessionProviderDescriptor(executableResolver = { "junie-test" })
+    val baseLaunchSpec = descriptor.buildNewSessionLaunchSpec(AgentSessionLaunchMode.STANDARD)
+
+    val updatedLaunchSpec = descriptor.applyGenerationSettings(
+      baseLaunchSpec,
+      AgentPromptGenerationSettings(planReasoningEffort = AgentPromptReasoningEffort.XHIGH),
+      STANDARD_INITIAL_MESSAGE_PLAN,
+    )
+
+    assertThat(updatedLaunchSpec.command).containsExactly("junie-test", "--skip-update-check")
   }
 
   @Test
@@ -371,6 +394,7 @@ class JunieAgentSessionProviderDescriptorTest {
         modelId = "chatgpt-5.5",
         reasoningEffort = AgentPromptReasoningEffort.HIGH,
       ),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly(
@@ -396,6 +420,7 @@ class JunieAgentSessionProviderDescriptorTest {
         modelId = "chatgpt-5.5",
         reasoningEffort = AgentPromptReasoningEffort.XHIGH,
       ),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly(
@@ -416,6 +441,7 @@ class JunieAgentSessionProviderDescriptorTest {
     val updatedLaunchSpec = descriptor.applyGenerationSettings(
       baseLaunchSpec,
       AgentPromptGenerationSettings(reasoningEffort = AgentPromptReasoningEffort.MAX),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly("junie-test", "--skip-update-check")
@@ -434,6 +460,7 @@ class JunieAgentSessionProviderDescriptorTest {
         modelId = "chatgpt-5.5",
         reasoningEffort = AgentPromptReasoningEffort.LOW,
       ),
+      STANDARD_INITIAL_MESSAGE_PLAN,
     )
 
     assertThat(updatedLaunchSpec.command).containsExactly(
@@ -517,7 +544,7 @@ class JunieAgentSessionProviderDescriptorTest {
 
   @Test
   fun `supported initial message launch passes prompt to Junie command`(): Unit = runBlocking(Dispatchers.Default) {
-    val descriptor = descriptorWithCliVersion(JunieCliVersion(1963, 1))
+    val descriptor = descriptorWithCliVersion(JunieCliVersion(2030, 1))
     assertThat(descriptor.isCliAvailable()).isTrue()
     val initialMessagePlan = AgentInitialMessagePlan(message = "Implement the feature")
 
@@ -556,7 +583,7 @@ class JunieAgentSessionProviderDescriptorTest {
 
   @Test
   fun `supported plan mode initial message uses Junie plan prompt command`(): Unit = runBlocking(Dispatchers.Default) {
-    val descriptor = descriptorWithCliVersion(JunieCliVersion(1963, 1))
+    val descriptor = descriptorWithCliVersion(JunieCliVersion(2030, 1))
     assertThat(descriptor.isCliAvailable()).isTrue()
 
     val plan = descriptor.buildInitialMessagePlan(
@@ -658,6 +685,8 @@ class JunieAgentSessionProviderDescriptorTest {
   fun `Junie CLI version parser reads build versions`() {
     assertThat(JunieCliSupport.parseCliVersion("Junie version: build 1963.1 nightly"))
       .isEqualTo(JunieCliVersion(1963, 1))
+    assertThat(JunieCliSupport.parseCliVersion("Junie version: build 2030.1 nightly"))
+      .isEqualTo(JunieCliVersion(2030, 1))
     assertThat(JunieCliSupport.parseCliVersion("26.6.8 (1892.12)"))
       .isEqualTo(JunieCliVersion(1892, 12))
     assertThat(JunieCliSupport.parseCliVersion("Junie version unknown"))
@@ -683,6 +712,8 @@ class JunieAgentSessionProviderDescriptorTest {
     assertThat(descriptor.resolvePendingSessionMetadata("Junie:new-123", launchSpec)).isNull()
   }
 }
+
+private val STANDARD_INITIAL_MESSAGE_PLAN: AgentInitialMessagePlan = AgentInitialMessagePlan(message = "Implement the feature")
 
 private fun descriptorWithCliVersion(version: JunieCliVersion?): JunieAgentSessionProviderDescriptor {
   return JunieAgentSessionProviderDescriptor(

@@ -2,6 +2,10 @@
 package com.intellij.agent.workbench.common
 
 object AgentWorkbenchActionIds {
+  object Prompt {
+    const val MANAGE_LAUNCH_PROFILES: String = "AgentWorkbenchPrompt.ManageLaunchProfiles"
+  }
+
   object Sessions {
     const val OPEN_DEDICATED_FRAME: String = "AgentWorkbenchSessions.OpenDedicatedFrame"
     const val SWITCH_SOURCE_AND_CHAT: String = "AgentWorkbenchSessions.SwitchSourceAndChat"
@@ -23,6 +27,11 @@ object AgentWorkbenchActionIds {
       const val NEW_THREAD: String = "AgentWorkbenchSessions.EditorTab.NewThread"
       const val PREVIOUS_PROPOSED_PLAN: String = "AgentWorkbenchSessions.EditorTab.PreviousProposedPlan"
       const val NEXT_PROPOSED_PLAN: String = "AgentWorkbenchSessions.EditorTab.NextProposedPlan"
+    }
+
+    object ThreadOutline {
+      const val POPUP_GROUP: String = "AgentWorkbenchSessions.ThreadOutline.Popup"
+      const val START_NEW_CONVERSATION_FROM_HERE: String = "AgentWorkbenchSessions.ThreadOutline.StartNewConversationFromHere"
     }
   }
 }

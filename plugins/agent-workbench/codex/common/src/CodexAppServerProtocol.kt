@@ -568,9 +568,11 @@ private fun parseModelObject(parser: JsonParser): CodexGenerationModel? {
       "displayName", "display_name", "name", "title" -> displayName = readStringOrNull(parser)
       "supportedReasoningLevels", "supported_reasoning_levels",
       "supportedReasoningEfforts", "supported_reasoning_efforts",
-      "reasoningLevels", "reasoning_levels" -> parseReasoningEffortArray(parser, supportedReasoningEfforts)
+      "reasoningLevels", "reasoning_levels",
+        -> parseReasoningEffortArray(parser, supportedReasoningEfforts)
       "defaultReasoningLevel", "default_reasoning_level",
-      "defaultReasoningEffort", "default_reasoning_effort" -> defaultReasoningEffort = parseReasoningEffortValue(parser)
+      "defaultReasoningEffort", "default_reasoning_effort",
+        -> defaultReasoningEffort = parseReasoningEffortValue(parser)
       "hidden", "isHidden", "is_hidden" -> hidden = readBooleanOrFalse(parser)
       "default", "isDefault", "is_default" -> isDefault = readBooleanOrFalse(parser)
       else -> parser.skipChildren()
@@ -784,22 +786,6 @@ private fun resolveThreadTitle(payload: ThreadPayload, threadId: String): String
   return resolvedTitle ?: "Thread ${threadId.take(8)}"
 }
 
-private data class ParsedTurnsActivity(
-  @JvmField val latestUserItemIndex: Long,
-  @JvmField val latestAssistantItemIndex: Long,
-  @JvmField val latestPlanItemIndex: Long,
-  @JvmField val isReviewing: Boolean,
-  @JvmField val hasInProgressTurn: Boolean,
-)
-
-private data class ParsedTurnItemsActivity(
-  @JvmField val latestUserItemIndex: Long,
-  @JvmField val latestAssistantItemIndex: Long,
-  @JvmField val latestPlanItemIndex: Long,
-  @JvmField val isReviewing: Boolean,
-  @JvmField val nextItemIndex: Long,
-)
-
 private fun parseThreadActivitySnapshot(parser: JsonParser): CodexThreadActivitySnapshot? {
   if (parser.currentToken != JsonToken.START_OBJECT) {
     parser.skipChildren()
@@ -813,12 +799,8 @@ private fun parseThreadActivitySnapshot(parser: JsonParser): CodexThreadActivity
   var createdAtAlt: Long? = null
   var statusKind = CodexThreadStatusKind.UNKNOWN
   var activeFlags: List<CodexThreadActiveFlag> = emptyList()
-  var latestUserItemIndex = Long.MIN_VALUE
-  var latestAssistantItemIndex = Long.MIN_VALUE
-  var latestPlanItemIndex = Long.MIN_VALUE
-  var isReviewing = false
-  var hasInProgressTurn = false
   var hasTurnActivity = false
+  val activityProjection = CodexThreadActivityProjection()
 
   forEachObjectField(parser) { fieldName ->
     when (fieldName) {
@@ -834,12 +816,7 @@ private fun parseThreadActivitySnapshot(parser: JsonParser): CodexThreadActivity
       }
       "turns" -> {
         hasTurnActivity = true
-        val parsedTurns = parseTurnsActivity(parser)
-        latestUserItemIndex = parsedTurns.latestUserItemIndex
-        latestAssistantItemIndex = parsedTurns.latestAssistantItemIndex
-        latestPlanItemIndex = parsedTurns.latestPlanItemIndex
-        isReviewing = parsedTurns.isReviewing
-        hasInProgressTurn = parsedTurns.hasInProgressTurn
+        CodexAppServerTurnActivityParser.parse(parser, activityProjection)
       }
       else -> parser.skipChildren()
     }
@@ -853,163 +830,130 @@ private fun parseThreadActivitySnapshot(parser: JsonParser): CodexThreadActivity
     createdAt = createdAt,
     createdAtAlt = createdAtAlt,
   )
-  val hasUnreadAssistantMessage = latestAssistantItemIndex > latestUserItemIndex
-  val hasPendingPlan = latestPlanItemIndex > latestUserItemIndex
-  return CodexThreadActivitySnapshot(
+  return activityProjection.toSnapshot(
     threadId = threadId,
     updatedAt = resolvedUpdatedAt,
     statusKind = statusKind,
     activeFlags = activeFlags,
-    hasUnreadAssistantMessage = hasUnreadAssistantMessage,
-    hasPendingPlan = hasPendingPlan,
-    isReviewing = isReviewing,
-    hasInProgressTurn = hasInProgressTurn,
     hasTurnActivity = hasTurnActivity,
   )
 }
 
-private fun parseTurnsActivity(parser: JsonParser): ParsedTurnsActivity {
-  if (parser.currentToken != JsonToken.START_ARRAY) {
-    parser.skipChildren()
-    return ParsedTurnsActivity(
-      latestUserItemIndex = Long.MIN_VALUE,
-      latestAssistantItemIndex = Long.MIN_VALUE,
-      latestPlanItemIndex = Long.MIN_VALUE,
-      isReviewing = false,
-      hasInProgressTurn = false,
-    )
-  }
-
-  var latestUserItemIndex = Long.MIN_VALUE
-  var latestAssistantItemIndex = Long.MIN_VALUE
-  var latestPlanItemIndex = Long.MIN_VALUE
-  var isReviewing = false
-  var hasInProgressTurn = false
-  var nextItemIndex = 0L
-
-  while (true) {
-    val token = parser.nextToken() ?: break
-    if (token == JsonToken.END_ARRAY) {
-      break
-    }
-    if (token != JsonToken.START_OBJECT) {
+private object CodexAppServerTurnActivityParser {
+  fun parse(parser: JsonParser, activityProjection: CodexThreadActivityProjection) {
+    if (parser.currentToken != JsonToken.START_ARRAY) {
       parser.skipChildren()
-      continue
+      return
     }
 
-    forEachObjectField(parser) { fieldName ->
-      when (fieldName) {
-        "status" -> {
-          if (parseTurnInProgress(parser)) {
-            hasInProgressTurn = true
-          }
-        }
-        "items" -> {
-          val parsedItems = parseTurnItemsActivity(
-            parser = parser,
-            initialReviewing = isReviewing,
-            startItemIndex = nextItemIndex,
-          )
-          latestUserItemIndex = maxOf(latestUserItemIndex, parsedItems.latestUserItemIndex)
-          latestAssistantItemIndex = maxOf(latestAssistantItemIndex, parsedItems.latestAssistantItemIndex)
-          latestPlanItemIndex = maxOf(latestPlanItemIndex, parsedItems.latestPlanItemIndex)
-          isReviewing = parsedItems.isReviewing
-          nextItemIndex = parsedItems.nextItemIndex
-        }
-        else -> parser.skipChildren()
+    var nextItemIndex = 0L
+    var nextTurnIndex = 0L
+
+    while (true) {
+      val token = parser.nextToken() ?: break
+      if (token == JsonToken.END_ARRAY) {
+        break
       }
-      true
-    }
-  }
-
-  return ParsedTurnsActivity(
-    latestUserItemIndex = latestUserItemIndex,
-    latestAssistantItemIndex = latestAssistantItemIndex,
-    latestPlanItemIndex = latestPlanItemIndex,
-    isReviewing = isReviewing,
-    hasInProgressTurn = hasInProgressTurn,
-  )
-}
-
-private fun parseTurnItemsActivity(
-  parser: JsonParser,
-  initialReviewing: Boolean,
-  startItemIndex: Long,
-): ParsedTurnItemsActivity {
-  if (parser.currentToken != JsonToken.START_ARRAY) {
-    parser.skipChildren()
-    return ParsedTurnItemsActivity(
-      latestUserItemIndex = Long.MIN_VALUE,
-      latestAssistantItemIndex = Long.MIN_VALUE,
-      latestPlanItemIndex = Long.MIN_VALUE,
-      isReviewing = initialReviewing,
-      nextItemIndex = startItemIndex,
-    )
-  }
-
-  var latestUserItemIndex = Long.MIN_VALUE
-  var latestAssistantItemIndex = Long.MIN_VALUE
-  var latestPlanItemIndex = Long.MIN_VALUE
-  var isReviewing = initialReviewing
-  var nextItemIndex = startItemIndex
-
-  while (true) {
-    val token = parser.nextToken() ?: break
-    if (token == JsonToken.END_ARRAY) {
-      break
-    }
-    if (token != JsonToken.START_OBJECT) {
-      parser.skipChildren()
-      continue
-    }
-
-    var itemType: String? = null
-    forEachObjectField(parser) { itemFieldName ->
-      when (itemFieldName) {
-        "type" -> itemType = readStringOrNull(parser)
-        else -> parser.skipChildren()
+      if (token != JsonToken.START_OBJECT) {
+        parser.skipChildren()
+        continue
       }
-      true
-    }
 
-    nextItemIndex += 1
-    when (normalizeToken(itemType)) {
-      "usermessage" -> latestUserItemIndex = maxOf(latestUserItemIndex, nextItemIndex)
-      "agentmessage" -> latestAssistantItemIndex = maxOf(latestAssistantItemIndex, nextItemIndex)
-      "plan" -> latestPlanItemIndex = maxOf(latestPlanItemIndex, nextItemIndex)
-      "enteredreviewmode" -> isReviewing = true
-      "exitedreviewmode" -> isReviewing = false
-    }
-  }
-
-  return ParsedTurnItemsActivity(
-    latestUserItemIndex = latestUserItemIndex,
-    latestAssistantItemIndex = latestAssistantItemIndex,
-    latestPlanItemIndex = latestPlanItemIndex,
-    isReviewing = isReviewing,
-    nextItemIndex = nextItemIndex,
-  )
-}
-
-private fun parseTurnInProgress(parser: JsonParser): Boolean {
-  return when (parser.currentToken) {
-    JsonToken.VALUE_STRING -> normalizeToken(parser.string) == "inprogress"
-    JsonToken.START_OBJECT -> {
-      var inProgress = false
+      var turnId: String? = null
+      var turnInProgress = false
       forEachObjectField(parser) { fieldName ->
         when (fieldName) {
-          "type" -> {
-            inProgress = normalizeToken(readStringOrNull(parser)) == "inprogress"
+          "id", "turnId", "turn_id" -> turnId = readStringOrNull(parser)
+          "status" -> {
+            if (parseTurnInProgress(parser)) {
+              turnInProgress = true
+            }
+          }
+          "items" -> {
+            nextItemIndex = parseTurnItemsActivity(
+              parser = parser,
+              activityProjection = activityProjection,
+              turnId = turnId,
+              startItemIndex = nextItemIndex,
+            )
           }
           else -> parser.skipChildren()
         }
         true
       }
-      inProgress
+
+      if (turnInProgress) {
+        activityProjection.apply(CodexThreadActivitySignal.TurnStarted(order = nextTurnIndex, turnId = turnId))
+      }
+      nextTurnIndex += 1
     }
-    else -> {
+  }
+
+  private fun parseTurnItemsActivity(
+    parser: JsonParser,
+    activityProjection: CodexThreadActivityProjection,
+    turnId: String?,
+    startItemIndex: Long,
+  ): Long {
+    if (parser.currentToken != JsonToken.START_ARRAY) {
       parser.skipChildren()
-      false
+      return startItemIndex
+    }
+
+    var nextItemIndex = startItemIndex
+
+    while (true) {
+      val token = parser.nextToken() ?: break
+      if (token == JsonToken.END_ARRAY) {
+        break
+      }
+      if (token != JsonToken.START_OBJECT) {
+        parser.skipChildren()
+        continue
+      }
+
+      var itemType: String? = null
+      forEachObjectField(parser) { itemFieldName ->
+        when (itemFieldName) {
+          "type" -> itemType = readStringOrNull(parser)
+          else -> parser.skipChildren()
+        }
+        true
+      }
+
+      nextItemIndex += 1
+      when (normalizeToken(itemType)) {
+        "usermessage" -> activityProjection.apply(CodexThreadActivitySignal.UserMessage(nextItemIndex))
+        "agentmessage" -> activityProjection.apply(CodexThreadActivitySignal.AssistantMessage(nextItemIndex))
+        "plan" -> activityProjection.apply(CodexThreadActivitySignal.Plan(order = nextItemIndex, turnId = turnId))
+        "enteredreviewmode" -> activityProjection.apply(CodexThreadActivitySignal.ReviewModeEntered)
+        "exitedreviewmode" -> activityProjection.apply(CodexThreadActivitySignal.ReviewModeExited)
+      }
+    }
+
+    return nextItemIndex
+  }
+
+  private fun parseTurnInProgress(parser: JsonParser): Boolean {
+    return when (parser.currentToken) {
+      JsonToken.VALUE_STRING -> normalizeToken(parser.string) == "inprogress"
+      JsonToken.START_OBJECT -> {
+        var inProgress = false
+        forEachObjectField(parser) { fieldName ->
+          when (fieldName) {
+            "type" -> {
+              inProgress = normalizeToken(readStringOrNull(parser)) == "inprogress"
+            }
+            else -> parser.skipChildren()
+          }
+          true
+        }
+        inProgress
+      }
+      else -> {
+        parser.skipChildren()
+        false
+      }
     }
   }
 }

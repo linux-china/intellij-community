@@ -324,7 +324,7 @@ class CodexWebSocketAppServerClient(
     )
   }
 
-  suspend fun persistThread(threadId: String) {
+  suspend fun persistThread(threadId: String, text: String = "") {
     requestUnit(
       method = "turn/start",
       paramsWriter = { generator ->
@@ -334,7 +334,7 @@ class CodexWebSocketAppServerClient(
         generator.writeStartArray()
         generator.writeStartObject()
         generator.writeStringField("type", "text")
-        generator.writeStringField("text", "")
+        generator.writeStringField("text", text)
         generator.writeEndObject()
         generator.writeEndArray()
         generator.writeEndObject()
@@ -380,6 +380,21 @@ class CodexWebSocketAppServerClient(
       defaultResult = null,
     )
     return thread ?: throw CodexAppServerException("Codex app-server returned empty thread/fork result")
+  }
+
+  suspend fun rollbackThread(threadId: String, numTurns: Int): CodexThread? {
+    require(numTurns >= 1) { "numTurns must be positive" }
+    return request(
+      method = "thread/rollback",
+      paramsWriter = { generator ->
+        generator.writeStartObject()
+        generator.writeStringField("threadId", threadId)
+        generator.writeNumberField("numTurns", numTurns)
+        generator.writeEndObject()
+      },
+      resultParser = { parser -> protocol.parseThreadReadResult(parser) },
+      defaultResult = null,
+    )
   }
 
   private suspend fun <T> request(

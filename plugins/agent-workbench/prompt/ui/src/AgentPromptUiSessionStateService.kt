@@ -27,7 +27,6 @@ internal enum class PromptSendMode {
 @Serializable
 internal data class AgentPromptUiDraft(
   @JvmField val promptText: String = "",
-  @JvmField val providerId: String? = null,
   @JvmField val targetMode: PromptTargetMode = PromptTargetMode.NEW_TASK,
   @JvmField val sendMode: PromptSendMode = PromptSendMode.SEND_NOW,
   @JvmField val existingTaskSearch: String = "",
@@ -63,6 +62,7 @@ internal data class AgentPromptUiState(
   @JvmField val draft: AgentPromptUiDraft = AgentPromptUiDraft(),
   @JvmField val promptHistory: List<AgentPromptHistoryEntry> = emptyList(),
   @JvmField val savedPrompts: List<AgentPromptSavedPromptEntry> = emptyList(),
+  @JvmField val autoClose: Boolean = true,
 )
 
 @Service(Service.Level.PROJECT)
@@ -71,6 +71,12 @@ internal class AgentPromptUiSessionStateService
   : SerializablePersistentStateComponent<AgentPromptUiState>(AgentPromptUiState()) {
   // Runtime-only snapshot: intentionally not persisted in AgentPromptUiState.
   private var contextRestoreSnapshot = AgentPromptUiContextRestoreSnapshot()
+
+  var autoClose: Boolean
+    get() = state.autoClose
+    set(value) {
+      updateState { state.copy(autoClose = value) }
+    }
 
   fun loadDraft(): AgentPromptUiDraft {
     return state.draft

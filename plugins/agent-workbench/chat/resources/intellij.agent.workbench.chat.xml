@@ -16,6 +16,10 @@
       qualifiedName="com.intellij.agent.workbench.chatTerminalTitleThreadRebindContributor"
       interface="com.intellij.agent.workbench.chat.AgentChatTerminalTitleThreadRebindContributor"
       dynamic="true"/>
+    <extensionPoint
+      qualifiedName="com.intellij.agent.workbench.chatProviderBehavior"
+      interface="com.intellij.agent.workbench.chat.AgentChatProviderBehaviorContributor"
+      dynamic="true"/>
   </extensionPoints>
 
   <extensions defaultExtensionNs="com.intellij">
@@ -54,5 +58,11 @@
       id="AgentWorkbenchSessions.EditorTab.NextProposedPlan"
       icon="AllIcons.Actions.NextOccurence"
       class="com.intellij.agent.workbench.chat.AgentChatNextProposedPlanAction"/>
+    <action
+      id="AgentWorkbenchSessions.ThreadOutline.StartNewConversationFromHere"
+      class="com.intellij.agent.workbench.chat.AgentChatThreadOutlineForkAction"/>
+    <group id="AgentWorkbenchSessions.ThreadOutline.Popup" class="com.intellij.agent.workbench.chat.AgentChatThreadOutlinePopupGroup">
+      <reference ref="AgentWorkbenchSessions.ThreadOutline.StartNewConversationFromHere"/>
+    </group>
   </actions>
 </idea-plugin>

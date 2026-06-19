@@ -14,8 +14,11 @@ import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.AgentThreadActivityReport
 import com.intellij.agent.workbench.common.session.AgentSessionCost
 import com.intellij.agent.workbench.common.session.AgentSessionCostKind
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItem
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItemKind
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.common.session.AgentSessionThread
+import com.intellij.agent.workbench.common.session.AgentSessionThreadOutline
 import com.intellij.agent.workbench.sessions.core.cost.AgentSessionUsageSnapshot
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshThreadSeed
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
@@ -30,8 +33,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
 import java.math.BigDecimal
+import java.lang.reflect.InvocationHandler
 import java.nio.file.Files
 import java.nio.file.Path
+import java.lang.reflect.Proxy
 import org.junit.jupiter.api.io.TempDir
 
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
@@ -73,6 +78,122 @@ class CodexSessionSourceTest {
 
       assertThat(costs).isEmpty()
       assertThat(refreshRequests).isEmpty()
+    }
+  }
+
+  @Test
+  fun loadThreadOutlineUsesRolloutBackendForRolloutOnlyThread() {
+    val projectDir = tempDir.resolve("project-outline-source")
+    Files.createDirectories(projectDir)
+    val threadId = "thread-outline-source"
+    val rolloutFile = tempDir.resolve("sessions").resolve("2026").resolve("06").resolve("16").resolve("rollout-outline-source.jsonl")
+    Files.createDirectories(rolloutFile.parent)
+    Files.write(
+      rolloutFile,
+      listOf(
+        codexSessionMetaLine(threadId = threadId, cwd = projectDir),
+        """{"timestamp":"2026-05-28T10:00:01.000Z","type":"event_msg","payload":{"type":"user_message","message":"Load outline from rollout"}}""",
+      ),
+    )
+    val rolloutBackend = CodexRolloutSessionBackend(codexHomeProvider = { tempDir })
+    val source = CodexSessionSource(
+      backend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> = emptyList()
+      },
+      appServerRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutBackend = rolloutBackend,
+      threadPathIndex = InMemoryCodexThreadPathIndex(),
+    )
+
+    runBlocking(Dispatchers.Default) {
+      assertThat(rolloutBackend.listThreads(path = projectDir.toString(), openProject = null).map { it.thread.id }).contains(threadId)
+
+      val outline = source.loadThreadOutline(path = projectDir.toString(), threadId = threadId, subAgentId = null)
+
+      assertThat(outline).isNotNull
+      assertThat(outline!!.threadId).isEqualTo(threadId)
+      assertThat(outline.title).isEqualTo("Load outline from rollout")
+      assertThat(outline.items.single().kind).isEqualTo(AgentSessionOutlineItemKind.USER_PROMPT)
+      assertThat(outline.items.single().preview).isEqualTo("Load outline from rollout")
+    }
+  }
+
+  @Test
+  fun forkThreadFromCodexUserPromptForksAndRollsBackFromSelectedPrompt() {
+    val forkRequests = mutableListOf<Pair<String, Int>>()
+    val source = CodexSessionSource(
+      backend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> = emptyList()
+
+        override suspend fun loadThreadOutline(path: String, threadId: String): AgentSessionThreadOutline {
+          return AgentSessionThreadOutline(
+            provider = AgentSessionProvider.CODEX,
+            threadId = threadId,
+            title = "Source thread",
+            updatedAt = 100L,
+            items = listOf(
+              AgentSessionOutlineItem(
+                id = "turn-1",
+                kind = AgentSessionOutlineItemKind.AGENT_WORK,
+                title = "Turn 1",
+                children = listOf(
+                  AgentSessionOutlineItem(
+                    id = codexUserPromptOutlineItemId(0),
+                    kind = AgentSessionOutlineItemKind.USER_PROMPT,
+                    title = "",
+                    preview = "First",
+                  ),
+                ),
+              ),
+              AgentSessionOutlineItem(
+                id = codexUserPromptOutlineItemId(1),
+                kind = AgentSessionOutlineItemKind.USER_PROMPT,
+                title = "",
+                preview = "Second",
+              ),
+              AgentSessionOutlineItem(
+                id = codexUserPromptOutlineItemId(2),
+                kind = AgentSessionOutlineItemKind.USER_PROMPT,
+                title = "",
+                preview = "Third",
+              ),
+            ),
+          )
+        }
+
+        override suspend fun forkThread(path: String, threadId: String, rollbackTurns: Int, openProject: Project?): CodexBackendThread {
+          forkRequests += threadId to rollbackTurns
+          return CodexBackendThread(
+            thread = CodexThread(
+              id = "forked-thread",
+              title = "Forked thread",
+              updatedAt = 200L,
+              archived = false,
+            )
+          )
+        }
+      },
+      appServerRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutRefreshHintsProvider = staticHintsProvider(emptyMap()),
+    )
+
+    runBlocking(Dispatchers.Default) {
+      assertThat(source.canShowThreadOutlineForkAction(PROJECT_PATH, "source-thread", codexUserPromptOutlineItemId(1))).isTrue()
+      assertThat(source.canShowThreadOutlineForkAction(PROJECT_PATH, "source-thread", codexUserPromptOutlineItemId(1), subAgentId = "sub"))
+        .isFalse()
+      assertThat(source.canShowThreadOutlineForkAction(PROJECT_PATH, "source-thread", "call-1")).isFalse()
+
+      val result = source.forkThreadFromOutlineItem(
+        project = testProject(),
+        path = PROJECT_PATH,
+        threadId = "source-thread",
+        itemId = codexUserPromptOutlineItemId(1),
+      )
+
+      assertThat(forkRequests).containsExactly("source-thread" to 2)
+      assertThat(result?.thread?.id).isEqualTo("forked-thread")
+      assertThat(result?.thread?.provider).isEqualTo(AgentSessionProvider.CODEX)
     }
   }
 
@@ -374,6 +495,340 @@ class CodexSessionSourceTest {
       assertThat(loadedCosts.getValue("thread-1")).isEqualTo(
         AgentSessionCost(
           amountUsd = BigDecimal.valueOf(100),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = "gpt-5",
+        )
+      )
+    }
+  }
+
+  @Test
+  fun loadThreadCostsUsesExactRolloutPathWhenOriginalProjectPathNoLongerExists() {
+    val existingProjectDir = tempDir.resolve("project-missing-rollout-cost")
+    Files.createDirectories(existingProjectDir)
+    val deletedProjectPath = tempDir.resolve("deleted-project").toString()
+    val rolloutPath = writeCodexSessionSourceRollout(
+      threadId = "thread-missing-path",
+      projectDir = existingProjectDir,
+      fileName = "rollout-thread-missing-path.jsonl",
+      inputTokens = 120,
+      outputTokens = 0,
+    )
+    val threadPathIndex = InMemoryCodexThreadPathIndex().apply {
+      recordThreads(
+        listOf(
+          CodexThread(
+            id = "thread-missing-path",
+            title = "thread-missing-path",
+            updatedAt = 100L,
+            archived = false,
+            cwd = deletedProjectPath,
+            path = rolloutPath,
+          )
+        )
+      )
+    }
+    var listCalls = 0
+    var refreshCalls = 0
+    val source = CodexSessionSource(
+      backend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          listCalls += 1
+          return emptyList()
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          refreshCalls += 1
+          return CodexBackendThreadRefreshResult()
+        }
+      },
+      appServerRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutBackend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          error("Rollout fallback should not be needed when exact rollout path is known")
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          error("Rollout fallback should not be needed when exact rollout path is known")
+        }
+      },
+      calculateCost = { usage ->
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(usage.inputTokens),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = usage.modelId,
+        )
+      },
+      threadPathIndex = threadPathIndex,
+    )
+
+    runBlocking(Dispatchers.Default) {
+      val loadedCosts = source.loadThreadCosts(
+        path = deletedProjectPath,
+        threads = listOf(
+          AgentSessionThread(
+            id = "thread-missing-path",
+            title = "thread-missing-path",
+            updatedAt = 100L,
+            archived = false,
+            provider = AgentSessionProvider.CODEX,
+          )
+        ),
+      )
+
+      assertThat(listCalls).isZero()
+      assertThat(refreshCalls).isZero()
+      assertThat(loadedCosts.getValue("thread-missing-path")).isEqualTo(
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(120),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = "gpt-5",
+        )
+      )
+    }
+  }
+
+  @Test
+  fun loadThreadCostsKeepsExactRolloutCostsWhenParentAndSubAgentAreRequestedInSameBatch() {
+    val projectDir = tempDir.resolve("project-subagent-exact-rollout-cost")
+    Files.createDirectories(projectDir)
+    val projectPath = projectDir.toString()
+    val parentRolloutPath = writeCodexSessionSourceRollout(
+      threadId = "thread-parent",
+      projectDir = projectDir,
+      fileName = "rollout-thread-parent.jsonl",
+      inputTokens = 100,
+      outputTokens = 0,
+    )
+    val childRolloutPath = writeCodexSessionSourceSubAgentRollout(
+      threadId = "thread-child",
+      parentThreadId = "thread-parent",
+      projectDir = projectDir,
+      fileName = "rollout-thread-child.jsonl",
+      inputTokens = 50,
+      outputTokens = 0,
+    )
+    val threadPathIndex = InMemoryCodexThreadPathIndex().apply {
+      recordThreads(
+        listOf(
+          CodexThread(
+            id = "thread-parent",
+            title = "thread-parent",
+            updatedAt = 100L,
+            archived = false,
+            cwd = projectPath,
+            path = parentRolloutPath,
+          ),
+          CodexThread(
+            id = "thread-child",
+            title = "thread-child",
+            updatedAt = 100L,
+            archived = false,
+            cwd = projectPath,
+            path = childRolloutPath,
+            parentThreadId = "thread-parent",
+          ),
+        )
+      )
+    }
+    var listCalls = 0
+    var refreshCalls = 0
+    val source = CodexSessionSource(
+      backend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          listCalls += 1
+          return emptyList()
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          refreshCalls += 1
+          return CodexBackendThreadRefreshResult()
+        }
+      },
+      appServerRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutBackend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          error("Rollout fallback should not be needed when exact rollout paths are known")
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          error("Rollout fallback should not be needed when exact rollout paths are known")
+        }
+      },
+      calculateCost = { usage ->
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(usage.inputTokens),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = usage.modelId,
+        )
+      },
+      threadPathIndex = threadPathIndex,
+    )
+
+    runBlocking(Dispatchers.Default) {
+      val loadedCosts = source.loadThreadCosts(
+        path = projectPath,
+        threads = listOf(
+          AgentSessionThread(
+            id = "thread-parent",
+            title = "thread-parent",
+            updatedAt = 100L,
+            archived = false,
+            provider = AgentSessionProvider.CODEX,
+          ),
+          AgentSessionThread(
+            id = "thread-child",
+            title = "thread-child",
+            updatedAt = 100L,
+            archived = false,
+            provider = AgentSessionProvider.CODEX,
+          ),
+        ),
+      )
+
+      assertThat(listCalls).isZero()
+      assertThat(refreshCalls).isZero()
+      assertThat(loadedCosts.getValue("thread-parent")).isEqualTo(
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(100),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = "gpt-5",
+        )
+      )
+      assertThat(loadedCosts.getValue("thread-child")).isEqualTo(
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(50),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = "gpt-5",
+        )
+      )
+    }
+  }
+
+  @Test
+  fun loadThreadCostsAggregatesExactSubAgentRolloutCostsWhenRequestedThreadIncludesSubAgents() {
+    val projectDir = tempDir.resolve("project-subagent-aggregate-rollout-cost")
+    Files.createDirectories(projectDir)
+    val projectPath = projectDir.toString()
+    val parentRolloutPath = writeCodexSessionSourceRollout(
+      threadId = "thread-parent-aggregate",
+      projectDir = projectDir,
+      fileName = "rollout-thread-parent-aggregate.jsonl",
+      inputTokens = 100,
+      outputTokens = 0,
+    )
+    val childRolloutPath = writeCodexSessionSourceSubAgentRollout(
+      threadId = "thread-child-aggregate",
+      parentThreadId = "thread-parent-aggregate",
+      projectDir = projectDir,
+      fileName = "rollout-thread-child-aggregate.jsonl",
+      inputTokens = 50,
+      outputTokens = 0,
+    )
+    val threadPathIndex = InMemoryCodexThreadPathIndex().apply {
+      recordThreads(
+        listOf(
+          CodexThread(
+            id = "thread-parent-aggregate",
+            title = "thread-parent-aggregate",
+            updatedAt = 100L,
+            archived = false,
+            cwd = projectPath,
+            path = parentRolloutPath,
+          ),
+          CodexThread(
+            id = "thread-child-aggregate",
+            title = "thread-child-aggregate",
+            updatedAt = 100L,
+            archived = false,
+            cwd = projectPath,
+            path = childRolloutPath,
+            parentThreadId = "thread-parent-aggregate",
+          ),
+        )
+      )
+    }
+    var listCalls = 0
+    var refreshCalls = 0
+    val source = CodexSessionSource(
+      backend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          listCalls += 1
+          return emptyList()
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          refreshCalls += 1
+          return CodexBackendThreadRefreshResult()
+        }
+      },
+      appServerRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutRefreshHintsProvider = staticHintsProvider(emptyMap()),
+      rolloutBackend = object : CodexSessionBackend {
+        override suspend fun listThreads(path: String, openProject: Project?): List<CodexBackendThread> {
+          error("Rollout fallback should not be needed when exact rollout paths are known")
+        }
+
+        override suspend fun refreshThreads(
+          path: String,
+          threadIds: Set<String>,
+          openProject: Project?,
+        ): CodexBackendThreadRefreshResult {
+          error("Rollout fallback should not be needed when exact rollout paths are known")
+        }
+      },
+      calculateCost = { usage ->
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(usage.inputTokens),
+          kind = AgentSessionCostKind.ESTIMATED,
+          matchedModelId = usage.modelId,
+        )
+      },
+      threadPathIndex = threadPathIndex,
+    )
+
+    runBlocking(Dispatchers.Default) {
+      val loadedCosts = source.loadThreadCosts(
+        path = projectPath,
+        threads = listOf(
+          AgentSessionThread(
+            id = "thread-parent-aggregate",
+            title = "thread-parent-aggregate",
+            updatedAt = 100L,
+            archived = false,
+            provider = AgentSessionProvider.CODEX,
+            subAgents = listOf(com.intellij.agent.workbench.common.session.AgentSubAgent(id = "thread-child-aggregate", name = "thread-child-aggregate")),
+          )
+        ),
+      )
+
+      assertThat(listCalls).isZero()
+      assertThat(refreshCalls).isZero()
+      assertThat(loadedCosts.getValue("thread-parent-aggregate")).isEqualTo(
+        AgentSessionCost(
+          amountUsd = BigDecimal.valueOf(150),
           kind = AgentSessionCostKind.ESTIMATED,
           matchedModelId = "gpt-5",
         )
@@ -981,11 +1436,71 @@ private fun CodexSessionSourceTest.writeCodexSessionSourceRollout(
   return rolloutFile.toString()
 }
 
+private fun CodexSessionSourceTest.writeCodexSessionSourceSubAgentRollout(
+  threadId: String,
+  parentThreadId: String,
+  projectDir: Path,
+  fileName: String,
+  inputTokens: Long,
+  outputTokens: Long,
+): String {
+  val rolloutDir = tempDir.resolve("sessions").resolve("2026").resolve("05").resolve("28")
+  val rolloutFile = rolloutDir.resolve(fileName)
+  Files.createDirectories(rolloutDir)
+  Files.write(
+    rolloutFile,
+    listOf(
+      codexSubAgentSessionMetaLine(threadId = threadId, parentThreadId = parentThreadId, cwd = projectDir),
+      codexTokenUsageLine(
+        model = "gpt-5",
+        inputTokens = inputTokens,
+        outputTokens = outputTokens,
+      ),
+    ),
+  )
+  return rolloutFile.toString()
+}
+
 private fun codexSessionMetaLine(threadId: String, cwd: Path): String {
   val timestamp = "2026-05-28T10:00:00.000Z"
-  return """{"timestamp":"$timestamp","type":"session_meta","payload":{"id":"$threadId","timestamp":"$timestamp","cwd":"${cwd.toString().replace("\\", "\\\\")}"}}"""
+  return """{"timestamp":"$timestamp","type":"session_meta","payload":{"id":"$threadId","timestamp":"$timestamp","cwd":"${
+    cwd.toString().replace("\\", "\\\\")
+  }"}}"""
+}
+
+private fun codexSubAgentSessionMetaLine(threadId: String, parentThreadId: String, cwd: Path): String {
+  val timestamp = "2026-05-28T10:00:00.000Z"
+  return """{"timestamp":"$timestamp","type":"session_meta","payload":{"id":"$threadId","timestamp":"$timestamp","cwd":"${cwd.toString().replace("\\", "\\\\")}","source":{"subagent":{"thread_spawn":{"parent_thread_id":"$parentThreadId"}}}}}"""
 }
 
 private fun codexTokenUsageLine(model: String, inputTokens: Long, outputTokens: Long): String {
   return """{"timestamp":"2026-05-28T10:00:01.000Z","type":"event_msg","payload":{"type":"token_count","model":"$model","info":{"total_token_usage":{"input_tokens":$inputTokens,"cached_input_tokens":0,"output_tokens":$outputTokens,"reasoning_output_tokens":0}}}}"""
+}
+
+private fun testProject(): Project {
+  val handler = InvocationHandler { proxy, method, args ->
+    when (method.name) {
+      "isDisposed" -> false
+      "toString" -> "Project(codex-session-source-test)"
+      "hashCode" -> System.identityHashCode(proxy)
+      "equals" -> proxy === args?.firstOrNull()
+      else -> defaultValue(method.returnType)
+    }
+  }
+  return Proxy.newProxyInstance(Project::class.java.classLoader, arrayOf(Project::class.java), handler) as Project
+}
+
+private fun defaultValue(returnType: Class<*>): Any? {
+  return when {
+    !returnType.isPrimitive -> null
+    returnType == Boolean::class.javaPrimitiveType -> false
+    returnType == Int::class.javaPrimitiveType -> 0
+    returnType == Long::class.javaPrimitiveType -> 0L
+    returnType == Short::class.javaPrimitiveType -> 0.toShort()
+    returnType == Byte::class.javaPrimitiveType -> 0.toByte()
+    returnType == Float::class.javaPrimitiveType -> 0f
+    returnType == Double::class.javaPrimitiveType -> 0.0
+    returnType == Char::class.javaPrimitiveType -> '\u0000'
+    else -> null
+  }
 }

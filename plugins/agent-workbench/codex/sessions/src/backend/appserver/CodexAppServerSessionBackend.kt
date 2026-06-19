@@ -9,7 +9,6 @@ import com.intellij.agent.workbench.codex.sessions.CodexThreadPathIndex
 import com.intellij.agent.workbench.codex.sessions.InMemoryCodexThreadPathIndex
 import com.intellij.agent.workbench.codex.sessions.backend.CodexBackendThread
 import com.intellij.agent.workbench.codex.sessions.backend.CodexBackendThreadRefreshResult
-import com.intellij.agent.workbench.codex.sessions.backend.CodexSessionActivity
 import com.intellij.agent.workbench.codex.sessions.backend.CodexSessionBackend
 import com.intellij.agent.workbench.codex.sessions.backend.isResponseRequired
 import com.intellij.agent.workbench.codex.sessions.backend.toCodexSessionActivity
@@ -41,6 +40,12 @@ internal class CodexAppServerSessionBackend(
   },
   private val readThread: suspend (String) -> CodexThread? = { threadId ->
     serviceAsync<SharedCodexAppServerService>().readThread(threadId)
+  },
+  private val forkThreadRequest: suspend (String) -> CodexThread? = { threadId ->
+    serviceAsync<SharedCodexAppServerService>().forkThread(threadId)
+  },
+  private val rollbackThreadRequest: suspend (String, Int) -> CodexThread? = { threadId, rollbackTurns ->
+    serviceAsync<SharedCodexAppServerService>().rollbackThread(threadId = threadId, numTurns = rollbackTurns)
   },
   private val archiveThread: suspend (String) -> Unit = { threadId ->
     serviceAsync<SharedCodexAppServerService>().archiveThread(threadId)
@@ -116,6 +121,30 @@ internal class CodexAppServerSessionBackend(
       orphanArchiveAttemptRecorder = { false },
     )[cwdFilter].orEmpty()
     return CodexBackendThreadRefreshResult(threads = threads, isComplete = false)
+  }
+
+  override suspend fun forkThread(path: String, threadId: String, rollbackTurns: Int, openProject: Project?): CodexBackendThread? {
+    if (rollbackTurns < 1) {
+      return null
+    }
+    val workingDirectory = resolveProjectDirectoryFromPath(path) ?: return null
+    val cwdFilter = normalizeRootPath(workingDirectory.invariantSeparatorsPathString)
+    val forkedThread = forkThreadRequest(threadId) ?: return null
+    val rolledBackThread = rollbackThreadRequest(forkedThread.id, rollbackTurns)
+                           ?: readThread(forkedThread.id)
+                           ?: forkedThread
+    val rolledBackCwd = rolledBackThread.cwd
+    if (rolledBackCwd != null && normalizeRootPath(rolledBackCwd) != cwdFilter) {
+      return null
+    }
+    rememberThreadMetadata(listOf(rolledBackThread))
+    return buildThreadsByCwd(
+      threads = listOf(rolledBackThread),
+      targetCwds = setOf(cwdFilter),
+      archiveThread = {},
+      orphanArchiveAttemptRecorder = { false },
+      includeOrphanSubAgents = true,
+    )[cwdFilter].orEmpty().firstOrNull()
   }
 
   override suspend fun prefetchThreads(paths: List<String>): Map<String, List<CodexBackendThread>> {
@@ -300,17 +329,14 @@ private suspend fun buildThreadsByCwd(
       val subAgents = children.map { child ->
         CodexSubAgent(id = child.id, name = child.toSubAgentName())
       }
-      val activity = foldSessionActivity(
-        parentActivity,
-        children.asSequence().map(CodexThread::toCodexSessionActivity),
-      )
-      val requiresResponse = parent.activeFlags.isResponseRequired() || children.any { child -> child.activeFlags.isResponseRequired() }
+      val subAgentActivitiesById = children.associate { child -> child.id to child.toCodexSessionActivity() }
       threadsForCwd.add(
         CodexBackendThread(
           thread = parent.copy(subAgents = subAgents),
-          activity = activity,
-          requiresResponse = requiresResponse,
+          activity = parentActivity,
+          requiresResponse = parent.activeFlags.isResponseRequired(),
           summaryActivity = if (parent.isSubAgentSourceKind()) null else parentActivity,
+          subAgentActivitiesById = subAgentActivitiesById,
         )
       )
     }
@@ -416,20 +442,6 @@ private fun CodexThread.isSubAgentSourceKind(): Boolean {
     CodexThreadSourceKind.UNKNOWN,
       -> false
   }
-}
-
-private fun foldSessionActivity(base: CodexSessionActivity, children: Sequence<CodexSessionActivity>): CodexSessionActivity {
-  var current = base
-  for (child in children) {
-    current = when {
-      child == CodexSessionActivity.NEEDS_INPUT || current == CodexSessionActivity.NEEDS_INPUT -> CodexSessionActivity.NEEDS_INPUT
-      child == CodexSessionActivity.REVIEWING || current == CodexSessionActivity.REVIEWING -> CodexSessionActivity.REVIEWING
-      child == CodexSessionActivity.PROCESSING || current == CodexSessionActivity.PROCESSING -> CodexSessionActivity.PROCESSING
-      child == CodexSessionActivity.UNREAD || current == CodexSessionActivity.UNREAD -> CodexSessionActivity.UNREAD
-      else -> CodexSessionActivity.READY
-    }
-  }
-  return current
 }
 
 private data class PathFilter(

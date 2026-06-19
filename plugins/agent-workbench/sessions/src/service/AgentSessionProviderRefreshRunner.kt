@@ -1,5 +1,5 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
-// @spec community/plugins/agent-workbench/spec/agent-sessions.spec.md
+// @spec community/plugins/agent-workbench/spec/sessions/agent-sessions.spec.md
 package com.intellij.agent.workbench.sessions.service
 
 import com.intellij.agent.workbench.chat.AgentChatOpenTabsRefreshSnapshot
@@ -150,7 +150,7 @@ internal class AgentSessionProviderRefreshRunner(
       )
 
       if (refreshSupport != null && refreshHintsByPath.isNotEmpty()) {
-        refreshSupport.applyActivityHints(
+        refreshSupport.applyPresentationHints(
           outcomes = outcomes,
           refreshHintsByPath = refreshHintsByPath,
         )
@@ -767,8 +767,8 @@ private fun applyRefreshHintsToOutcomes(
   for ((path, outcome) in ArrayList(outcomes.entries)) {
     val threads = outcome.threads ?: continue
     val refreshHints = refreshHintsByPath[path] ?: continue
-    val activityUpdatesByThreadId = refreshHints.activityUpdatesByThreadId
-    if (activityUpdatesByThreadId.isEmpty()) {
+    val presentationUpdatesByThreadId = refreshHints.resolvePresentationUpdatesByThreadId()
+    if (presentationUpdatesByThreadId.isEmpty()) {
       continue
     }
 
@@ -777,13 +777,13 @@ private fun applyRefreshHintsToOutcomes(
       if (thread.provider != provider) {
         return@map thread
       }
-      val activityUpdate = activityUpdatesByThreadId[thread.id] ?: return@map thread
-      val resolvedUpdate = resolveAgentThreadActivityReportUpdate(thread = thread, activityUpdate = activityUpdate)
-      if (resolvedUpdate.activityReport == thread.activityReport && resolvedUpdate.updatedAt == thread.updatedAt) {
+      val presentationUpdate = presentationUpdatesByThreadId[thread.id] ?: return@map thread
+      val resolvedUpdate = resolveAgentThreadPresentationUpdate(thread = thread, presentationUpdate = presentationUpdate)
+      if (resolvedUpdate.title == thread.title && resolvedUpdate.activityReport == thread.activityReport && resolvedUpdate.updatedAt == thread.updatedAt) {
         return@map thread
       }
       changed = true
-      thread.copy(activityReport = resolvedUpdate.activityReport, updatedAt = resolvedUpdate.updatedAt)
+      thread.copy(title = resolvedUpdate.title, activityReport = resolvedUpdate.activityReport, updatedAt = resolvedUpdate.updatedAt)
     }
     if (changed) {
       outcomes[path] = outcome.copy(threads = updatedThreads)

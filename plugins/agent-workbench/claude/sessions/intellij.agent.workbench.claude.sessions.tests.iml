@@ -43,6 +43,9 @@
     <orderEntry type="module" module-name="intellij.platform.ide" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.ide.impl" scope="TEST" />
     <orderEntry type="module" module-name="intellij.platform.ide.util.io" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.platform.builtInServer" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.platform.builtInServer.impl" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.platform.ide.util.netty" scope="TEST" />
     <orderEntry type="module" module-name="intellij.agent.workbench.filewatch" scope="TEST" />
     <orderEntry type="module" module-name="intellij.agent.workbench.claude.common" scope="TEST" />
     <orderEntry type="module" module-name="intellij.agent.workbench.common" scope="TEST" />
@@ -51,6 +54,7 @@
     <orderEntry type="module" module-name="intellij.agent.workbench.sessions.actions" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.agent.workbench.sessions.tests" scope="TEST" />
     <orderEntry type="module" module-name="intellij.agent.workbench.sessions.core" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.agent.workbench.ui" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.jackson3" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.pty4j" scope="TEST" />
     <orderEntry type="library" scope="TEST" name="jna" level="project" />
@@ -59,6 +63,7 @@
     <orderEntry type="module" module-name="intellij.platform.testFramework.junit5" scope="TEST" />
     <orderEntry type="module" module-name="intellij.libraries.assertj.core" scope="TEST" />
     <orderEntry type="module" module-name="intellij.agent.workbench.claude.sessions" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.libraries.junit5.params" scope="TEST" />
   </component>
   <component name="TestModuleProperties" production-module="intellij.agent.workbench.claude.sessions" />
 </module>

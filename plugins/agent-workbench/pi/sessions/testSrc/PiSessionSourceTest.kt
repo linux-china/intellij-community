@@ -3,9 +3,11 @@ package com.intellij.agent.workbench.pi.sessions
 
 import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.AgentThreadActivityReport
+import com.intellij.agent.workbench.common.session.AgentSessionOutlineItemKind
 import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.testFramework.junit5.RegistryKey
 import com.intellij.testFramework.junit5.TestApplication
 import kotlinx.coroutines.Dispatchers
@@ -220,6 +222,120 @@ class PiSessionSourceTest {
       val thread = source.listThreadsFromClosedProject(projectDir.toString()).single()
 
       assertThat(thread.title).isEqualTo("First task")
+    }
+  }
+
+  @Test
+  fun `loads thread outline from pi session jsonl tree`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-outline")
+      val sessionDir = tempDir.resolve("outline-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-outline",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-outline", content = "Fix flaky test", timestamp = 1_000L),
+        piLabelEntry(),
+        piAssistantTextAndToolEntry(),
+        piBashExecutionMessageEntry(),
+        piNamedSessionInfoEntry(id = "name-outline", name = "Named outline"),
+      )
+      val source = sourceFor(sessionDir)
+
+      val outline = source.loadThreadOutline(projectDir.toString(), "session-outline", null)
+
+      assertThat(outline).isNotNull
+      assertThat(outline!!.provider).isEqualTo(AgentSessionProvider.PI)
+      assertThat(outline.threadId).isEqualTo("session-outline")
+      assertThat(outline.title).isEqualTo("Named outline")
+      assertThat(outline.updatedAt).isEqualTo(3_000L)
+      assertThat(outline.items.map { it.kind }).containsExactly(
+        AgentSessionOutlineItemKind.USER_PROMPT,
+        AgentSessionOutlineItemKind.ASSISTANT_RESPONSE,
+      )
+      val userPrompt = outline.items[0]
+      assertThat(userPrompt.kind).isEqualTo(AgentSessionOutlineItemKind.USER_PROMPT)
+      assertThat(userPrompt.preview).isEqualTo("Fix flaky test")
+      assertThat(userPrompt.children).isEmpty()
+      val assistant = outline.items[1]
+      assertThat(assistant.kind).isEqualTo(AgentSessionOutlineItemKind.ASSISTANT_RESPONSE)
+      assertThat(assistant.title).isEqualTo("I will inspect the failure.")
+      assertThat(assistant.children.map { it.kind }).containsExactly(
+        AgentSessionOutlineItemKind.TOOL_CALL,
+        AgentSessionOutlineItemKind.TOOL_RESULT,
+      )
+      assertThat(assistant.children.map { it.title }).containsExactly("Read", "Exit 0")
+      assertThat(assistant.children[0].preview).isEqualTo("src/Test.kt")
+      assertThat(assistant.children[1].preview).isEqualTo("ok")
+    }
+  }
+
+  @Test
+  fun `forks outline item from local session file when live control is unavailable`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-local-fork")
+      val sessionDir = tempDir.resolve("local-fork-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-local-fork",
+        cwd = projectDir,
+        piUserMessageEntry(id = "user-first", content = "First task", timestamp = 1_000L),
+        piAssistantTextMessageEntry(id = "assistant-first", parentId = "user-first", content = "First answer", timestamp = 2_000L),
+        piUserMessageEntry(id = "user-second", content = "Second task", timestamp = 3_000L, parentId = "assistant-first"),
+        piAssistantTextMessageEntry(id = "assistant-second", parentId = "user-second", content = "Second answer", timestamp = 4_000L),
+      )
+      val source = sourceFor(sessionDir)
+
+      assertThat(source.canForkThreadFromOutlineItem(projectDir.toString(), "session-local-fork", "assistant-first", null, "tab-1")).isTrue()
+
+      val forkResult = source.forkThreadFromOutlineItem(
+        project = ProjectManager.getInstance().defaultProject,
+        path = projectDir.toString(),
+        threadId = "session-local-fork",
+        itemId = "assistant-first",
+        subAgentId = null,
+        tabKey = "tab-1",
+      )
+
+      val forkedThread = checkNotNull(forkResult?.thread)
+      assertThat(forkedThread.provider).isEqualTo(AgentSessionProvider.PI)
+      assertThat(forkedThread.id).isNotEqualTo("session-local-fork")
+      assertThat(forkedThread.title).isEqualTo("First task")
+      val forkedOutline = source.loadThreadOutline(projectDir.toString(), forkedThread.id, null)
+      assertThat(forkedOutline).isNotNull
+      assertThat(forkedOutline!!.items.map { it.id }).containsExactly("user-first", "assistant-first")
+    }
+  }
+
+  @Test
+  fun `flattens linear pi conversation parent chain in outline`() {
+    runBlocking(Dispatchers.Default) {
+      val projectDir = tempDir.resolve("project-linear-outline")
+      val sessionDir = tempDir.resolve("linear-outline-sessions")
+      writePiSession(
+        sessionDir = sessionDir,
+        sessionId = "session-linear-outline",
+        cwd = projectDir,
+        piModelChangeEntry(id = "model-first", parentId = null),
+        piUserMessageEntry(id = "user-first", content = "2 + 2?", timestamp = 1_000L, parentId = "model-first"),
+        piAssistantTextMessageEntry(id = "assistant-first", parentId = "user-first", content = "2 + 2 = 4", timestamp = 2_000L),
+        piModelChangeEntry(id = "model-second", parentId = "assistant-first"),
+        piUserMessageEntry(id = "user-second", content = "5 + 5?=", timestamp = 3_000L, parentId = "model-second"),
+        piAssistantTextMessageEntry(id = "assistant-second", parentId = "user-second", content = "5 + 5 = 10", timestamp = 4_000L),
+      )
+      val source = sourceFor(sessionDir)
+
+      val outline = source.loadThreadOutline(projectDir.toString(), "session-linear-outline", null)
+
+      assertThat(outline).isNotNull
+      assertThat(outline!!.items.map { it.kind }).containsExactly(
+        AgentSessionOutlineItemKind.USER_PROMPT,
+        AgentSessionOutlineItemKind.ASSISTANT_RESPONSE,
+        AgentSessionOutlineItemKind.USER_PROMPT,
+        AgentSessionOutlineItemKind.ASSISTANT_RESPONSE,
+      )
+      assertThat(outline.items.map { it.preview }).containsExactly("2 + 2?", "2 + 2 = 4", "5 + 5?=", "5 + 5 = 10")
+      assertThat(outline.items.flatMap { it.children }).isEmpty()
     }
   }
 
@@ -467,6 +583,39 @@ class PiSessionSourceTest {
     assertThat(envConfigured).isEqualTo(envSessionDir)
   }
 
+  @Test
+  fun `outline fork action is shown only for concrete top level items`() {
+    val source = sourceFor(tempDir.resolve("sessions"))
+
+    assertThat(
+      source.canShowThreadOutlineForkAction(
+        path = "/work/project-a",
+        threadId = "thread-1",
+        itemId = "entry-1",
+        subAgentId = null,
+        tabKey = "tab-1",
+      )
+    ).isTrue()
+    assertThat(
+      source.canShowThreadOutlineForkAction(
+        path = "/work/project-a",
+        threadId = "thread-1",
+        itemId = " ",
+        subAgentId = null,
+        tabKey = "tab-1",
+      )
+    ).isFalse()
+    assertThat(
+      source.canShowThreadOutlineForkAction(
+        path = "/work/project-a",
+        threadId = "thread-1",
+        itemId = "entry-1",
+        subAgentId = "alpha",
+        tabKey = "tab-1",
+      )
+    ).isFalse()
+  }
+
   private fun sourceFor(sessionDir: Path): PiSessionSource {
     return PiSessionSource(sessionStore = PiSessionStore(sessionDirResolver = { sessionDir }))
   }
@@ -489,12 +638,21 @@ class PiSessionSourceTest {
   }
 }
 
-private fun piUserMessageEntry(id: String, content: String, timestamp: Long): String {
+private fun piUserMessageEntry(id: String, content: String, timestamp: Long, parentId: String? = null): String {
   return piMessageEntry(
     id = id,
-    parentId = null,
+    parentId = parentId,
     entryTimestamp = "2026-01-01T00:00:02Z",
     messageFields = "\"role\":\"user\",\"content\":${content.jsonString()},\"timestamp\":$timestamp",
+  )
+}
+
+private fun piAssistantTextMessageEntry(id: String, parentId: String, content: String, timestamp: Long): String {
+  return piMessageEntry(
+    id = id,
+    parentId = parentId,
+    entryTimestamp = "2026-01-01T00:00:03Z",
+    messageFields = "\"role\":\"assistant\",\"content\":${content.jsonString()},\"timestamp\":$timestamp",
   )
 }
 
@@ -514,6 +672,56 @@ private fun piToolResultMessageEntry(): String {
     entryTimestamp = "2026-01-01T00:00:03Z",
     messageFields = "\"role\":\"toolResult\",\"content\":[],\"timestamp\":3000",
   )
+}
+
+private fun piAssistantTextAndToolEntry(): String {
+  val messageFields = """
+    "role":"assistant",
+    "content":[
+      {"type":"text","text":"I will inspect the failure."},
+      {"type":"tool_use","id":"tool-read","name":"Read","input":{"file_path":"src/Test.kt"}}
+    ],
+    "timestamp":2000
+  """.trimIndent().replace("\n", "")
+  return piMessageEntry(
+    id = "assistant-outline",
+    parentId = "label-outline",
+    entryTimestamp = "2026-01-01T00:00:03Z",
+    messageFields = messageFields,
+  )
+}
+
+private fun piBashExecutionMessageEntry(): String {
+  val messageFields = """
+    "role":"bashExecution",
+    "content":{"type":"bashExecution","text":"ok","exitCode":0},
+    "timestamp":3000
+  """.trimIndent().replace("\n", "")
+  return piMessageEntry(
+    id = "result-outline",
+    parentId = "assistant-outline",
+    entryTimestamp = "2026-01-01T00:00:04Z",
+    messageFields = messageFields,
+  )
+}
+
+private fun piLabelEntry(): String {
+  return listOf(
+    "\"type\":\"label\"",
+    "\"id\":\"label-outline\"",
+    "\"parentId\":\"user-outline\"",
+    "\"timestamp\":\"2026-01-01T00:00:02Z\"",
+    "\"label\":\"hidden\"",
+  ).joinToString(separator = ",", prefix = "{", postfix = "}")
+}
+
+private fun piModelChangeEntry(id: String, parentId: String?): String {
+  return listOf(
+    "\"type\":\"model_change\"",
+    "\"id\":${id.jsonString()}",
+    "\"parentId\":${parentId?.jsonString() ?: "null"}",
+    "\"timestamp\":\"2026-01-01T00:00:02Z\"",
+  ).joinToString(separator = ",", prefix = "{", postfix = "}")
 }
 
 private fun piCustomMessageEntry(): String {

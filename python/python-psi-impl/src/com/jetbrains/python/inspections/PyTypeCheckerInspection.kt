@@ -149,6 +149,13 @@ open class PyTypeCheckerInspection : PyInspection() {
       checkCallSite(node)
     }
 
+    // A class definition implicitly calls `__init_subclass__` of its base classes with the
+    // class-definition keyword arguments; type-check those arguments against its parameters.
+    override fun visitPyClass(node: PyClass) {
+      if (node.getArguments(null).isEmpty()) return
+      checkCallSite(node)
+    }
+
     override fun visitPyBinaryExpression(node: PyBinaryExpression) {
       checkCallSite(node)
     }
@@ -488,6 +495,15 @@ open class PyTypeCheckerInspection : PyInspection() {
       }
 
       if (!matchesExpectedType(expected, actual, assignedValue, null)) {
+        // `tryPromotingType` may preserve element literals in a collection value (e.g. `list[Literal[1]]`),
+        // which spuriously fails the invariant match against the value's own widened type (`list[int]`),
+        // for instance for an un-annotated `x = [1, [1]]`. If the value's natural (un-promoted) type already
+        // matches the expected type, the fresh literal is assignable and there is no real mismatch.
+        // temporary special casing to avoid Literal problems PY-90366
+        val naturalType = myTypeEvalContext.getType(assignedValue)
+        if (naturalType != actual && matchesExpectedType(expected, naturalType, assignedValue, null)) {
+          return
+        }
         val isAugAssignment = node.parent is PyAugAssignmentStatement
         val message =
           if (isDescriptor)
@@ -802,7 +818,7 @@ open class PyTypeCheckerInspection : PyInspection() {
       if (calleesResults.none { isMatched(it) }) {
         PyTypeCheckerInspectionProblemRegistrar
           .registerProblem(
-            this, callSite, getArgumentTypes(calleesResults), calleesResults, myTypeEvalContext,
+            this, callSite, calleesResults, myTypeEvalContext,
             effectiveHighlightType(ProblemHighlightType.GENERIC_ERROR_OR_WARNING)
           )
       }
@@ -967,6 +983,7 @@ open class PyTypeCheckerInspection : PyInspection() {
               result.add(
                 AnalyzeArgumentResult(
                   receiver,
+                  selfParameter,
                   expected,
                   substituteGenerics(expected, substitutions),
                   actual,
@@ -1036,7 +1053,7 @@ open class PyTypeCheckerInspection : PyInspection() {
         }
         else {
           val matched = matchParameterAndArgument(expected, actual, argument, substitutions)
-          result.add(AnalyzeArgumentResult(argument, expected, substituteGenerics(expected, substitutions), actual, matched))
+          result.add(AnalyzeArgumentResult(argument, parameter, expected, substituteGenerics(expected, substitutions), actual, matched))
         }
       }
 
@@ -1127,7 +1144,7 @@ open class PyTypeCheckerInspection : PyInspection() {
         val argType = myTypeEvalContext.getType(argument)
         val paramType = parameter.getType(myTypeEvalContext)
         val matched = matchParameterAndArgument(paramType, argType, argument, substitutions)
-        result.add(AnalyzeArgumentResult(argument, paramType, substituteGenerics(paramType, substitutions), argType, matched))
+        result.add(AnalyzeArgumentResult(argument, parameter, paramType, substituteGenerics(paramType, substitutions), argType, matched))
       }
       if (!mapping.unmappedArguments.isEmpty()) {
         for (argument in mapping.unmappedArguments) {
@@ -1185,7 +1202,7 @@ open class PyTypeCheckerInspection : PyInspection() {
         val argument = arguments[i]
         val actual = myTypeEvalContext.getType(argument)
         val matched = matchParameterAndArgument(expected, actual, argument, substitutions)
-        result.add(AnalyzeArgumentResult(argument, expected, substituteGenerics(expected, substitutions), actual, matched))
+        result.add(AnalyzeArgumentResult(argument, null, expected, substituteGenerics(expected, substitutions), actual, matched))
       }
     }
 
@@ -1203,7 +1220,7 @@ open class PyTypeCheckerInspection : PyInspection() {
         val matched = matchParameterAndArgument(expected, argumentTypes, null, substitutions)
         return arguments.map { argument ->
           val expectedWithSubstitutions = substituteGenerics(expected, substitutions)
-          AnalyzeArgumentResult(argument, expected, expectedWithSubstitutions, argumentTypes, matched)
+          AnalyzeArgumentResult(argument, container, expected, expectedWithSubstitutions, argumentTypes, matched)
         }
       }
 
@@ -1221,7 +1238,7 @@ open class PyTypeCheckerInspection : PyInspection() {
           // Then match each argument type against the expected type after these substitutions.
           val actual = myTypeEvalContext.getType(it)
           val matched = matchParameterAndArgument(expected, actual, it, substitutions)
-          AnalyzeArgumentResult(it, expected, substituteGenerics(expected, substitutions), actual, matched)
+          AnalyzeArgumentResult(it, container, expected, substituteGenerics(expected, substitutions), actual, matched)
         }
       }
       else {
@@ -1231,7 +1248,7 @@ open class PyTypeCheckerInspection : PyInspection() {
           val actual = promotedToLiteral ?: myTypeEvalContext.getType(argument)
           val matched = matchParameterAndArgument(expected, actual, argument, substitutions)
           val expectedWithSubstitutions = substituteGenerics(expected, substitutions)
-          AnalyzeArgumentResult(argument, expected, expectedWithSubstitutions, actual, matched)
+          AnalyzeArgumentResult(argument, container, expected, expectedWithSubstitutions, actual, matched)
         }
       }
     }
@@ -1319,14 +1336,6 @@ open class PyTypeCheckerInspection : PyInspection() {
                calleeResults.unfilledPositionalVarargs.isEmpty()
       }
 
-      private fun getArgumentTypes(calleesResults: List<AnalyzeCalleeResults>): List<PyType?> {
-        return calleesResults
-          .stream()
-          .map { it.results }
-          .max(Comparator.comparingInt { it.size })
-          .orElse(mutableListOf()).map { it.actualType }
-      }
-
       private fun hasExplicitType(node: PsiElement): Boolean {
         if (node is PyAnnotationOwner && node.annotation != null) return true
         if (node is PyTypeCommentOwner && node.typeCommentAnnotation != null) return true
@@ -1361,6 +1370,7 @@ open class PyTypeCheckerInspection : PyInspection() {
 
   internal class AnalyzeArgumentResult(
     val argument: PyExpression,
+    val parameter: PyCallableParameter?,
     val expectedType: PyType?,
     val expectedTypeAfterSubstitution: PyType?,
     val actualType: PyType?,

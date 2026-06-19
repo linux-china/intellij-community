@@ -9,6 +9,7 @@ import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageD
 import com.intellij.agent.workbench.sessions.core.providers.AgentInitialMessageDispatchStep
 import com.intellij.agent.workbench.sessions.core.providers.AgentOpenTopLevelThreadDispatchService
 import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
+import com.intellij.agent.workbench.sessions.core.providers.AgentTerminalPromptDispatch
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import kotlinx.coroutines.delay
@@ -239,7 +240,9 @@ internal class ClaudeThreadRenameStateObserver(
 
 private fun buildClaudeRenameDispatchPlan(normalizedTitle: String): AgentInitialMessageDispatchPlan {
   return AgentInitialMessageDispatchPlan(
-    postStartDispatchSteps = listOf(AgentInitialMessageDispatchStep(text = "/rename $normalizedTitle")),
+    terminalDispatch = AgentTerminalPromptDispatch(
+      steps = listOf(AgentInitialMessageDispatchStep(text = "/rename $normalizedTitle")),
+    ),
   )
 }
 
@@ -252,7 +255,7 @@ private fun describeObservedState(thread: ClaudeBackendThread?): String {
   }
 }
 
-private const val DEFAULT_CLAUDE_THREAD_COMMAND_TIMEOUT_MS = 30_000
+private const val DEFAULT_CLAUDE_THREAD_COMMAND_TIMEOUT_MS = 60_000
 private const val DEFAULT_CLAUDE_THREAD_RENAME_WAIT_TIMEOUT_MS = 10_000L
 private const val DEFAULT_CLAUDE_THREAD_RENAME_POLL_INTERVAL_MS = 250L
 private const val CLAUDE_PRINT_FLAG = "--print"

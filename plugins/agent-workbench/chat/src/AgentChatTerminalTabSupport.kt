@@ -1,7 +1,7 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.chat
 
-// @spec community/plugins/agent-workbench/spec/agent-terminal-sessions.spec.md
+// @spec community/plugins/agent-workbench/spec/sessions/agent-terminal-sessions.spec.md
 
 import com.intellij.agent.workbench.common.AgentThreadActivity
 import com.intellij.agent.workbench.common.AgentThreadActivityReport
@@ -43,13 +43,13 @@ import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import kotlin.time.Duration.Companion.milliseconds
 
-internal interface AgentChatTerminalTab {
+internal interface AgentChatTerminalTab : AgentChatBehaviorTerminalTab {
   val component: JComponent
   val preferredFocusableComponent: JComponent
-  val coroutineScope: CoroutineScope
-  val sessionState: StateFlow<TerminalViewSessionState>
+  override val coroutineScope: CoroutineScope
+  override val sessionState: StateFlow<TerminalViewSessionState>
   val keyEventsFlow: Flow<TerminalKeyEvent>
-  val terminalView: TerminalView?
+  override val terminalView: TerminalView?
     get() = null
 
   suspend fun captureOutputCheckpoint(): AgentChatTerminalOutputCheckpoint
@@ -66,7 +66,7 @@ internal interface AgentChatTerminalTab {
     checkpoint: AgentChatTerminalOutputCheckpoint? = null,
   ): AgentChatTerminalInputReadiness
 
-  suspend fun readRecentOutputTail(): String
+  override suspend fun readRecentOutputTail(): String
 
   fun sendText(text: String, shouldExecute: Boolean, useBracketedPasteMode: Boolean = true)
 

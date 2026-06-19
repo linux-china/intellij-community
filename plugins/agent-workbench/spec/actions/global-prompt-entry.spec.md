@@ -54,8 +54,9 @@ The global prompt opens a project-scoped popup for starting a new task or sendin
 - Claude slash completion is available only for Claude provider prompts and only for explicit slash-token completion; it merges built-in Claude menu commands with project `.claude/commands` and `.claude/skills` definitions.
   [@test] ../../prompt/ui/testSrc/AgentPromptClaudeSlashCompletionProviderTest.kt
 
-- Provider restore order is shared provider preferences, persisted prompt draft provider, then provider-list default order.
-  [@test] ../../prompt/ui/testSrc/AgentPromptProviderSelectionDecisionsTest.kt
+- New-task provider, mode, and generation defaults restore through launch profiles. Prompt drafts may persist provider options and container mode, but they must not persist a separate provider id default.
+  [@test] ../../prompt/ui/testSrc/AgentPromptLaunchProfileStateTest.kt
+  [@test] ../../prompt/ui/testSrc/AgentPromptUiSessionStateServiceTest.kt
 
 - Submit flow must route through `AgentPromptLauncherBridge` using `AgentPromptLaunchRequest`; the prompt UI must not call provider session sources directly.
   [@test] ../../prompt/ui/testSrc/AgentPromptPaletteSubmitControllerTest.kt
@@ -65,23 +66,28 @@ The global prompt opens a project-scoped popup for starting a new task or sendin
   [@test] ../../prompt/ui/testSrc/AgentPromptPlanModeDecisionsTest.kt
   [@test] ../../sessions/testSrc/AgentSessionPromptLauncherBridgeTest.kt
 
-- `NEW_TASK` exposes provider-backed model and reasoning-effort controls as specified by `global-prompt-generation-controls.spec.md`. Header actions stay limited to prompt-surface tools such as provider selection, Plan mode, Run in container, preview, and prompt library.
+- `NEW_TASK` and `EXISTING_TASK` expose the provider selector. Changing provider in `EXISTING_TASK` reloads the selectable task list for that provider. Provider-backed model and reasoning-effort controls are exposed for `NEW_TASK` as specified by `global-prompt-generation-controls.spec.md`. Header actions stay limited to prompt-surface tools such as provider selection, Plan mode, Run in container, preview, and prompt library.
   [@test] ../../prompt/ui/testSrc/AgentPromptPaletteViewStructureTest.kt
   [@test] ../../prompt/ui/testSrc/AgentPromptProviderSelectorTest.kt
+  [@test] ../../prompt/ui/testSrc/AgentPromptPaletteSessionControllerTest.kt
 
 - Generation settings are applied only to `NEW_TASK` launches; `EXISTING_TASK` must not expose editable model or reasoning-effort controls.
   [@test] ../../prompt/ui/testSrc/AgentPromptPaletteSubmitControllerTest.kt
   [@test] ../../sessions/testSrc/AgentSessionPromptLauncherBridgeTest.kt
 
-- Extension tab auto-selection is opt-in through `AgentPromptPaletteExtension.shouldAutoSelect(contextItems)` and applies only to the auto-select action. Active extension tabs own their submit action and bypass provider/options routing.
+- Extension tab auto-selection is opt-in through `AgentPromptPaletteExtension.shouldAutoSelect(contextItems)` and applies only to the auto-select action. Active extension tabs own their submit action and bypass provider/options routing, except that an extension may opt back into the provider selector through `AgentPromptPaletteExtension.showsProviderSelector()` and into the per-task model/reasoning controls through `AgentPromptPaletteExtension.showsGenerationControls()`. The chosen provider, generation settings, and model catalog are forwarded to the submit action through the data context.
   [@test] ../../prompt/ui/testSrc/AgentPromptExtensionActionDataContextTest.kt
 
 - Prompt draft persistence must not serialize manual context items. Successful submit or explicit draft clear clears removed-auto-context and manual-context runtime state.
   [@test] ../../prompt/ui/testSrc/AgentPromptDraftPersistenceDecisionsTest.kt
   [@test] ../../prompt/ui/testSrc/AgentPromptUiSessionStateServiceTest.kt
 
+- Pasting a clipboard image into the prompt adds it as a screenshot context item. If the clipboard contains copied image files, those files are decoded and preferred over generic `imageFlavor` icon data; non-image copied files must not be consumed by the image paste provider.
+  [@test] ../../prompt/ui/testSrc/context/AgentPromptImagePasteProviderTest.kt
+
 ## User Experience
 - The popup is a focused launcher, not a persistent tool window.
+- The popup keep-open toggle is a secondary footer control, not part of the primary header action cluster.
 - Validation errors appear inline and keep the popup open.
 - Successful launches close the popup and clear the submitted draft.
 
@@ -94,4 +100,4 @@ The global prompt opens a project-scoped popup for starting a new task or sendin
 - `global-prompt-generation-controls.spec.md`
 - `global-prompt-suggestions.spec.md`
 - `../prompt-context/prompt-context-contracts.spec.md`
-- `../agent-core-contracts.spec.md`
+- `../core/agent-core-contracts.spec.md`
