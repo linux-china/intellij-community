@@ -2,15 +2,18 @@
   <!-- region Generated dependencies - run `Generate Product Layouts` to regenerate -->
   <dependencies>
     <module name="intellij.agent.workbench.chat"/>
-    <module name="intellij.agent.workbench.common"/>
-    <module name="intellij.agent.workbench.sessions.core"/>
+    <module name="intellij.platform.ai.agent.common"/>
+    <module name="intellij.platform.ai.agent.core"/>
+    <module name="intellij.platform.ai.agent.sessions.core"/>
   </dependencies>
   <!-- endregion -->
 
   <extensions defaultExtensionNs="com.intellij">
     <agent.workbench.chatProviderBehavior
-      implementation="com.intellij.agent.workbench.codex.chat.CodexAgentChatProviderBehaviorContributor"/>
+      providerId="codex"
+      implementation="com.intellij.agent.workbench.codex.chat.CodexAgentChatProviderBehavior"/>
     <agent.workbench.chatTerminalTitleThreadRebindContributor
+      providerId="codex"
       implementation="com.intellij.agent.workbench.codex.chat.CodexTerminalTitleThreadRebindContributor"/>
   </extensions>
 </idea-plugin>

@@ -9,40 +9,39 @@ import com.intellij.agent.workbench.chat.AgentChatPendingTabSnapshot
 import com.intellij.agent.workbench.chat.collectOpenConcreteAgentChatThreadIdentitiesByPath
 import com.intellij.agent.workbench.chat.collectOpenPendingAgentChatTabsByPath
 import com.intellij.agent.workbench.chat.rebindOpenPendingAgentChatTabs
-import com.intellij.agent.workbench.common.AgentThreadActivity
-import com.intellij.agent.workbench.common.AgentThreadActivityReport
-import com.intellij.agent.workbench.common.session.AgentSessionCost
-import com.intellij.agent.workbench.common.normalizeAgentWorkbenchPath
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
-import com.intellij.agent.workbench.common.session.AgentSessionThread
-import com.intellij.agent.workbench.common.session.AgentSubAgent
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshHints
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionRefreshThreadSeed
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSource
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceRefreshRequest
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceRefreshResult
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionThreadActivityUpdate
+import com.intellij.platform.ai.agent.core.AgentThreadActivity
+import com.intellij.platform.ai.agent.core.AgentThreadActivityReport
+import com.intellij.platform.ai.agent.core.session.AgentSessionCost
+import com.intellij.platform.ai.agent.core.normalizeAgentWorkbenchPath
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionThread
+import com.intellij.platform.ai.agent.core.session.AgentSubAgent
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionRefreshHints
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionRefreshThreadSeed
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSource
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceRefreshRequest
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceRefreshResult
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceUpdate
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceUpdateEvent
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionThreadActivityUpdate
 import com.intellij.agent.workbench.sessions.frame.AgentChatOpenModeSettings
-import com.intellij.agent.workbench.sessions.frame.OPEN_CHAT_IN_DEDICATED_FRAME_SETTING_ID
 import com.intellij.agent.workbench.sessions.model.AgentSessionsState
 import com.intellij.agent.workbench.sessions.model.ProjectEntry
 import com.intellij.agent.workbench.sessions.model.WorktreeEntry
 import com.intellij.agent.workbench.sessions.service.AgentSessionArchiveBackgroundTaskRunner
 import com.intellij.agent.workbench.sessions.service.AgentSessionArchiveService
+import com.intellij.agent.workbench.sessions.service.AgentSessionArchiveTransitionSuppressions
 import com.intellij.agent.workbench.sessions.service.AgentSessionChatOpenExecutor
 import com.intellij.agent.workbench.sessions.service.AgentSessionContentRepository
+import com.intellij.agent.workbench.sessions.service.AgentSessionLaunchProfileResolverImpl
 import com.intellij.agent.workbench.sessions.service.AgentSessionLaunchService
 import com.intellij.agent.workbench.sessions.service.AgentSessionRefreshService
 import com.intellij.agent.workbench.sessions.state.AgentSessionUiPreferencesStateService
 import com.intellij.agent.workbench.sessions.state.AgentSessionsStateStore
 import com.intellij.agent.workbench.sessions.state.InMemorySessionWarmState
 import com.intellij.agent.workbench.sessions.state.SessionWarmState
-import com.intellij.openapi.options.advanced.AdvancedSettingBean
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.replaceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -113,19 +112,6 @@ private fun <T> normalizeSnapshotTabsByPath(
     normalized[normalizeAgentWorkbenchPath(path)] = tabs
   }
   return normalized
-}
-
-internal fun registerDedicatedFrameSettingForTest(disposable: com.intellij.openapi.Disposable) {
-  if (AdvancedSettingBean.EP_NAME.extensionList.none { it.id == OPEN_CHAT_IN_DEDICATED_FRAME_SETTING_ID }) {
-    AdvancedSettingBean.EP_NAME.point.registerExtension(
-      AdvancedSettingBean().apply {
-        id = OPEN_CHAT_IN_DEDICATED_FRAME_SETTING_ID
-        defaultValue = "true"
-        groupKey = "agent.workbench.tests"
-      },
-      disposable,
-    )
-  }
 }
 
 data class TestProjectCatalogEntry(
@@ -352,6 +338,7 @@ suspend fun withRegisteredTestService(
     openAgentChatSnapshotProvider = { buildOpenChatRefreshSnapshot() },
     providerDescriptorProvider = { provider -> testIntegrationProviderDescriptor(provider) },
     toolWindowVisibleFlow = toolWindowVisibleFlow,
+    loadingDelayMs = 0L,
     subscribeToProjectLifecycle = false,
   )
   val app = ApplicationManager.getApplication()
@@ -396,7 +383,7 @@ internal suspend fun withTestServiceAndLaunch(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingCodexTabs,
   openPendingAgentChatTabsProvider: suspend (AgentSessionProvider) -> Map<String, List<AgentChatPendingTabSnapshot>> = { provider ->
-    if (provider == AgentSessionProvider.CODEX) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
+    if (provider == AgentSessionProvider.from("codex")) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
   },
   openAgentChatPendingTabsBinderWithProvider: suspend (
     AgentSessionProvider,
@@ -405,6 +392,7 @@ internal suspend fun withTestServiceAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  loadingDelayMs: Long = 0L,
   branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
     error("Unexpected branch mismatch confirmation")
   },
@@ -424,6 +412,7 @@ internal suspend fun withTestServiceAndLaunch(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    loadingDelayMs = loadingDelayMs,
     branchMismatchConfirmation = branchMismatchConfirmation,
     action = action,
   )
@@ -443,7 +432,7 @@ internal suspend fun withService(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingCodexTabs,
   openPendingAgentChatTabsProvider: suspend (AgentSessionProvider) -> Map<String, List<AgentChatPendingTabSnapshot>> = { provider ->
-    if (provider == AgentSessionProvider.CODEX) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
+    if (provider == AgentSessionProvider.from("codex")) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
   },
   openAgentChatPendingTabsBinderWithProvider: suspend (
     AgentSessionProvider,
@@ -452,6 +441,7 @@ internal suspend fun withService(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  loadingDelayMs: Long = 0L,
   action: suspend (AgentSessionStateSyncTestFacade) -> Unit,
 ) {
   withServiceAndLaunch(
@@ -468,6 +458,7 @@ internal suspend fun withService(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    loadingDelayMs = loadingDelayMs,
   ) { service, _ ->
     action(service)
   }
@@ -487,7 +478,7 @@ internal suspend fun withServiceAndLaunch(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingCodexTabs,
   openPendingAgentChatTabsProvider: suspend (AgentSessionProvider) -> Map<String, List<AgentChatPendingTabSnapshot>> = { provider ->
-    if (provider == AgentSessionProvider.CODEX) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
+    if (provider == AgentSessionProvider.from("codex")) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
   },
   openAgentChatPendingTabsBinderWithProvider: suspend (
     AgentSessionProvider,
@@ -496,6 +487,7 @@ internal suspend fun withServiceAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  loadingDelayMs: Long = 0L,
   branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
     error("Unexpected branch mismatch confirmation")
   },
@@ -516,6 +508,7 @@ internal suspend fun withServiceAndLaunch(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    loadingDelayMs = loadingDelayMs,
     branchMismatchConfirmation = branchMismatchConfirmation,
   ) { service, _, launchService ->
     action(service, launchService)
@@ -538,7 +531,7 @@ internal suspend fun withServiceAndArchive(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingCodexTabs,
   openPendingAgentChatTabsProvider: suspend (AgentSessionProvider) -> Map<String, List<AgentChatPendingTabSnapshot>> = { provider ->
-    if (provider == AgentSessionProvider.CODEX) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
+    if (provider == AgentSessionProvider.from("codex")) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
   },
   openAgentChatPendingTabsBinderWithProvider: suspend (
     AgentSessionProvider,
@@ -547,6 +540,7 @@ internal suspend fun withServiceAndArchive(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  loadingDelayMs: Long = 0L,
   action: suspend (AgentSessionStateSyncTestFacade, AgentSessionArchiveService) -> Unit,
 ) {
   withServiceAndArchiveAndLaunch(
@@ -565,6 +559,7 @@ internal suspend fun withServiceAndArchive(
     archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
     toolWindowVisibleFlow = toolWindowVisibleFlow,
     currentTimeMillis = currentTimeMillis,
+    loadingDelayMs = loadingDelayMs,
   ) { service, archiveService, _ ->
     action(service, archiveService)
   }
@@ -586,7 +581,7 @@ internal suspend fun withServiceAndArchiveAndLaunch(
     Map<String, List<AgentChatPendingTabRebindRequest>>,
   ) -> AgentChatPendingTabRebindReport = ::rebindOpenPendingCodexTabs,
   openPendingAgentChatTabsProvider: suspend (AgentSessionProvider) -> Map<String, List<AgentChatPendingTabSnapshot>> = { provider ->
-    if (provider == AgentSessionProvider.CODEX) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
+    if (provider == AgentSessionProvider.from("codex")) openPendingCodexTabsProvider() else collectOpenPendingAgentChatTabsByPath(provider)
   },
   openAgentChatPendingTabsBinderWithProvider: suspend (
     AgentSessionProvider,
@@ -595,6 +590,7 @@ internal suspend fun withServiceAndArchiveAndLaunch(
   archivedSessionsRefreshIfLoaded: () -> Unit = {},
   toolWindowVisibleFlow: StateFlow<Boolean> = MutableStateFlow(true),
   currentTimeMillis: () -> Long = System::currentTimeMillis,
+  loadingDelayMs: Long = 0L,
   branchMismatchConfirmation: suspend (Project?, String, String) -> Boolean = { _, _, _ ->
     error("Unexpected branch mismatch confirmation")
   },
@@ -604,13 +600,12 @@ internal suspend fun withServiceAndArchiveAndLaunch(
 
   @Suppress("RAW_SCOPE_CREATION")
   val scope = CoroutineScope(job + Dispatchers.Default)
-  val settingDisposable = Disposer.newDisposable()
   var previousOpenInDedicatedFrame: Boolean? = null
   try {
-    registerDedicatedFrameSettingForTest(settingDisposable)
     previousOpenInDedicatedFrame = AgentChatOpenModeSettings.openInDedicatedFrame()
     AgentChatOpenModeSettings.setOpenInDedicatedFrame(true)
     val stateStore = AgentSessionsStateStore()
+    val archiveTransitionSuppressions = AgentSessionArchiveTransitionSuppressions()
     val contentRepository = AgentSessionContentRepository(
       stateStore = stateStore,
       warmState = warmState,
@@ -625,8 +620,8 @@ internal suspend fun withServiceAndArchiveAndLaunch(
       openAgentChatSnapshotProvider = {
         buildOpenChatRefreshSnapshot(
           pendingTabsByProvider = mapOf(
-            AgentSessionProvider.CODEX to openPendingAgentChatTabsProvider(AgentSessionProvider.CODEX),
-            AgentSessionProvider.CLAUDE to openPendingAgentChatTabsProvider(AgentSessionProvider.CLAUDE),
+            AgentSessionProvider.from("codex") to openPendingAgentChatTabsProvider(AgentSessionProvider.from("codex")),
+            AgentSessionProvider.from("claude") to openPendingAgentChatTabsProvider(AgentSessionProvider.from("claude")),
           ),
           concreteThreadIdentitiesByPath = openConcreteChatThreadIdentitiesByPathProvider(),
         )
@@ -635,18 +630,23 @@ internal suspend fun withServiceAndArchiveAndLaunch(
       providerDescriptorProvider = { provider -> testIntegrationProviderDescriptor(provider) },
       toolWindowVisibleFlow = toolWindowVisibleFlow,
       currentTimeMillis = currentTimeMillis,
+      archiveTransitionSuppressions = archiveTransitionSuppressions,
+      loadingDelayMs = loadingDelayMs,
       subscribeToProjectLifecycle = false,
     )
     val service = AgentSessionStateSyncTestFacade(
       stateStore = stateStore,
       syncService = syncService,
     )
+    val launchProfileResolver = AgentSessionLaunchProfileResolverImpl(uiPreferencesState)
     val launchService = if (chatOpenExecutor == null) {
       AgentSessionLaunchService(
         serviceScope = scope,
         stateStore = stateStore,
         syncService = syncService,
         uiPreferencesState = uiPreferencesState,
+        launchProfileResolver = launchProfileResolver,
+        archiveTransitionSuppressions = archiveTransitionSuppressions,
         openPendingAgentChatTabsProvider = openPendingAgentChatTabsProvider,
         openAgentChatPendingTabsBinder = openAgentChatPendingTabsBinderWithProvider,
         archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
@@ -659,7 +659,9 @@ internal suspend fun withServiceAndArchiveAndLaunch(
         stateStore = stateStore,
         syncService = syncService,
         uiPreferencesState = uiPreferencesState,
+        launchProfileResolver = launchProfileResolver,
         chatOpenExecutor = chatOpenExecutor,
+        archiveTransitionSuppressions = archiveTransitionSuppressions,
         openPendingAgentChatTabsProvider = openPendingAgentChatTabsProvider,
         openAgentChatPendingTabsBinder = openAgentChatPendingTabsBinderWithProvider,
         archivedSessionsRefreshIfLoaded = archivedSessionsRefreshIfLoaded,
@@ -672,12 +674,12 @@ internal suspend fun withServiceAndArchiveAndLaunch(
       contentRepository = contentRepository,
       archiveChatCleanup = archiveChatCleanup,
       backgroundTaskRunner = archiveBackgroundTaskRunner,
+      archiveTransitionSuppressions = archiveTransitionSuppressions,
     )
     action(service, archiveService, launchService)
   }
   finally {
     previousOpenInDedicatedFrame?.let { AgentChatOpenModeSettings.setOpenInDedicatedFrame(it) }
-    Disposer.dispose(settingDisposable)
     job.cancelAndJoin()
   }
 }
@@ -762,14 +764,14 @@ private fun defaultValue(returnType: Class<*>): Any? {
 }
 
 private suspend fun collectOpenPendingCodexTabsByPath(): Map<String, List<AgentChatPendingTabSnapshot>> {
-  return collectOpenPendingAgentChatTabsByPath(AgentSessionProvider.CODEX)
+  return collectOpenPendingAgentChatTabsByPath(AgentSessionProvider.from("codex"))
 }
 
 private suspend fun rebindOpenPendingCodexTabs(
   requestsByProjectPath: Map<String, List<AgentChatPendingTabRebindRequest>>,
 ): AgentChatPendingTabRebindReport {
   return rebindOpenPendingAgentChatTabs(
-    provider = AgentSessionProvider.CODEX,
+    provider = AgentSessionProvider.from("codex"),
     requestsByProjectPath = requestsByProjectPath,
   )
 }
@@ -787,7 +789,7 @@ suspend fun waitForCondition(timeoutMs: Long = 5_000, condition: () -> Boolean) 
 
 private val TEST_INTEGRATION_PROVIDER_DESCRIPTORS: Map<AgentSessionProvider, TestAgentSessionProviderDescriptor> = listOf(
   TestAgentSessionProviderDescriptor(
-    provider = AgentSessionProvider.CODEX,
+    provider = AgentSessionProvider.from("codex"),
     supportedModes = emptySet(),
     cliAvailable = true,
     supportsPendingEditorTabRebind = true,
@@ -796,7 +798,7 @@ private val TEST_INTEGRATION_PROVIDER_DESCRIPTORS: Map<AgentSessionProvider, Tes
     refreshPathAfterCreateNewSession = true,
   ),
   TestAgentSessionProviderDescriptor(
-    provider = AgentSessionProvider.CLAUDE,
+    provider = AgentSessionProvider.from("claude"),
     supportedModes = emptySet(),
     cliAvailable = true,
     supportsPendingEditorTabRebind = true,

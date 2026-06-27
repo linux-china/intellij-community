@@ -3,9 +3,6 @@ package com.intellij.agent.workbench.sessions.toolwindow.ui
 
 import com.intellij.agent.workbench.chat.AgentChatTabSelection
 import com.intellij.agent.workbench.chat.AgentChatOpenPendingTabsState
-import com.intellij.agent.workbench.common.AgentThreadActivity
-import com.intellij.agent.workbench.common.parseAgentThreadIdentity
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.AgentSessionsBundle
 import com.intellij.agent.workbench.sessions.model.AgentArchivedSessionsState
 import com.intellij.agent.workbench.sessions.model.AgentSessionThreadViewMode
@@ -16,6 +13,7 @@ import com.intellij.agent.workbench.sessions.state.AgentSessionThreadViewState
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeId
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeModel
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeModelDiff
+import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeRootPresentation
 import com.intellij.agent.workbench.sessions.toolwindow.tree.buildSessionTreeModel
 import com.intellij.agent.workbench.sessions.toolwindow.tree.diffSessionTreeModels
 import com.intellij.agent.workbench.sessions.toolwindow.tree.overlayPendingAgentChatTabs
@@ -44,12 +42,13 @@ internal class AgentSessionsTreeStateController(
   private val threadViewStateFlow: StateFlow<AgentSessionThreadViewState>,
   private val selectedChatTabFlow: StateFlow<AgentChatTabSelection?>,
   private val pendingChatTabsStateFlow: StateFlow<AgentChatOpenPendingTabsState>,
-  private val markThreadAsRead: (String, AgentSessionProvider, String, Long) -> Unit,
   private val ensureArchivedSessionsLoaded: () -> Unit,
   private val tree: Tree,
   private val getSessionTreeModel: () -> SessionTreeModel,
   private val setSessionTreeModel: (SessionTreeModel) -> Unit,
   private val onNewThreadProfileMenuChanged: () -> Unit,
+  private val isCurrentProjectScopeEnabled: () -> Boolean,
+  private val currentProjectPathProvider: () -> String?,
   private val onBeforeModelSwap: () -> Unit,
   private val invalidateTreeModel: (SessionTreeModelDiff) -> CompletableFuture<*>,
   private val expandNode: (SessionTreeId) -> Unit,
@@ -98,12 +97,7 @@ internal class AgentSessionsTreeStateController(
 
     scope.launch {
       selectedChatTabFlow.collect { selection ->
-        val previousSelection = selectedChatTab
         selectedChatTab = selection
-        if (previousSelection != selection) {
-          markChatTabThreadAsRead(previousSelection)
-        }
-        markChatTabThreadAsRead(selection)
         applyChatSelection(selection)
       }
     }
@@ -144,7 +138,7 @@ internal class AgentSessionsTreeStateController(
   }
 
   fun displayedStateSnapshot(): AgentSessionsState {
-    return when (threadViewState.mode) {
+    val state = when (threadViewState.mode) {
       AgentSessionThreadViewMode.ACTIVE -> overlayPendingAgentChatTabs(
         state = activeSessionsState,
         pendingTabsState = pendingChatTabsState,
@@ -155,6 +149,15 @@ internal class AgentSessionsTreeStateController(
         nowMs = nowProvider(),
       )
     }
+    return state.filterToCurrentProjectSessions(currentProjectPathForScope())
+  }
+
+  fun isSingleProjectPresentationEnabled(): Boolean {
+    return currentProjectPathForScope() != null
+  }
+
+  fun projectScopeChanged() {
+    rebuildTree(SessionTreeRebuildReason.PROJECT_SCOPE_CHANGED)
   }
 
   fun dispose() {
@@ -164,24 +167,6 @@ internal class AgentSessionsTreeStateController(
 
   @TestOnly
   internal fun hasPendingModelUpdateForTest(): Boolean = pendingRebuildReason != null
-
-  private fun markChatTabThreadAsRead(selection: AgentChatTabSelection?) {
-    if (selection == null) return
-    val provider = AgentSessionProvider.fromOrNull(
-      parseAgentThreadIdentity(selection.threadIdentity)?.providerId ?: return
-    ) ?: return
-    val thread = activeSessionsState.projects
-                   .asSequence()
-                   .flatMap { project ->
-                     when {
-                       project.path == selection.projectPath -> project.threads.asSequence()
-                       else -> project.worktrees.firstOrNull { it.path == selection.projectPath }?.threads?.asSequence() ?: emptySequence()
-                     }
-                   }
-                   .firstOrNull { it.id == selection.threadId && it.provider == provider && it.activity == AgentThreadActivity.UNREAD }
-                 ?: return
-    markThreadAsRead(selection.projectPath, provider, thread.id, thread.updatedAt)
-  }
 
   private fun rebuildTree(reason: SessionTreeRebuildReason) {
     if (!modelUpdatesVisible) {
@@ -196,6 +181,12 @@ internal class AgentSessionsTreeStateController(
     val snapshotState = displayedStateSnapshot()
     val snapshotThreadViewState = threadViewState
     val snapshotSelectedChatTab = selectedChatTab
+    val snapshotRootPresentation = if (isSingleProjectPresentationEnabled()) {
+      SessionTreeRootPresentation.SINGLE_PROJECT_CONTENTS
+    }
+    else {
+      SessionTreeRootPresentation.PROJECTS
+    }
     val oldModel = getSessionTreeModel()
     val updateSequence = ++treeUpdateSequence
     rebuildJob = scope.launch {
@@ -205,6 +196,7 @@ internal class AgentSessionsTreeStateController(
           visibleClosedProjectCount = snapshotState.visibleClosedProjectCount,
           visibleThreadCounts = snapshotState.visibleThreadCounts,
           treeUiState = serviceAsync<AgentSessionTreeUiStateService>(),
+          rootPresentation = snapshotRootPresentation,
         )
         val diff = diffSessionTreeModels(oldModel, model)
         val selection = if (snapshotThreadViewState.mode == AgentSessionThreadViewMode.ACTIVE) {
@@ -317,19 +309,27 @@ internal class AgentSessionsTreeStateController(
 
   private fun updateEmptyText() {
     val displayedState = displayedStateSnapshot()
+    val currentProjectScope = currentProjectPathForScope() != null
     val message = when (threadViewState.mode) {
       AgentSessionThreadViewMode.ACTIVE -> when {
         displayedState.projects.isEmpty() && displayedState.lastUpdatedAt == null -> AgentSessionsBundle.message("toolwindow.loading")
+        displayedState.projects.isEmpty() && currentProjectScope -> AgentSessionsBundle.message("toolwindow.empty.current.project")
         displayedState.projects.isEmpty() -> AgentSessionsBundle.message("toolwindow.empty.global")
         else -> ""
       }
       AgentSessionThreadViewMode.ARCHIVED -> when {
         archivedSessionsState.projects.isEmpty() && archivedSessionsState.lastUpdatedAt == null -> AgentSessionsBundle.message("toolwindow.loading.archived")
+        displayedState.projects.isEmpty() && currentProjectScope -> AgentSessionsBundle.message("toolwindow.empty.archived.current.project")
         displayedState.projects.isEmpty() -> AgentSessionsBundle.message("toolwindow.empty.archived")
         else -> ""
       }
     }
     tree.emptyText.text = message
+  }
+
+  private fun currentProjectPathForScope(): String? {
+    if (!isCurrentProjectScopeEnabled()) return null
+    return currentProjectPathProvider()
   }
 
   private fun applyDefaultExpansion(
@@ -378,6 +378,7 @@ internal enum class SessionTreeRebuildReason {
   CHAT_TAB_SELECTION_CHANGED,
   PENDING_CHAT_TABS_CHANGED,
   THREAD_VIEW_CHANGED,
+  PROJECT_SCOPE_CHANGED,
 }
 
 internal fun SessionTreeModelDiff.isEmpty(): Boolean {
@@ -400,6 +401,10 @@ internal fun coalesceSessionTreeRebuildReason(
   if (current == SessionTreeRebuildReason.THREAD_VIEW_CHANGED ||
       next == SessionTreeRebuildReason.THREAD_VIEW_CHANGED) {
     return SessionTreeRebuildReason.THREAD_VIEW_CHANGED
+  }
+  if (current == SessionTreeRebuildReason.PROJECT_SCOPE_CHANGED ||
+      next == SessionTreeRebuildReason.PROJECT_SCOPE_CHANGED) {
+    return SessionTreeRebuildReason.PROJECT_SCOPE_CHANGED
   }
   return SessionTreeRebuildReason.SESSION_STATE_CHANGED
 }
@@ -433,6 +438,7 @@ internal fun sessionTreeSelectionTargetsAfterModelSwap(
     SessionTreeRebuildReason.SESSION_STATE_CHANGED,
     SessionTreeRebuildReason.PENDING_CHAT_TABS_CHANGED,
     SessionTreeRebuildReason.THREAD_VIEW_CHANGED,
+    SessionTreeRebuildReason.PROJECT_SCOPE_CHANGED,
       -> {
       when {
         preservedSelection.isNotEmpty() -> preservedSelection

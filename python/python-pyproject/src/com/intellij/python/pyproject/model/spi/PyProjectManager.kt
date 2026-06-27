@@ -1,9 +1,7 @@
 package com.intellij.python.pyproject.model.spi
 
 import com.intellij.openapi.extensions.ExtensionPointName
-import com.intellij.openapi.util.NlsSafe
 import com.intellij.python.community.common.tools.ToolId
-import com.intellij.python.pyproject.model.internal.pyProjectToml.TomlDependencySpecification
 import com.jetbrains.python.PyToolUIInfo
 import com.jetbrains.python.venvReader.Directory
 import org.apache.tuweni.toml.TomlTable
@@ -15,11 +13,6 @@ interface PyProjectManager {
 
   val id: ToolId
   val ui: PyToolUIInfo
-
-  /**
-   * Tools that support old (tool-specific) naming should return it here
-   */
-  suspend fun getProjectName(projectToml: TomlTable): @NlsSafe String?
 
   /**
    * Tool uses [entries] ([rootIndex] contains the same data, used as index rooDir->project name) to report project dependencies and workspace members.

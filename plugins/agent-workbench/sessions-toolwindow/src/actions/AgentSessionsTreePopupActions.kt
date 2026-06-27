@@ -1,8 +1,8 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.sessions.toolwindow.actions
 
-import com.intellij.agent.workbench.common.session.AgentSessionThread
-import com.intellij.agent.workbench.common.session.AgentSubAgent
+import com.intellij.platform.ai.agent.core.session.AgentSessionThread
+import com.intellij.platform.ai.agent.core.session.AgentSubAgent
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfile
 import com.intellij.agent.workbench.sessions.AgentSessionLaunchProfileSelection
 import com.intellij.agent.workbench.sessions.AgentSessionsBundle
@@ -10,10 +10,10 @@ import com.intellij.agent.workbench.sessions.buildAgentSessionLaunchProfileMenuA
 import com.intellij.agent.workbench.sessions.buildAgentSessionLaunchProfileMenuModel
 import com.intellij.agent.workbench.sessions.launchQuickStartProfile
 import com.intellij.agent.workbench.sessions.actions.createNewThreadViaService
-import com.intellij.agent.workbench.sessions.core.SessionActionTarget
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
-import com.intellij.agent.workbench.sessions.core.providers.hasEntries
+import com.intellij.platform.ai.agent.sessions.core.SessionActionTarget
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderDescriptor
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.hasEntries
 import com.intellij.agent.workbench.sessions.statistics.AgentWorkbenchEntryPoint
 import com.intellij.agent.workbench.sessions.frame.AgentWorkbenchDedicatedFrameProjectManager
 import com.intellij.agent.workbench.sessions.model.ArchiveThreadTarget
@@ -47,6 +47,7 @@ internal data class AgentSessionsTreePopupActionContext(
   val target: SessionActionTarget,
   @JvmField val archiveTargets: List<ArchiveThreadTarget>,
   @JvmField val unarchiveTargets: List<ArchiveThreadTarget> = emptyList(),
+  @JvmField val newThreadActionAvailable: Boolean = true,
 )
 
 internal fun resolveAgentSessionsTreePopupActionContext(event: AnActionEvent): AgentSessionsTreePopupActionContext? {
@@ -236,6 +237,7 @@ internal class AgentSessionsTreePopupNewThreadGroup @JvmOverloads constructor(
 
   private fun resolveNewThreadMenu(e: AnActionEvent): NewThreadMenu? {
     val context = resolveContext(e) ?: return null
+    if (!context.newThreadActionAvailable) return null
     val path = newThreadPathFromTarget(context.target) ?: return null
     val menuModel = buildAgentSessionLaunchProfileMenuModel(allBridges(), context.project)
     if (!menuModel.hasEntries()) return null

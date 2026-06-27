@@ -1,6 +1,15 @@
 load("@community//build:tests-options.bzl", "jps_test")
 load("@rules_jvm//:jvm.bzl", "jvm_library")
 
+jps_test(
+    name = "agent-workbench-ui-tests_test",
+    timeout = "moderate",
+    sandbox = True,
+    tags = ["community-aggregator"],
+    runtime_deps = [":agent-workbench-ui-tests_test_lib"],
+)
+### skip generation section `test intellij.agent.workbench.ui.tests`
+
 ### auto-generated section `build intellij.agent.workbench.ui` start
 
 jvm_library(
@@ -27,6 +36,9 @@ jvm_library(
         "//platform/platform-api:ide",
         "//platform/ide-core",
         "//platform/platform-impl:ide-impl",
+        "//plugins/agent-workbench/lib-agent/common",
+        "//plugins/agent-workbench/lib-agent/core",
+        "//plugins/agent-workbench/lib-agent/sessions-core:ai-agent-sessions-core",
         "//platform/util",
         "//platform/util:util-ui",
     ],
@@ -49,6 +61,9 @@ jvm_library(
         "//platform/platform-api:ide_test_lib",
         "//platform/ide-core:ide-core_test_lib",
         "//platform/platform-impl:ide-impl_test_lib",
+        "//plugins/agent-workbench/lib-agent/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/core:core_test_lib",
+        "//plugins/agent-workbench/lib-agent/sessions-core:ai-agent-sessions-core_test_lib",
         "//platform/util:util_test_lib",
         "//platform/util:util-ui_test_lib",
     ],
@@ -133,11 +148,3 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 ### auto-generated section `iml intellij.agent.workbench.ui.tests` end
-
-### auto-generated section `test intellij.agent.workbench.ui.tests` start
-
-jps_test(
-    name = "agent-workbench-ui-tests_test",
-    runtime_deps = [":agent-workbench-ui-tests_test_lib"],
-)
-### auto-generated section `test intellij.agent.workbench.ui.tests` end

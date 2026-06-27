@@ -1,16 +1,16 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.sessions
 
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
-import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
-import com.intellij.agent.workbench.common.session.AgentSessionThread
-import com.intellij.agent.workbench.common.session.AgentSubAgent
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionLaunchMode
+import com.intellij.platform.ai.agent.core.session.AgentSessionThread
+import com.intellij.platform.ai.agent.core.session.AgentSubAgent
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModel
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
-import com.intellij.agent.workbench.sessions.core.launch.resolveAgentSessionChatOpenPlan
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionTerminalLaunchSpec
-import com.intellij.agent.workbench.sessions.core.providers.InMemoryAgentSessionProviderRegistry
+import com.intellij.platform.ai.agent.sessions.core.launch.resolveAgentSessionChatOpenPlan
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionTerminalLaunchSpec
+import com.intellij.platform.ai.agent.sessions.core.providers.InMemoryAgentSessionProviderRegistry
 import com.intellij.agent.workbench.sessions.util.buildAgentSessionIdentity
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -33,7 +33,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
 
       val payload = resolveAgentSessionChatOpenPlan(
@@ -44,7 +44,7 @@ class AgentSessionChatOpenPlanTest {
         resumeLaunchSpecProvider = ::testResumeLaunchSpec,
       )
 
-      assertThat(payload.threadIdentity).isEqualTo(buildAgentSessionIdentity(AgentSessionProvider.CODEX, "thread-1"))
+      assertThat(payload.threadIdentity).isEqualTo(buildAgentSessionIdentity(AgentSessionProvider.from("codex"), "thread-1"))
       assertThat(payload.runtimeThreadId).isEqualTo("thread-1")
       assertThat(payload.launchSpec.command)
         .containsExactly("codex", "-c", "check_for_update_on_startup=false", "resume", "thread-1")
@@ -61,7 +61,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
       val subAgent = AgentSubAgent(id = "sub-1", name = "Sub-agent label")
 
@@ -73,7 +73,7 @@ class AgentSessionChatOpenPlanTest {
         resumeLaunchSpecProvider = ::testResumeLaunchSpec,
       )
 
-      assertThat(payload.threadIdentity).isEqualTo(buildAgentSessionIdentity(AgentSessionProvider.CODEX, "thread-1"))
+      assertThat(payload.threadIdentity).isEqualTo(buildAgentSessionIdentity(AgentSessionProvider.from("codex"), "thread-1"))
       assertThat(payload.runtimeThreadId).isEqualTo("sub-1")
       assertThat(payload.launchSpec.command)
         .containsExactly("codex", "-c", "check_for_update_on_startup=false", "resume", "sub-1")
@@ -90,7 +90,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
       val subAgent = AgentSubAgent(id = "sub-1", name = "")
 
@@ -114,7 +114,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
       val subAgent = AgentSubAgent(id = "sub-1", name = "Sub-agent label")
 
@@ -141,7 +141,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
 
       val payload = resolveAgentSessionChatOpenPlan(
@@ -166,7 +166,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
 
       val payload = withTestLaunchSpecAugmenter {
@@ -201,7 +201,7 @@ class AgentSessionChatOpenPlanTest {
         title = "Parent title",
         updatedAt = 1,
         archived = false,
-        provider = AgentSessionProvider.CODEX,
+        provider = AgentSessionProvider.from("codex"),
       )
 
       val payload = resolveAgentSessionChatOpenPlan(
@@ -210,7 +210,7 @@ class AgentSessionChatOpenPlanTest {
         subAgent = null,
         launchSpecOverride = null,
         resumeLaunchSpecProvider = { provider, sessionId, _ ->
-          check(provider == AgentSessionProvider.CODEX)
+          check(provider == AgentSessionProvider.from("codex"))
           AgentSessionTerminalLaunchSpec(
             command = listOf(
               "codex",
@@ -243,7 +243,7 @@ class AgentSessionChatOpenPlanTest {
     var catalogProject: Project? = null
     val model = AgentPromptGenerationModel(id = "model-1", displayName = "Model 1")
     val descriptor = object : TestAgentSessionProviderDescriptor(
-      provider = AgentSessionProvider.CODEX,
+      provider = AgentSessionProvider.from("codex"),
       supportedModes = setOf(AgentSessionLaunchMode.STANDARD),
       cliAvailable = true,
     ) {
@@ -280,7 +280,7 @@ class AgentSessionChatOpenPlanTest {
           title = "Parent title",
           updatedAt = 1,
           archived = false,
-          provider = AgentSessionProvider.CODEX,
+          provider = AgentSessionProvider.from("codex"),
         )
 
         val payload = resolveAgentSessionChatOpenPlan(
@@ -305,7 +305,7 @@ private fun testResumeLaunchSpec(
   sessionId: String,
   launchMode: AgentSessionLaunchMode,
 ): AgentSessionTerminalLaunchSpec {
-  check(provider == AgentSessionProvider.CODEX)
+  check(provider == AgentSessionProvider.from("codex"))
   if (launchMode == AgentSessionLaunchMode.YOLO) {
     return AgentSessionTerminalLaunchSpec(
       command = listOf("codex", "--yolo", "resume", sessionId),

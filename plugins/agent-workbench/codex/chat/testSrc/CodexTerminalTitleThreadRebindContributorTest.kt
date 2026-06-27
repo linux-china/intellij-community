@@ -2,7 +2,7 @@
 package com.intellij.agent.workbench.codex.chat
 
 import com.intellij.agent.workbench.chat.AgentChatTerminalTitleThreadRebindContributors
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.testFramework.junit5.TestApplication
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -29,8 +29,20 @@ class CodexTerminalTitleThreadRebindContributorTest {
   }
 
   @Test
+  fun extractsThreadTitleFromConfiguredTerminalTitle() {
+    val threadId = "018f4b30-f1b2-7000-9b4d-abcdef123456"
+
+    assertThat(contributor.extractThreadSignal("$threadId | Fix indexing bug")?.threadTitle)
+      .isEqualTo("Fix indexing bug")
+    assertThat(contributor.extractThreadSignal(threadId)?.threadTitle)
+      .isNull()
+    assertThat(contributor.extractThreadSignal("Codex · $threadId · /work/project-a")?.threadTitle)
+      .isNull()
+  }
+
+  @Test
   fun contributorIsRegistered() {
-    assertThat(AgentChatTerminalTitleThreadRebindContributors.find(AgentSessionProvider.CODEX))
+    assertThat(AgentChatTerminalTitleThreadRebindContributors.find(AgentSessionProvider.from("codex")))
       .isInstanceOf(CodexTerminalTitleThreadRebindContributor::class.java)
   }
 }

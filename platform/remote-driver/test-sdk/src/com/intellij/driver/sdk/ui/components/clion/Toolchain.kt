@@ -96,7 +96,7 @@ sealed class Toolchain(
 
   class Cygwin(
     compiler: Compiler = Compiler.DEFAULT,
-    debugger: Debugger = Debugger.CUSTOM_CYGWIN_GDB,
+    debugger: Debugger = Debugger.CYGWIN_GDB,
     buildTool: BuildTool = BuildTool.DEFAULT,
     name: ToolchainNames = ToolchainNames.CYGWIN,
     toolset: Toolset = Toolset(kind = "CYGWIN", path = "C:/Tools/cygwin")
@@ -199,6 +199,7 @@ enum class Debugger {
     override fun getDebuggerFieldName(): String = "Custom GDB executable"
     override fun toString(): String = "Custom GDB"
     override fun type(): String = "GDB"
+    override val shouldTypePath: Boolean = true
   },
 
   CUSTOM_LLDB {
@@ -206,13 +207,15 @@ enum class Debugger {
     override fun getDebuggerFieldName(): String = "Custom LLDB executable"
     override fun toString(): String = "Custom LLDB"
     override fun type(): String = "LLDB"
+    override val shouldTypePath: Boolean = true
   },
 
-  CUSTOM_CYGWIN_GDB {
-    override fun getDebuggerPath(): String = "C:/Tools/cygwin/bin/gdbserver.exe"
+  CYGWIN_GDB {
+    override fun getDebuggerPath(): String = "C:\\Tools\\cygwin\\bin\\gdbserver.exe"
     override fun getDebuggerFieldName(): String = "Custom GDB executable"
     override fun toString(): String = "Custom Cygwin GDB"
     override fun type(): String = "GDB"
+    override val shouldTypePath: Boolean = true
   },
 
   WSL_DEBUGGER {
@@ -239,6 +242,9 @@ enum class Debugger {
   abstract fun getDebuggerPath(): String
   abstract fun getDebuggerFieldName(): String
   abstract fun type(): String
+
+  /** Whether [ToolchainPanel.setDebugger] must type the debugger path into the field after selecting it from the popup. */
+  open val shouldTypePath: Boolean = false
 }
 
 

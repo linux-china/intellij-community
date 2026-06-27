@@ -1,8 +1,8 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react"
+import { AllIcons } from "@jetbrains/intellij-webview"
 import renderMathInElement from "katex/contrib/auto-render"
-import "katex/dist/katex.min.css"
 import ReactMarkdown, { type Components, type Options } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
 import rehypeRaw from "rehype-raw"
@@ -13,14 +13,29 @@ import remarkGfm from "remark-gfm"
 import { MermaidBlock } from "./MermaidBlock"
 import { markdownSanitizeSchema } from "./markdownSanitizeSchema"
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "jb-icon": {
+        src?: string
+        label?: string
+        size?: string
+        className?: string
+        "aria-hidden"?: boolean | "true" | "false"
+      }
+    }
+  }
+}
+
 interface MarkdownPreviewAppProps {
   markdown: string
   scrollLine: number
-  commands: MarkdownCommandDescriptor[]
+  contentVersion: number
   changes: MarkdownChangedBlockDescriptor[]
   selection: MarkdownSourceRange | undefined
   theme: "light" | "dark"
   onOpenLink: (href: string) => void
+  onResolveRunCommands: (request: MarkdownResolveRunCommandsRequest) => Promise<MarkdownResolvedRunCommandsResponse>
   onRunCommand: (request: MarkdownRunCommandRequest) => void
 }
 
@@ -37,6 +52,27 @@ export interface MarkdownCommandDescriptor {
 
 export type MarkdownCommandKind = "BLOCK" | "LINE" | "INLINE"
 
+export interface MarkdownCommandCandidate {
+  id: string
+  kind: MarkdownCommandKind
+  startLine: number
+  startColumn: number
+  endLine: number
+  endColumn: number
+  rawCommand: string
+  language?: string
+  firstLineCommandId?: string
+}
+
+export interface MarkdownResolveRunCommandsRequest {
+  contentVersion: number
+  candidates: MarkdownCommandCandidate[]
+}
+
+export interface MarkdownResolvedRunCommandsResponse {
+  commands: MarkdownCommandDescriptor[]
+}
+
 export type MarkdownChangedBlockKind = "ADDED" | "MODIFIED" | "REMOVED"
 
 export interface MarkdownChangedBlockDescriptor {
@@ -46,6 +82,7 @@ export interface MarkdownChangedBlockDescriptor {
 }
 
 export interface MarkdownRunCommandRequest {
+  contentVersion: number
   id: string
   clientX: number
   clientY: number
@@ -96,6 +133,7 @@ interface MarkdownNode {
 
 interface HastNode {
   tagName?: string
+  value?: string
   properties?: Record<string, unknown>
   children?: HastNode[]
 }
@@ -141,8 +179,15 @@ const removedBlockPlaceholderClassName = "markdownRemovedBlockPlaceholder"
 const headingSelector = "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]"
 const activeHeadingTopOffset = 80
 const markdownResourcePrefix = "./__markdown-preview-resource/"
-const markdownIconPrefix = "./__markdown-preview-icon/"
 let scheduledScrollFrame: number | undefined
+
+const runLineIcon = {
+  src: () => AllIcons.src("expui/gutter/run.svg"),
+}
+
+const runBlockIcon = {
+  src: () => AllIcons.src("expui/gutter/rerun.svg"),
+}
 
 const latexDelimiters = [
   { left: "$$", right: "$$", display: true },
@@ -169,7 +214,23 @@ const rehypePlugins: Options["rehypePlugins"] = [
   [rehypeHighlight, { detect: true, plainText: ["mermaid", "text", "txt"] }],
 ]
 
-export function MarkdownPreviewApp({ markdown, scrollLine, commands, changes, selection, theme, onOpenLink, onRunCommand }: MarkdownPreviewAppProps) {
+export function MarkdownPreviewApp({
+  markdown,
+  scrollLine,
+  contentVersion,
+  changes,
+  selection,
+  theme,
+  onOpenLink,
+  onResolveRunCommands,
+  onRunCommand,
+}: MarkdownPreviewAppProps) {
+  const commandCandidates: MarkdownCommandCandidate[] = []
+  const [resolvedCommands, setResolvedCommands] = useState<{ contentVersion: number, commands: MarkdownCommandDescriptor[] }>({
+    contentVersion: -1,
+    commands: [],
+  })
+  const commands = resolvedCommands.contentVersion === contentVersion ? resolvedCommands.commands : []
   const commandLookup = createCommandLookup(commands)
   const components: Components = {
     a({ href, children, ...props }) {
@@ -195,6 +256,10 @@ export function MarkdownPreviewApp({ markdown, scrollLine, commands, changes, se
         )
       }
       const sourcePosition = sourcePositionFromPreNode(node)
+      const codeNode = codeNodeFromPreNode(node)
+      if (sourcePosition && codeNode) {
+        commandCandidates.push(...codeFenceCommandCandidates(sourcePosition, codeNode))
+      }
       const blockCommand = sourcePosition ? findBlockCommand(commandLookup, sourcePosition) : undefined
       const lineCommands = sourcePosition ? findLineCommands(commandLookup, sourcePosition, blockCommand?.firstLineCommandId) : []
       if (!blockCommand && lineCommands.length === 0) {
@@ -204,6 +269,7 @@ export function MarkdownPreviewApp({ markdown, scrollLine, commands, changes, se
         <div className="codeFenceWithCommands">
           <pre className={className} {...props}>{children}</pre>
           <CodeFenceRunGutter
+            contentVersion={contentVersion}
             sourcePosition={sourcePosition}
             blockCommand={blockCommand}
             lineCommands={lineCommands}
@@ -218,11 +284,14 @@ export function MarkdownPreviewApp({ markdown, scrollLine, commands, changes, se
         return <MermaidBlock chart={code} theme={theme} />
       }
       const sourcePosition = sourcePositionFromHastNode(node)
+      if (sourcePosition && !hasLanguageClass(className)) {
+        commandCandidates.push(inlineCommandCandidate(sourcePosition, code))
+      }
       const inlineCommand = sourcePosition ? findInlineCommand(commandLookup, sourcePosition) : undefined
       if (inlineCommand) {
         return (
           <code className={className} {...props}>
-            <RunCommandButton command={inlineCommand} variant="inline" onRunCommand={onRunCommand} />
+            <RunCommandButton contentVersion={contentVersion} command={inlineCommand} variant="inline" onRunCommand={onRunCommand} />
             {children}
           </code>
         )
@@ -230,6 +299,16 @@ export function MarkdownPreviewApp({ markdown, scrollLine, commands, changes, se
       return <code className={className} {...props}>{children}</code>
     },
   }
+
+  useEffect(() => {
+    let cancelled = false
+    void onResolveRunCommands({ contentVersion, candidates: uniqueCommandCandidates(commandCandidates) }).then(response => {
+      if (!cancelled) setResolvedCommands({ contentVersion, commands: response.commands })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [contentVersion, onResolveRunCommands])
 
   useEffect(() => {
     renderLatex()
@@ -404,6 +483,118 @@ function normalizeHeadingText(text: string): string {
   return text.replace(/\s+/g, " ").trim()
 }
 
+function codeFenceCommandCandidates(sourcePosition: SourcePositionRange, codeNode: HastNode): MarkdownCommandCandidate[] {
+  const code = hastText(codeNode)
+  const language = codeFenceLanguage(codeNode)
+  const lineCommands = lineCommandCandidates(sourcePosition, code)
+  const result: MarkdownCommandCandidate[] = []
+  if (language) {
+    result.push({
+      ...commandSource(sourcePosition),
+      id: commandId("BLOCK", sourcePosition, code),
+      kind: "BLOCK",
+      rawCommand: code,
+      language,
+      firstLineCommandId: lineCommands.length > 1 ? lineCommands[0].id : undefined,
+    })
+  }
+  result.push(...lineCommands)
+  return result
+}
+
+function lineCommandCandidates(sourcePosition: SourcePositionRange, code: string): MarkdownCommandCandidate[] {
+  const result: MarkdownCommandCandidate[] = []
+  let offset = 0
+  let lineIndex = 0
+  while (offset < code.length) {
+    const delimiter = code.indexOf("\n", offset)
+    const lineEndOffset = delimiter < 0 ? code.length : delimiter
+    const rawCommand = code.slice(offset, lineEndOffset)
+    const lineSource = codeLineSourcePosition(sourcePosition, lineIndex, rawCommand)
+    result.push({
+      ...commandSource(lineSource),
+      id: commandId("LINE", lineSource, rawCommand),
+      kind: "LINE",
+      rawCommand,
+    })
+    if (delimiter < 0) break
+    offset = delimiter + 1
+    lineIndex++
+  }
+  return result
+}
+
+function inlineCommandCandidate(sourcePosition: SourcePositionRange, rawCommand: string): MarkdownCommandCandidate {
+  return {
+    ...commandSource(sourcePosition),
+    id: commandId("INLINE", sourcePosition, rawCommand),
+    kind: "INLINE",
+    rawCommand,
+  }
+}
+
+function commandSource(sourcePosition: SourcePositionRange): Pick<MarkdownCommandCandidate, "startLine" | "startColumn" | "endLine" | "endColumn"> {
+  return {
+    startLine: sourcePosition.startLine,
+    startColumn: sourcePosition.startColumn,
+    endLine: sourcePosition.endLine,
+    endColumn: sourcePosition.endColumn,
+  }
+}
+
+function codeLineSourcePosition(sourcePosition: SourcePositionRange, lineIndex: number, rawCommand: string): SourcePositionRange {
+  const line = sourcePosition.startLine + lineIndex + 1
+  return {
+    startLine: line,
+    startColumn: 1,
+    endLine: line,
+    endColumn: rawCommand.length + 1,
+  }
+}
+
+function commandId(kind: MarkdownCommandKind, sourcePosition: SourcePositionRange, rawCommand: string): string {
+  return `${kind}:${positionKey(sourcePosition)}:${hashString(rawCommand)}`
+}
+
+function hashString(value: string): string {
+  let hash = 0
+  for (let index = 0; index < value.length; index++) {
+    hash = (Math.imul(hash, 31) + value.charCodeAt(index)) | 0
+  }
+  return (hash >>> 0).toString(16)
+}
+
+function uniqueCommandCandidates(candidates: MarkdownCommandCandidate[]): MarkdownCommandCandidate[] {
+  const result = new Map<string, MarkdownCommandCandidate>()
+  for (const candidate of candidates) {
+    result.set(candidate.id, candidate)
+  }
+  return Array.from(result.values())
+}
+
+function codeFenceLanguage(codeNode: HastNode): string | undefined {
+  const classNames = hastClassNames(codeNode)
+  const languageClass = classNames.find(className => className.startsWith("language-"))
+  return languageClass?.substring("language-".length)
+}
+
+function hasLanguageClass(className: string | undefined): boolean {
+  return className?.split(/\s+/).some(name => name.startsWith("language-")) ?? false
+}
+
+function hastClassNames(node: HastNode | undefined): string[] {
+  const className = node?.properties?.className
+  if (Array.isArray(className)) return className.filter((name): name is string => typeof name === "string")
+  if (typeof className === "string") return className.split(/\s+/)
+  return []
+}
+
+function hastText(node: HastNode | undefined): string {
+  if (!node) return ""
+  if (typeof node.value === "string") return node.value
+  return node.children?.map(hastText).join("") ?? ""
+}
+
 interface CommandLookup {
   blockCommands: MarkdownCommandDescriptor[]
   lineCommands: MarkdownCommandDescriptor[]
@@ -449,21 +640,23 @@ function findInlineCommand(lookup: CommandLookup, sourcePosition: SourcePosition
 }
 
 interface CodeFenceRunGutterProps {
+  contentVersion: number
   sourcePosition: SourcePositionRange | undefined
   blockCommand: MarkdownCommandDescriptor | undefined
   lineCommands: MarkdownCommandDescriptor[]
   onRunCommand: (request: MarkdownRunCommandRequest) => void
 }
 
-function CodeFenceRunGutter({ sourcePosition, blockCommand, lineCommands, onRunCommand }: CodeFenceRunGutterProps) {
+function CodeFenceRunGutter({ contentVersion, sourcePosition, blockCommand, lineCommands, onRunCommand }: CodeFenceRunGutterProps) {
   if (!sourcePosition || (!blockCommand && lineCommands.length === 0)) return null
   const contentStartLine = sourcePosition.startLine + 1
   return (
     <div className="codeFenceRunGutter" aria-hidden={false}>
-      {blockCommand && <RunCommandButton command={blockCommand} variant="block" onRunCommand={onRunCommand} />}
+      {blockCommand && <RunCommandButton contentVersion={contentVersion} command={blockCommand} variant="block" onRunCommand={onRunCommand} />}
       {lineCommands.map(command => (
         <RunCommandButton
           key={command.id}
+          contentVersion={contentVersion}
           command={command}
           variant="line"
           style={{ top: `calc(${Math.max(0, command.startLine - contentStartLine)} * var(--markdown-code-line-height))` }}
@@ -475,17 +668,18 @@ function CodeFenceRunGutter({ sourcePosition, blockCommand, lineCommands, onRunC
 }
 
 interface RunCommandButtonProps {
+  contentVersion: number
   command: MarkdownCommandDescriptor
   variant: "block" | "line" | "inline"
   style?: CSSProperties
   onRunCommand: (request: MarkdownRunCommandRequest) => void
 }
 
-function RunCommandButton({ command, variant, style, onRunCommand }: RunCommandButtonProps) {
+function RunCommandButton({ contentVersion, command, variant, style, onRunCommand }: RunCommandButtonProps) {
   function handleClick(event: MouseEvent<HTMLButtonElement>): void {
     event.preventDefault()
     event.stopPropagation()
-    onRunCommand({ id: command.id, clientX: Math.round(event.clientX), clientY: Math.round(event.clientY) })
+    onRunCommand({ contentVersion, id: command.id, clientX: Math.round(event.clientX), clientY: Math.round(event.clientY) })
   }
 
   return (
@@ -497,13 +691,13 @@ function RunCommandButton({ command, variant, style, onRunCommand }: RunCommandB
       style={style}
       onClick={handleClick}
     >
-      <img src={runCommandIconSrc(variant)} alt="" />
+      <jb-icon className="markdownRunIcon" src={runCommandIcon(variant).src()} aria-hidden={true} />
     </button>
   )
 }
 
-function runCommandIconSrc(variant: "block" | "line" | "inline"): string {
-  return `${markdownIconPrefix}${variant === "block" ? "runBlock.png" : "run.png"}`
+function runCommandIcon(variant: "block" | "line" | "inline"): typeof runLineIcon {
+  return variant === "block" ? runBlockIcon : runLineIcon
 }
 
 function renderLatex(): void {
@@ -688,8 +882,11 @@ function sourcePositionFromPreNode(node: unknown): SourcePositionRange | undefin
   const prePosition = sourcePositionFromHastNode(node)
   if (prePosition) return prePosition
 
-  const codeNode = (node as HastNode | undefined)?.children?.find(child => child.tagName === "code")
-  return sourcePositionFromHastNode(codeNode)
+  return sourcePositionFromHastNode(codeNodeFromPreNode(node))
+}
+
+function codeNodeFromPreNode(node: unknown): HastNode | undefined {
+  return (node as HastNode | undefined)?.children?.find(child => child.tagName === "code")
 }
 
 function sourcePositionFromHastNode(node: unknown): SourcePositionRange | undefined {
@@ -765,7 +962,7 @@ function frontmatterCodeNode(node: MarkdownNode): MarkdownNode {
 }
 
 function frontmatterLanguageFromPreNode(node: unknown): string | undefined {
-  const codeNode = (node as HastNode | undefined)?.children?.find(child => child.tagName === "code")
+  const codeNode = codeNodeFromPreNode(node)
   const language = codeNode?.properties?.dataFrontmatter
   return typeof language === "string" ? language : undefined
 }

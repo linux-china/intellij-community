@@ -81,6 +81,11 @@
             qualifiedName="org.jetbrains.kotlin.j2kConverterExtension"
             interface="org.jetbrains.kotlin.j2k.J2kConverterExtension"
             dynamic="true"/>
+
+    <extensionPoint
+            qualifiedName="org.jetbrains.kotlin.j2kNullabilityInferenceExtension"
+            interface="org.jetbrains.kotlin.nj2k.J2KNullabilityInferenceExtension"
+            dynamic="true"/>
     <extensionPoint
             qualifiedName="org.jetbrains.kotlin.j2kPreprocessorExtension"
             interface="org.jetbrains.kotlin.j2k.J2kPreprocessorExtension"
@@ -345,7 +350,6 @@
     <binaryExtension implementation="org.jetbrains.kotlin.idea.base.projectStructure.JavaClassBinary"/>
     <binaryExtension implementation="org.jetbrains.kotlin.idea.base.projectStructure.KotlinBuiltInBinary"/>
     <binaryExtension implementation="org.jetbrains.kotlin.idea.base.projectStructure.KotlinModuleBinary"/>
-    <binaryExtension implementation="org.jetbrains.kotlin.idea.base.projectStructure.KotlinJsMetaBinary"/>
 
     <projectConfigurator implementation="org.jetbrains.kotlin.idea.configuration.KotlinJavaModuleConfigurator"/>
     <projectConfigurator implementation="org.jetbrains.kotlin.idea.configuration.KotlinJsModuleConfigurator"/>

@@ -1,7 +1,7 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.sessions.toolwindow.ui
 
-import com.intellij.agent.workbench.common.AgentWorkbenchActionIds
+import com.intellij.agent.workbench.ui.AgentWorkbenchActionIds
 import com.intellij.agent.workbench.sessions.statistics.AgentWorkbenchEntryPoint
 import com.intellij.agent.workbench.sessions.model.ArchiveThreadTarget
 import com.intellij.agent.workbench.sessions.model.hasAnyProviderSnapshot
@@ -44,6 +44,7 @@ internal class AgentSessionsTreeInteractionController(
   private val selectedUnarchiveTargets: () -> List<ArchiveThreadTarget>,
   private val showMoreProjects: () -> Unit,
   private val showMoreThreads: (String) -> Unit,
+  private val isNewThreadPopupAvailable: () -> Boolean = { true },
 ) {
   var popupActionContext: AgentSessionsTreePopupActionContext? = null
     private set
@@ -147,6 +148,7 @@ internal class AgentSessionsTreeInteractionController(
       node = treeNode,
       archiveTargets = selectedArchiveTargets(),
       unarchiveTargets = selectedUnarchiveTargets(),
+      newThreadActionAvailable = isNewThreadPopupAvailable(),
     ) ?: return
     val popupMenu = ActionManager.getInstance().createActionPopupMenu(ActionPlaces.TOOLWINDOW_POPUP, actionGroup)
     popupMenu.setTargetComponent(tree)

@@ -8,14 +8,15 @@ package com.intellij.agent.workbench.sessions.toolwindow.ui
 import com.intellij.agent.workbench.chat.AgentChatTabSelectionService
 import com.intellij.agent.workbench.chat.AgentChatOpenPendingTabsStateService
 import com.intellij.agent.workbench.chat.AgentChatPendingEditorLifecycleService
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.AgentSessionCostHintBanner
 import com.intellij.agent.workbench.sessions.AgentSessionCostHintStateService
 import com.intellij.agent.workbench.sessions.AgentSessionsBundle
 import com.intellij.agent.workbench.sessions.jbcentral.JbCentralQuotaCliSupport
 import com.intellij.agent.workbench.sessions.jbcentral.JbCentralQuotaHintBanner
 import com.intellij.agent.workbench.sessions.jbcentral.JbCentralQuotaHintStateService
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderUiContributors
 import com.intellij.agent.workbench.sessions.model.AgentSessionThreadViewMode
 import com.intellij.agent.workbench.sessions.service.AgentArchivedSessionsService
 import com.intellij.agent.workbench.sessions.service.AgentSessionProviderAvailabilityListener
@@ -23,7 +24,10 @@ import com.intellij.agent.workbench.sessions.service.AgentSessionProviderAvailab
 import com.intellij.agent.workbench.sessions.service.AgentSessionReadService
 import com.intellij.agent.workbench.sessions.service.AgentSessionRefreshService
 import com.intellij.agent.workbench.sessions.service.AgentSessionsToolWindowVisibilityService
-import com.intellij.agent.workbench.sessions.settings.AgentSessionProviderSettingsListener
+import com.intellij.agent.workbench.sessions.service.openableSourceProjectPath
+import com.intellij.agent.workbench.sessions.settings.AgentThreadsProjectScopeSettings
+import com.intellij.agent.workbench.settings.AgentSessionProviderSettingsListener
+import com.intellij.agent.workbench.settings.AgentWorkbenchSettingsListener
 import com.intellij.agent.workbench.sessions.state.AgentSessionThreadViewStateService
 import com.intellij.agent.workbench.sessions.state.AgentSessionsStateStore
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeId
@@ -31,6 +35,7 @@ import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeModel
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeModelDiff
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeNode
 import com.intellij.agent.workbench.sessions.util.isAgentSessionNewSessionId
+import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -66,8 +71,14 @@ internal fun createAgentSessionsNorthComponents(
   parentDisposable: Disposable,
   refreshSessions: () -> Unit,
 ): List<JComponent> {
-  val providerContributions = AgentSessionProviders.allProvidersById()
-    .mapNotNull { provider -> provider.createToolWindowNorthComponent(project) }
+  val providerContributions = AgentSessionProviders.allProvidersById().flatMap { provider ->
+    buildList {
+      provider.createToolWindowNorthComponent(project)?.let(::add)
+      AgentSessionProviderUiContributors.forProvider(provider.provider).mapNotNullTo(this) { contributor ->
+        contributor.createToolWindowNorthComponent(project)
+      }
+    }
+  }
   service<JbCentralQuotaHintStateService>().setEligible(JbCentralQuotaCliSupport.isAvailable())
   return buildList {
     add(AgentProviderCliStatusBanner(project, parentDisposable, refreshSessions = refreshSessions))
@@ -170,9 +181,6 @@ internal class AgentSessionsToolWindowPanel(
     threadViewStateFlow = service<AgentSessionThreadViewStateService>().state,
     selectedChatTabFlow = project.service<AgentChatTabSelectionService>().selectedChatTab,
     pendingChatTabsStateFlow = service<AgentChatOpenPendingTabsStateService>().state,
-    markThreadAsRead = { path, provider, threadId, updatedAt ->
-      service<AgentSessionRefreshService>().markThreadAsRead(path, provider, threadId, updatedAt)
-    },
     ensureArchivedSessionsLoaded = { service<AgentArchivedSessionsService>().ensureLoaded() },
     tree = tree,
     getSessionTreeModel = { sessionTreeModel },
@@ -187,6 +195,8 @@ internal class AgentSessionsToolWindowPanel(
         tree.repaint()
       }
     },
+    isCurrentProjectScopeEnabled = AgentThreadsProjectScopeSettings::isCurrentProjectOnly,
+    currentProjectPathProvider = { openableSourceProjectPath(project) },
     onBeforeModelSwap = {
       rowActionsOverlay.clearTransientState()
     },
@@ -216,15 +226,18 @@ internal class AgentSessionsToolWindowPanel(
       selectedUnarchiveTargets = { dataContextProvider.selectedUnarchiveTargets() },
       showMoreProjects = ::showMoreProjectsForCurrentView,
       showMoreThreads = ::showMoreThreadsForCurrentView,
+      isNewThreadPopupAvailable = { !stateController.isSingleProjectPresentationEnabled() },
     )
 
     rowActionsOverlay = AgentSessionsTreeRowActionsOverlay(
       project = project,
       tree = tree,
       nodeResolver = ::sessionTreeNode,
+      isNewThreadActionAvailable = { !stateController.isSingleProjectPresentationEnabled() },
     )
 
     installProviderAvailabilityRefresh()
+    installProjectScopeRefresh()
     configureTree()
     add(northPanel, BorderLayout.NORTH)
     add(createSessionTreeScrollPane(tree), BorderLayout.CENTER)
@@ -251,6 +264,24 @@ internal class AgentSessionsToolWindowPanel(
           tree.repaint()
         }
       })
+  }
+
+  private fun installProjectScopeRefresh() {
+    ApplicationManager.getApplication().messageBus.connect(this)
+      .subscribe(AgentWorkbenchSettingsListener.TOPIC, object : AgentWorkbenchSettingsListener {
+        override fun openInDedicatedFrameChanged() {
+          refreshProjectScope()
+        }
+
+        override fun agentThreadsCurrentProjectOnlyChanged() {
+          refreshProjectScope()
+        }
+      })
+  }
+
+  private fun refreshProjectScope() {
+    stateController.projectScopeChanged()
+    ActivityTracker.getInstance().inc()
   }
 
   private fun installToolWindowVisibilityTracker() {

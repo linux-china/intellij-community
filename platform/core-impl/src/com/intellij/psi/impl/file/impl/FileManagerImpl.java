@@ -11,11 +11,11 @@ import com.intellij.lang.Language;
 import com.intellij.lang.LanguageUtil;
 import com.intellij.lang.injection.InjectedLanguageManager;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.EditorLockFreeTyping;
 import com.intellij.openapi.application.ex.ApplicationManagerEx;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.fileTypes.BinaryFileTypeDecompilers;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.DumbModeListenerBackgroundable;
 import com.intellij.openapi.project.Project;
@@ -463,17 +463,15 @@ public final class FileManagerImpl implements FileManagerEx {
   }
 
   @Override
-  @RequiresReadLock(generateAssertion = false) // assert for real vFile
+  @RequiresReadLock
   public @Nullable PsiFile findFile(@NotNull VirtualFile vFile) {
-    EditorLockFreeTyping.assertReadAccess(vFile);
     CodeInsightContext context = CodeInsightContexts.anyContext();
     return findFile(vFile, context);
   }
 
   @Override
-  @RequiresReadLock(generateAssertion = false) // assert for real vFile
+  @RequiresReadLock
   public @Nullable PsiFile findFile(@NotNull VirtualFile vFile, @NotNull CodeInsightContext context) {
-    EditorLockFreeTyping.assertReadAccess(vFile);
     if (vFile.isDirectory()) return null;
 
     if (!vFile.isValid()) {
@@ -486,10 +484,9 @@ public final class FileManagerImpl implements FileManagerEx {
     return viewProvider.getPsi(viewProvider.getBaseLanguage());
   }
 
-  @RequiresReadLock(generateAssertion = false) // assert for real vFile
+  @RequiresReadLock
   @Override
   public @Nullable PsiFile getCachedPsiFile(@NotNull VirtualFile vFile) {
-    EditorLockFreeTyping.assertReadAccess(vFile);
     return getCachedPsiFile(vFile, CodeInsightContexts.anyContext());
   }
 
@@ -660,7 +657,8 @@ public final class FileManagerImpl implements FileManagerEx {
 
   @Override
   public void reloadPsiAfterTextChange(@NotNull FileViewProvider viewProvider, @NotNull VirtualFile vFile) {
-    if (!areViewProvidersEquivalent(viewProvider, createFileViewProvider(vFile, false))) {
+    if (BinaryFileTypeDecompilers.getInstance().hasDecompiler(vFile) ||
+        !areViewProvidersEquivalent(viewProvider, createFileViewProvider(vFile, false))) {
       forceReload(vFile);
       return;
     }

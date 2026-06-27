@@ -1,14 +1,14 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.sessions.service
 
-import com.intellij.agent.workbench.common.AgentThreadActivity
-import com.intellij.agent.workbench.common.AgentThreadActivityReport
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
-import com.intellij.agent.workbench.common.session.AgentSessionThread
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdate
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionSourceUpdateEvent
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionThreadActivityUpdate
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionThreadPresentationUpdate
+import com.intellij.platform.ai.agent.core.AgentThreadActivity
+import com.intellij.platform.ai.agent.core.AgentThreadActivityReport
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionThread
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceUpdate
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionSourceUpdateEvent
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionThreadActivityUpdate
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionThreadPresentationUpdate
 import com.intellij.agent.workbench.sessions.waitForCondition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +40,7 @@ class AgentSessionRefreshSchedulerTest {
         rowActivity = AgentThreadActivity.PROCESSING,
         chromeActivity = AgentThreadActivity.REVIEWING,
       ),
-      provider = AgentSessionProvider.CODEX,
+      provider = AgentSessionProvider.from("codex"),
     )
 
     val resolved = resolveAgentThreadActivityReportUpdate(
@@ -66,7 +66,7 @@ class AgentSessionRefreshSchedulerTest {
         rowActivity = AgentThreadActivity.READY,
         chromeActivity = AgentThreadActivity.REVIEWING,
       ),
-      provider = AgentSessionProvider.CODEX,
+      provider = AgentSessionProvider.from("codex"),
     )
 
     val resolved = resolveAgentThreadActivityReportUpdate(
@@ -327,8 +327,8 @@ class AgentSessionRefreshSchedulerTest {
     val scheduler = AgentSessionRefreshScheduler(
       serviceScope = serviceScope,
       sessionSourcesProvider = { emptyList() },
-      scopedRefreshProvidersProvider = { listOf(AgentSessionProvider.CODEX) },
-      scopedRefreshSignalsProvider = { provider -> if (provider == AgentSessionProvider.CODEX) scopedEvents else emptyFlow() },
+      scopedRefreshProvidersProvider = { listOf(AgentSessionProvider.from("codex")) },
+      scopedRefreshSignalsProvider = { provider -> if (provider == AgentSessionProvider.from("codex")) scopedEvents else emptyFlow() },
       isRefreshGateActive = { true },
       executeFullRefresh = {},
       executeProviderRefresh = { _, _, updateEvent -> providerRefreshes.add(updateEvent) },

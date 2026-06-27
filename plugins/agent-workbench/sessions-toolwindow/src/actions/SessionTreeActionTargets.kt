@@ -1,8 +1,8 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.agent.workbench.sessions.toolwindow.actions
 
-import com.intellij.agent.workbench.common.normalizeAgentWorkbenchPath
-import com.intellij.agent.workbench.sessions.core.SessionActionTarget
+import com.intellij.platform.ai.agent.core.normalizeAgentWorkbenchPath
+import com.intellij.platform.ai.agent.sessions.core.SessionActionTarget
 import com.intellij.agent.workbench.sessions.model.ArchiveThreadTarget
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeId
 import com.intellij.agent.workbench.sessions.toolwindow.tree.SessionTreeNode
@@ -17,6 +17,7 @@ internal fun createAgentSessionsTreePopupActionContext(
   node: SessionTreeNode,
   archiveTargets: List<ArchiveThreadTarget>,
   unarchiveTargets: List<ArchiveThreadTarget> = emptyList(),
+  newThreadActionAvailable: Boolean = true,
 ): AgentSessionsTreePopupActionContext? {
   val target = resolveSessionActionTarget(nodeId, node) ?: return null
   return AgentSessionsTreePopupActionContext(
@@ -24,6 +25,7 @@ internal fun createAgentSessionsTreePopupActionContext(
     target = target,
     archiveTargets = archiveTargets,
     unarchiveTargets = unarchiveTargets,
+    newThreadActionAvailable = newThreadActionAvailable,
   )
 }
 

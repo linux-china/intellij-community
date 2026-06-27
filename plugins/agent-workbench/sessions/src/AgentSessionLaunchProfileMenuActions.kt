@@ -4,20 +4,20 @@ package com.intellij.agent.workbench.sessions
 // @spec community/plugins/agent-workbench/spec/sessions/agent-terminal-sessions.spec.md
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-task-cost-profiles.spec.md
 
-import com.intellij.agent.workbench.common.AgentWorkbenchActionIds
-import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.agent.workbench.ui.AgentWorkbenchActionIds
+import com.intellij.platform.ai.agent.core.session.AgentSessionLaunchMode
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfile
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfileKind
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionLaunchProfileSnapshot
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuItem
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuModel
-import com.intellij.agent.workbench.sessions.core.providers.buildAgentSessionProviderMenuModel
-import com.intellij.agent.workbench.sessions.core.providers.buildBuiltInLaunchProfiles
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionLaunchProfileSnapshot
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderDescriptor
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderMenuItem
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderMenuModel
+import com.intellij.platform.ai.agent.sessions.core.providers.buildAgentSessionProviderMenuModel
+import com.intellij.platform.ai.agent.sessions.core.providers.buildBuiltInLaunchProfiles
 import com.intellij.agent.workbench.sessions.statistics.AgentWorkbenchEntryPoint
 import com.intellij.agent.workbench.sessions.service.AgentSessionProviderAvailabilityService
-import com.intellij.agent.workbench.sessions.settings.AgentSessionProviderSettingsService
+import com.intellij.agent.workbench.settings.AgentSessionProviderSettingsService
 import com.intellij.agent.workbench.ui.AgentWorkbenchPopupRow
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -50,7 +50,8 @@ fun buildAgentSessionLaunchProfileMenuModel(
   bridges: List<AgentSessionProviderDescriptor>,
   project: Project,
 ): AgentSessionProviderMenuModel {
-  val enabledBridges = service<AgentSessionProviderSettingsService>().enabledProviders(bridges)
+  val providerSettings = service<AgentSessionProviderSettingsService>()
+  val enabledBridges = bridges.filter { bridge -> providerSettings.isProviderEnabled(bridge.provider) }
   return buildAgentSessionProviderMenuModel(enabledBridges, providerAvailabilitySnapshot(enabledBridges, project))
 }
 

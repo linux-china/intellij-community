@@ -6,7 +6,7 @@ targets:
   - ../../claude/sessions/src/ClaudeHookBridge.kt
   - ../../claude/sessions/src/ClaudeHookHttpRequestHandler.kt
   - ../../claude/sessions/src/backend/store/ClaudeStoreSessionBackend.kt
-  - ../../claude/sessions/resources/intellij.agent.workbench.claude.sessions.xml
+  - ../../claude/sessions/resources/intellij.platform.ai.agent.claude.sessions.xml
 ---
 
 # Agent Sessions Claude Hooks
@@ -37,6 +37,9 @@ Agent Workbench must use Claude Code hooks for immediate Claude session status a
 
 - The generated settings must include a `PreToolUse` hook with matcher `AskUserQuestion|ExitPlanMode` and a `PostToolUse` hook with matcher `Write|Edit|MultiEdit|NotebookEdit`.
   [@test] ../../claude/sessions/testSrc/ClaudeHookBridgeTest.kt
+
+- `ToolSearch` must not be added as a broad `PreToolUse` matcher. Add it only with a verified input-aware hook condition for `select:ExitPlanMode` or `select:AskUserQuestion`; JSONL transcript parsing remains the correctness fallback.
+  [@test] ../../claude/sessions/testSrc/ClaudeSessionsStoreTest.kt
 
 - Hook settings must be per-launch and authenticated with a bearer token bound to the expected Claude session id.
   [@test] ../../claude/sessions/testSrc/ClaudeHookBridgeTest.kt
@@ -69,13 +72,15 @@ Agent Workbench must use Claude Code hooks for immediate Claude session status a
 
 - Missing or invalid bearer tokens must be rejected with an unauthorized hook result.
 - Malformed JSON or missing session id must be rejected as bad requests. Authenticated but unsupported or incomplete hook payloads must be accepted without emitting updates.
+- HTTP hook responses must use `Content-Type: application/json` and return a JSON object body, including success and rejection statuses.
 - Hook delivery failures must not block Claude Code; the generated HTTP hook has a short timeout and the JSONL watcher remains the fallback.
 
 ## Testing / Local Run
 
-- Focused tests: `./tests.cmd --module intellij.agent.workbench.claude.sessions.tests --test com.intellij.agent.workbench.claude.sessions.ClaudeAgentSessionProviderDescriptorTest;com.intellij.agent.workbench.claude.sessions.ClaudeHookBridgeTest;com.intellij.agent.workbench.claude.sessions.ClaudeStoreSessionBackendTest`
+- Focused tests: `./tests.cmd --module intellij.platform.ai.agent.claude.sessions.tests --test com.intellij.platform.ai.agent.claude.sessions.ClaudeAgentSessionProviderDescriptorTest;com.intellij.platform.ai.agent.claude.sessions.ClaudeHookBridgeTest;com.intellij.platform.ai.agent.claude.sessions.ClaudeStoreSessionBackendTest`
 
 ## Open Questions / Risks
 
 - Claude Code does not hook arbitrary assistant text questions; only tool calls such as `AskUserQuestion` and `ExitPlanMode` are covered.
+- Broad `ToolSearch` hook matching would call the endpoint for every `ToolSearch`; input-aware hook conditions may avoid that only after their exact Claude Code matching behavior is verified.
 - If the IDE built-in server is unavailable or the HTTP hook times out, the JSONL watcher remains the fallback.

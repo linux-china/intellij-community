@@ -15,8 +15,6 @@ import org.junit.jupiter.api.Test
  */
 class PyTupleTypeTest : PyCodeInsightTestCase() {
 
-  private val noAny = TestOptions(enablePyAnyType = false)
-
   @Nested
   inner class TupleLiteralsAndElementInference {
     @Test
@@ -71,12 +69,12 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-64474"])
-    fun `tuple element accessed with out of bound index`() = test(noAny, """
+    fun `tuple element accessed with out of bound index`() = test("""
       xs = (1, True, "foo")
       expr = xs[-10], xs[10]
       #│        │        ^^ WARNING Tuple index out of range
       #│        ^^^ WARNING Tuple index out of range
-      #└ TYPE tuple[Any, Any]
+      #└ TYPE tuple[Unknown, Unknown]
       """)
 
     @Test
@@ -234,7 +232,6 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
       xs = unknown() # type: Tuple[int, ...]
       #    ^^^^^^^ ERROR Unresolved reference 'unknown'
-      #    ^^^^^^^^^ WARNING 'unknown' is not callable
 
       for x in xs:
           expr = x
@@ -264,7 +261,6 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
       xs = unknown() # type: Tuple[int, ...]
       #    ^^^^^^^ ERROR Unresolved reference 'unknown'
-      #    ^^^^^^^^^ WARNING 'unknown' is not callable
       expr = xs * 42
       #└ TYPE tuple[int, ...]
       """)
@@ -308,7 +304,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-10967"])
-    fun `default tuple parameter member`() = test(noAny, """
+    fun `default tuple parameter member`() = test("""
       def foo(xs=(1, 2)):
         expr, foo = xs
       # └ TYPE int
@@ -321,14 +317,13 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
       xs = unknown() # type: Tuple[int, ...]
       #    ^^^^^^^ ERROR Unresolved reference 'unknown'
-      #    ^^^^^^^^^ WARNING 'unknown' is not callable
       expr, yx = xs
       #  └ TYPE int
       """)
 
     @Test
     @TestFor(issues = ["PY-9334"])
-    fun `iterate over list of nested tuples`() = test(noAny, """
+    fun `iterate over list of nested tuples`() = test("""
       def f():
           for i, (expr, v) in [(0, ('foo', []))]:
       #           └ TYPE str
@@ -337,7 +332,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-38928"])
-    fun `iterate list of tuples`() = test(noAny, """
+    fun `iterate list of tuples`() = test("""
       for ((_, expr)) in [(1, 'foo')]:
       #         └ TYPE str
           pass
@@ -348,28 +343,28 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
   inner class GenericIterableUnpacking {
     @Test
     @TestFor(issues = ["PY-29489"])
-    fun `generic iterable unpacking no brackets`() = test(noAny, """
+    fun `generic iterable unpacking no brackets`() = test(TestOptions(enablePyAnyType = false), """
       _, expr, _ = [1, 2, 3]
       #  └ TYPE int
       """)
 
     @Test
     @TestFor(issues = ["PY-29489"])
-    fun `generic iterable unpacking parentheses`() = test(noAny, """
+    fun `generic iterable unpacking parentheses`() = test(TestOptions(enablePyAnyType = false), """
       (_, expr, _) = [1, 2, 3]
       #   └ TYPE int
       """)
 
     @Test
     @TestFor(issues = ["PY-29489"])
-    fun `generic iterable unpacking square brackets`() = test(noAny, """
+    fun `generic iterable unpacking square brackets`() = test(TestOptions(enablePyAnyType = false), """
       [_, expr] = [1, 2, 3]
       #   └ TYPE int
       """)
 
     @Test
     @TestFor(issues = ["PY-29489"])
-    fun `non generic iterable unpacking`() = test(noAny, """
+    fun `non generic iterable unpacking`() = test(TestOptions(enablePyAnyType = false), """
       _, expr = "ab"
       #  └ TYPE LiteralString
       """)
@@ -381,7 +376,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
-    fun `unpacking to nested targets in square brackets in for loops`() = test(noAny, """
+    fun `unpacking to nested targets in square brackets in for loops`() = test("""
       xs = [(1, ("foo",))]
       for [_, [expr]] in xs:
       #        └ TYPE str
@@ -389,7 +384,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
-    fun `unpacking to nested targets in square brackets in comprehensions`() = test(noAny, """
+    fun `unpacking to nested targets in square brackets in comprehensions`() = test("""
       xs = [(1, ("foo",))]
       ys = [expr for [_, [expr]] in xs]
       #     └ TYPE str
@@ -400,7 +395,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
   inner class NestedListUnpacking {
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking inner element`() = test(noAny, """
+    fun `nested list unpacking inner element`() = test("""
       def f(edges: list[list[int]]):
                        [[node_a], second_edge] = edges
                        expr = node_a
@@ -409,7 +404,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking outer element`() = test(noAny, """
+    fun `nested list unpacking outer element`() = test("""
       def f(edges: list[list[int]]):
                        [[node_a], second_edge] = edges
                        expr = second_edge
@@ -418,7 +413,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking inner element on the right`() = test(noAny, """
+    fun `nested list unpacking inner element on the right`() = test("""
       def f(edges: list[list[int]]):
                        [edge, [node_b]] = edges
                        expr = node_b
@@ -427,7 +422,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking outer element on the left`() = test(noAny, """
+    fun `nested list unpacking outer element on the left`() = test("""
       def f(edges: list[list[int]]):
                        [edge, [node_b]] = edges
                        expr = edge
@@ -436,7 +431,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking middle element`() = test(noAny, """
+    fun `nested list unpacking middle element`() = test("""
       def f(edges: list[list[int]]):
                        [edge, [node_b], edge_2] = edges
                        expr = node_b
@@ -445,7 +440,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list unpacking all elements into tuple`() = test(noAny, """
+    fun `nested list unpacking all elements into tuple`() = test("""
       def f(edges: list[list[int]]):
                        [[node_a], [node_b], [node_c]] = edges
                        expr = (node_a, node_b, node_c)
@@ -454,7 +449,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list depth 3 unpacking element`() = test(noAny, """
+    fun `nested list depth 3 unpacking element`() = test("""
       def f(edges: list[list[list[int]]]):
                        [edge, [node_a]] = edges
                        expr = node_a
@@ -463,7 +458,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list depth 3 unpacking deep element`() = test(noAny, """
+    fun `nested list depth 3 unpacking deep element`() = test("""
       def f(edges: list[list[list[int]]]):
                        [edge, [edge_2, [node_a]]] = edges
                        expr = node_a
@@ -472,7 +467,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list depth 3 unpacking middle element`() = test(noAny, """
+    fun `nested list depth 3 unpacking middle element`() = test("""
       def f(edges: list[list[list[int]]]):
                        [edge, [edge_2, [node_a]]] = edges
                        expr = edge_2
@@ -481,7 +476,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-86873"])
-    fun `nested list depth 3 unpacking outer element`() = test(noAny, """
+    fun `nested list depth 3 unpacking outer element`() = test("""
       def f(edges: list[list[list[int]]]):
                        [edge, [edge_2, [node_a]]] = edges
                        expr = edge
@@ -526,7 +521,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-57621"])
-    fun `tuple as generic in tuple narrows`() = test(noAny, """
+    fun `tuple as generic in tuple narrows`() = test("""
       def f[T](t: T) -> tuple[list[T], T] | T: ...
       expr = f((1, 'hello'))
       #└ TYPE tuple[list[tuple[int, str]], tuple[Literal[1], Literal['hello']]] | tuple[Literal[1], Literal['hello']]
@@ -534,7 +529,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-57621"])
-    fun `tuple as bare type variable is literal`() = test(noAny, """
+    fun `tuple as bare type variable is literal`() = test("""
       def f[T](t: T) -> T: ...
       expr = f((1, "hello"))
       #└ TYPE tuple[Literal[1], Literal["hello"]]
@@ -575,7 +570,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-9924"])
-    fun `tuple get item with slice`() = test(noAny, """
+    fun `tuple get item with slice`() = test("""
       t = (1, 2, 3, 4)
       s = slice(0, 2)
       y = t[s]
@@ -614,7 +609,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
-    fun `tuple Any arbitrary length can be assigned to any tuple`() = test(noAny, """
+    fun `tuple Any arbitrary length can be assigned to any tuple`() = test(TestOptions(enablePyAnyType = false), """
       from typing import Any
       def func(p1: tuple[Any, ...]):
           v1: tuple[float, float] = p1
@@ -630,7 +625,7 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-64359"])
-    fun `tuple dict values`() = test(noAny.copy(assertRecursionPrevention = false), """
+    fun `tuple dict values`() = test(TestOptions(assertRecursionPrevention = false), """
       def f(a: dict[str, int]):
           b: tuple[int, ...] = tuple(a.values())
       """)
@@ -708,37 +703,166 @@ class PyTupleTypeTest : PyCodeInsightTestCase() {
           expr = test_seq(p)
       #   └ TYPE Sequence[int | complex | float | str]
       """)
-  }
-
-  @Nested
-  inner class PyAnyMigrationMirrors {
-    //
-    // These mirror representative cases above but run with `enablePyAnyType = true`, asserting the
-    // expected post-migration types. They currently fail (unpacking inference degrades to `Unknown`)
-    // and are disabled until the `python.type.any` migration is complete.
 
     @Test
-    @Disabled("python.type.any: nested sequence unpacking degrades to Unknown until migration completes")
-    fun `nested list unpacking inner element (py-any)`() = test(TestOptions(enablePyAnyType = true), """
-      def f(edges: list[list[int]]):
-                       [[node_a], second_edge] = edges
-                       expr = node_a
-      #                       └ TYPE int
+    @TestFor(issues = ["PY-43585"])
+    fun `tuple literal splicing a list`() = test("""
+      def f(first: int, rest: list[int]):
+          expr = (first, *rest)
+      #   └ TYPE tuple[int, *tuple[int, ...]]
       """)
 
     @Test
-    @Disabled("python.type.any: tuple literal preservation degrades until migration completes")
-    fun `tuple as bare type variable is literal (py-any)`() = test(TestOptions(enablePyAnyType = true), """
-      def f[T](t: T) -> T: ...
-      expr = f((1, "hello"))
-      #└ TYPE tuple[Literal[1], Literal["hello"]]
+    @TestFor(issues = ["PY-43585"])
+    fun `tuple literal splicing a homogeneous tuple`() = test("""
+      def f(first: int, rest: tuple[str, ...]):
+          expr = (first, *rest)
+      #   └ TYPE tuple[int, *tuple[str, ...]]
+      """)
+  }
+
+  @Nested
+  inner class UnpackingDiagnostics {
+    @Test
+    @TestFor(issues = ["PY-39258"])
+    fun `nested tuple unpacking balance`() = test("""
+      def func(args: tuple[str, tuple[int, int, int]]):
+          s, (x, y) = args # WARNING Too many values to unpack from 'tuple[int, int, int]': expected 2, got 3
+
+      def func2(args: tuple[str, tuple[int, int]]):
+          s, (x, y, z) = args # WARNING Not enough values to unpack from 'tuple[int, int]': expected 3, got 2
+
+      def func3(args: tuple[str, tuple[int, int]]):
+          s, (x, y) = args
+
+      def func4(args: tuple[str, tuple[int, ...]]):
+          s, (x, y) = args
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85232"])
+    fun `for loop unpacking a non iterable item`() = test("""
+      for a, b in [1]: # WARNING Expected an iterable, got 'int'
+          pass
+
+      for c in [1]:
+          pass
+
+      for x, y in [(1, 2)]:
+          pass
+
+      for k, v in [[1, 2]]:
+          pass
+
+      def f(rows: list[str]):
+          for first, second in rows:
+              pass
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-90173"])
+    fun `annotated target unpacked from list assignment is type checked`() = test(defaultTestOptions.copy(enablePyAnyType = false), """
+      x: int
+      x, _ = ["foo", "bar"] # WARNING Expected type 'int', got 'str' instead
+
+      y: str
+      y, _ = ["foo", "bar"]
+
+      def f(items: list[int]):
+          z: str
+          z, _ = items # WARNING Expected type 'str', got 'int' instead
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-90173"])
+    fun `annotated target unpacked in for loop is type checked`() = test("""
+      x: int
+      for x, _ in [("a", "b")]: # WARNING Expected type 'int', got 'str' instead
+          pass
+
+      y: int
+      for y, _ in [(1, 2)]:
+          pass
+
+      def f(matrix: list[list[int]]):
+          a: str
+          for a, b in matrix: # WARNING Expected type 'str', got 'int' instead
+              pass
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-39258"])
+    fun `nested tuple unpacking balance in for loop`() = test("""
+      def func(rows: list[tuple[str, tuple[int, int, int]]]):
+          for s, (x, y) in rows: # WARNING Too many values to unpack from 'tuple[int, int, int]': expected 2, got 3
+              pass
+
+      def func2(rows: list[tuple[str, tuple[int, int]]]):
+          for s, (x, y, z) in rows: # WARNING Not enough values to unpack from 'tuple[int, int]': expected 3, got 2
+              pass
+
+      def func3(rows: list[tuple[str, tuple[int, int]]]):
+          for s, (x, y) in rows:
+              pass
+
+      def func4(rows: list[tuple[str, tuple[int, ...]]]):
+          for s, (x, y) in rows:
+              pass
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-27205"])
+    fun `tuple literal splicing a fixed tuple matches its target type`() = test("""
+      def f(t: tuple[int, int]):
+          expr = (1, *t)
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-40735"])
+    fun `unpacked tuple argument fills parameters`() = test("""
+      def foo(a: str, b: int): ...
+
+      a = "1",
+      foo(*("1",), 1)
+      foo(*a, 1)
+      foo(*("1", 2))
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-40735"])
+    fun `unpacked tuple variable argument overfills parameters`() = test("""
+      def foo(a: str, b: int): ...
+
+      xe = "1", 2
+      foo(*xe, 3) # WARNING Unexpected argument
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-40735"])
+    fun `unpacked tuple literal argument is type checked`() = test("""
+      def foo(a: str, b: int): ...
+
+      foo(*("1",), 1)
+      foo(*("1", 2))
+      foo(*("1",), "2") # WARNING Expected type 'int', got 'Literal["2"]' instead
+      foo(*("1", "2")) # WARNING Expected type 'int', got 'Literal["2"]' instead
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-40735"])
+    fun `unpacked tuple variable argument is type checked`() = test("""
+      def foo(a: str, b: int): ...
+
+      xe = "1",
+      foo(*xe, 2)
+      foo(*xe, "2") # WARNING Expected type 'int', got 'Literal["2"]' instead
       """)
   }
 
   @Test
   @TestFor(issues = ["PY-23138"])
   fun `homogeneous tuple plus heterogeneous tuple with the same elements type`() =
-    test(TestOptions(enablePyAnyType = false, assertRecursionPrevention = false), """
+    test(TestOptions(assertRecursionPrevention = false), """
     A = tuple(sorted([1, 4, 2]))
 
     B = A + (4, 6, 7, 8)

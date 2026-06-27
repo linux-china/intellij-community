@@ -66,7 +66,6 @@ import com.intellij.openapi.diff.DiffBundle;
 import com.intellij.openapi.diff.impl.DiffUsageTriggerCollector;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.LogicalPosition;
-import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.fileEditor.FileEditorState;
 import com.intellij.openapi.fileEditor.FileEditorStateLevel;
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider;
@@ -92,8 +91,6 @@ import com.intellij.openapi.wm.IdeFocusManager;
 import com.intellij.openapi.wm.ex.IdeFocusTraversalPolicy;
 import com.intellij.ui.GuiUtils;
 import com.intellij.ui.HintHint;
-import com.intellij.ui.IslandsState;
-import com.intellij.ui.JBColor;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.LightweightHint;
 import com.intellij.ui.RemoteTransferUIManager;
@@ -176,6 +173,7 @@ public abstract class DiffRequestProcessor
   private final @NotNull ActionToolbar myRightToolbar;
   private final @NotNull Wrapper myToolbarStatusPanel;
   private final @NotNull MyProgressBar myProgressBar;
+  private final @NotNull Splitter myBottomContentSplitter;
 
   private final @NotNull EventDispatcher<DiffRequestProcessorListener> myEventDispatcher =
     EventDispatcher.create(DiffRequestProcessorListener.class);
@@ -232,7 +230,7 @@ public abstract class DiffRequestProcessor
     putContextUserData(DiffUserDataKeysEx.LEFT_TOOLBAR, myToolbar);
 
     myToolbar.setLayoutStrategy(ToolbarLayoutStrategy.NOWRAP_STRATEGY);
-    myToolbar.setTargetComponent(myContentPanel);
+    myToolbar.setTargetComponent(myContentPanel.getTargetComponent());
     myToolbar.getComponent().setOpaque(false);
 
     myRightToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.DIFF_RIGHT_TOOLBAR, myRightToolbarGroup, true);
@@ -243,31 +241,23 @@ public abstract class DiffRequestProcessor
     myDiffToolChooser = createDiffToolChooser();
     myTopPanel = buildTopPanel();
 
-    Splitter bottomContentSplitter = new JBSplitter(true, "DiffRequestProcessor.BottomComponentSplitter", 0.8f);
-    bottomContentSplitter.setFirstComponent(myContentPanel);
+    myBottomContentSplitter = new JBSplitter(true, "DiffRequestProcessor.BottomComponentSplitter", 0.8f);
+    myBottomContentSplitter.setFirstComponent(myContentPanel);
 
     // only needed for lux to transfer the BG color correctly
     var topPanelWrapper = new Wrapper(myTopPanel);
     topPanelWrapper.setOpaque(true);
-    topPanelWrapper.setBackground(JBColor.lazy(() -> {
-      if (IslandsState.Companion.isEnabled()) {
-        EditorColorsManager manager = EditorColorsManager.getInstance();
-        return manager.getGlobalScheme().getDefaultBackground();
-      }
-      else {
-        return UIUtil.getPanelBackground();
-      }
-    }));
+    topPanelWrapper.setBackground(DiffUtil.getDiffContentBackground());
     RemoteTransferUIManager.forceDirectTransfer(topPanelWrapper);
 
     myMainPanel.add(topPanelWrapper, BorderLayout.NORTH);
-    myMainPanel.add(bottomContentSplitter, BorderLayout.CENTER);
+    myMainPanel.add(myBottomContentSplitter, BorderLayout.CENTER);
 
     myMainPanel.setFocusTraversalPolicyProvider(true);
     myMainPanel.setFocusTraversalPolicy(new MyFocusTraversalPolicy());
 
     JComponent bottomPanel = myContext.getUserData(DiffUserDataKeysEx.BOTTOM_PANEL);
-    if (bottomPanel != null) bottomContentSplitter.setSecondComponent(bottomPanel);
+    if (bottomPanel != null) myBottomContentSplitter.setSecondComponent(bottomPanel);
     if (bottomPanel instanceof Disposable) Disposer.register(this, (Disposable)bottomPanel);
 
     myState = EmptyState.INSTANCE;
@@ -515,6 +505,9 @@ public abstract class DiffRequestProcessor
       myContentPanel.setContent(null);
       myTopPanel.setNeedBottomSeparatorBorder(false);
 
+      myToolbar.setTargetComponent(null);
+      myRightToolbar.setTargetComponent(null);
+
       myToolbarGroup.removeAll();
       myRightToolbarGroup.removeAll();
       myPopupActionGroup.removeAll();
@@ -667,6 +660,15 @@ public abstract class DiffRequestProcessor
       myRightToolbarGroup.removeAll();
       myPopupActionGroup.removeAll();
       ActionUtil.clearActions(myMainPanel);
+
+      myToolbar.setTargetComponent(null);
+      ((ActionToolbarImpl)myToolbar).reset(); // do not leak previous DiffViewer via caches
+
+      myRightToolbar.setTargetComponent(null);
+      ((ActionToolbarImpl)myRightToolbar).reset();
+
+      // do not leak 'this' via ('DiffUserDataKeysEx.BOTTOM_PANEL' as JComponent).parent
+      myBottomContentSplitter.setSecondComponent(null);
 
       onAssigned(myActiveRequest, false);
 

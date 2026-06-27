@@ -13,8 +13,8 @@ import com.intellij.ide.rpc.throttledWithAccumulation
 import com.intellij.ide.vfs.rpcId
 import com.intellij.ide.vfs.virtualFile
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.progress.util.AbstractProgressIndicatorExBase
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.CheckedDisposable
 import com.intellij.openapi.util.Disposer
@@ -28,6 +28,7 @@ import com.intellij.usages.UsageInfoAdapter
 import com.intellij.util.cancelOnDispose
 import fleet.rpc.client.RpcClientException
 import fleet.rpc.client.RpcTimeoutException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -62,10 +63,14 @@ open class FindAndReplaceExecutorImpl(val coroutineScope: CoroutineScope) : Find
     maxUsages: Int,
   ) {
     if (FindKey.isEnabled) {
+      LOG.debug { "FiF: executor.findUsages entry; cancelling prevJob=$findUsagesJob shouldThrottle=$shouldThrottle maxUsages=$maxUsages" }
       findUsagesJob?.cancel("new find request is started")
-      val job = coroutineScope.launch {
+      findUsagesJob = coroutineScope.launch {
+        var firstLogged = false
         try {
+          LOG.debug { "FiF: coroutine start; selectScope join begin (selectScopeJob=$selectScopeJob)" }
           selectScopeJob?.join()
+          LOG.debug { "FiF: selectScope join done" }
           val filesToScanInitially = previousUsages.mapNotNull { (it as? UsageInfoModel)?.model?.fileId?.virtualFile() }.toSet()
           currentSearchDisposable?.let { Disposer.dispose(it) }
           currentSearchDisposable = Disposer.newCheckedDisposable( "Find in Project Search").also {
@@ -96,6 +101,10 @@ open class FindAndReplaceExecutorImpl(val coroutineScope: CoroutineScope) : Find
             if (searchDisposable?.isDisposed == true) {
               return@collect
             }
+            if (!firstLogged) {
+              firstLogged = true
+              LOG.debug { "FiF: first collected item batch (size=${throttledItems.items.size})" }
+            }
             throttledItems.items.forEach { item ->
               val usage = UsageInfoModel.createUsageInfoModel(project, item, initScope, onUpdateModelCallback)
               if (searchDisposable == null || !Disposer.tryRegister(searchDisposable, usage)) {
@@ -109,20 +118,24 @@ open class FindAndReplaceExecutorImpl(val coroutineScope: CoroutineScope) : Find
               }
             }
           }
+          LOG.debug { "FiF: collect completed normally" }
+        }
+        catch (ce: CancellationException) {
+          // A superseded/closed search generation is cancelled here. Re-throw to honour structured
+          // concurrency; the finally below still fires the terminal callback so the popup is never
+          // left stuck on "Searching…". The callback is generation-guarded on the caller side, so a
+          // superseded search becomes a no-op there.
+          LOG.debug { "FiF: coroutine CANCELLED: ${ce.message}" }
+          throw ce
         }
         finally {
           // Always notify that this search generation has finished — including on cancellation or an
-          // early return above — so the Find popup is never left stuck showing "Searching..." with no
-          // results. The callback is generation-guarded on the caller side, so a superseded search
-          // becomes a no-op there.
+          // early return above — so the Find popup is never left stuck showing "Searching…" with no
+          // results.
+          LOG.debug { "FiF: coroutine finally -> onFinish()" }
           onFinish()
         }
       }
-      findUsagesJob = job
-      // A canceled search progress indicator (superseded search, popup-level cancel, ...) must abort
-      // the collection promptly. Otherwise the coroutine can stay suspended on the backend result flow
-      // indefinitely and this search generation would never terminate (the popup stays on "Searching...").
-      cancelJobWhenIndicatorIsCanceled(progressIndicator, job)
     }
     else {
       val filesToScanInitially = previousUsages.mapNotNull { (it as? UsageInfo2UsageAdapter)?.file }.toSet()
@@ -184,18 +197,5 @@ open class FindAndReplaceExecutorImpl(val coroutineScope: CoroutineScope) : Find
     validationJob?.cancel(message)
     findUsagesJob?.cancel(message)
     selectScopeJob?.cancel(message)
-  }
-
-  private fun cancelJobWhenIndicatorIsCanceled(indicator: ProgressIndicatorEx, job: Job) {
-    indicator.addStateDelegate(object : AbstractProgressIndicatorExBase() {
-      override fun cancel() {
-        super.cancel()
-        job.cancel("find search progress indicator is canceled")
-      }
-    })
-    // The indicator may already be canceled by the time the delegate above is attached.
-    if (indicator.isCanceled) {
-      job.cancel("find search progress indicator is canceled")
-    }
   }
 }

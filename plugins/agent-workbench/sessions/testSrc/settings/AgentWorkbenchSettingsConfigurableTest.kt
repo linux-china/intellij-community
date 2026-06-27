@@ -2,18 +2,19 @@
 package com.intellij.agent.workbench.sessions.settings
 
 import com.intellij.agent.workbench.sessions.AgentSessionCostPresentationSettings
-import com.intellij.agent.workbench.common.session.AgentSessionLaunchMode
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionLaunchMode
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.AgentSessionsBundle
 import com.intellij.agent.workbench.sessions.TestAgentSessionProviderDescriptor
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
-import com.intellij.agent.workbench.sessions.core.providers.InMemoryAgentSessionProviderRegistry
-import com.intellij.agent.workbench.sessions.core.settings.AGENT_WORKBENCH_CHAT_SETTINGS_COMPONENT_ID
-import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchCheckboxSetting
-import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchSettings
-import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchSettingsComponent
-import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchSettingsContributor
-import com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchSettingsContributors
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.InMemoryAgentSessionProviderRegistry
+import com.intellij.agent.workbench.settings.AGENT_WORKBENCH_CHAT_SETTINGS_COMPONENT_ID
+import com.intellij.agent.workbench.settings.AgentWorkbenchCheckboxSetting
+import com.intellij.agent.workbench.settings.AgentWorkbenchSettings
+import com.intellij.agent.workbench.settings.AgentWorkbenchSettingsComponent
+import com.intellij.agent.workbench.settings.AgentWorkbenchSettingsContributor
+import com.intellij.agent.workbench.settings.AgentWorkbenchSettingsContributors
+import com.intellij.agent.workbench.settings.AgentSessionProviderSettingsService
 import com.intellij.agent.workbench.sessions.sleep.PREVENT_SYSTEM_SLEEP_WHILE_WORKING_SETTING_ID
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
@@ -49,7 +50,7 @@ class AgentWorkbenchSettingsConfigurableTest {
   }
 
   private fun resetSettings() {
-    service<AgentSessionProviderSettingsService>().setProviderEnabled(AgentSessionProvider.CODEX, true)
+    service<AgentSessionProviderSettingsService>().setProviderEnabled(AgentSessionProvider.from("codex"), true)
     AgentWorkbenchSettings.getInstance().loadState(AgentWorkbenchSettings.SettingsState())
     AgentSessionCostPresentationSettings.setEnabled(false)
     setJbCentralQuotaWidgetEnabled(false)
@@ -67,7 +68,6 @@ class AgentWorkbenchSettingsConfigurableTest {
       .contains("id=\"${AgentWorkbenchProvidersSettingsConfigurable.ID}\"")
       .contains("key=\"settings.agent.workbench.providers.name\"")
       .contains("parentId=\"${AgentWorkbenchSettingsConfigurable.ID}\"")
-      .contains("<applicationSettings service=\"com.intellij.agent.workbench.sessions.settings.AgentSessionProviderSettingsService\"/>")
   }
 
   @Test
@@ -84,18 +84,22 @@ class AgentWorkbenchSettingsConfigurableTest {
         configurable.reset()
 
         val dedicatedFrameCheckBox =
-          component.checkBox(AgentSessionsBundle.message("advanced.setting.agent.workbench.chat.open.in.dedicated.frame"))
+          component.checkBox(AgentSessionsBundle.message("settings.agent.workbench.chat.open.in.dedicated.frame"))
+        val currentProjectOnlyCheckBox =
+          component.checkBox(AgentSessionsBundle.message("settings.agent.workbench.agent.threads.current.project.only"))
         val mainToolbarActivityCheckBox =
           component.checkBox(AgentSessionsBundle.message("settings.agent.workbench.show.activity.in.main.toolbar"))
         val sleepPreventionCheckBox =
           component.checkBox(AgentSessionsBundle.message("advanced.setting.agent.workbench.prevent.system.sleep.while.working"))
 
         assertThat(dedicatedFrameCheckBox.isSelected).isFalse()
+        assertThat(currentProjectOnlyCheckBox.isSelected).isTrue()
         assertThat(mainToolbarActivityCheckBox.isSelected).isFalse()
         assertThat(sleepPreventionCheckBox.isSelected).isTrue()
         assertThat(configurable.isModified).isFalse()
 
         dedicatedFrameCheckBox.isSelected = true
+        currentProjectOnlyCheckBox.isSelected = true
         mainToolbarActivityCheckBox.isSelected = true
         sleepPreventionCheckBox.isSelected = false
 
@@ -108,7 +112,8 @@ class AgentWorkbenchSettingsConfigurableTest {
     }
 
     assertThat(AgentWorkbenchSettings.getInstance().openInDedicatedFrame).isTrue()
-    assertThat(AgentWorkbenchSettings.getInstance().openInDedicatedFrameOverride).isNull()
+    assertThat(AgentWorkbenchSettings.getInstance().openInDedicatedFrameOverride).isTrue()
+    assertThat(AgentWorkbenchSettings.getInstance().agentThreadsCurrentProjectOnlyOverride).isTrue()
     assertThat(AgentWorkbenchSettings.getInstance().showAgentActivityInMainToolbar).isTrue()
     assertThat(AgentWorkbenchSettings.getInstance().showAgentActivityInMainToolbarOverride).isTrue()
     assertThat(AdvancedSettings.getBoolean(PREVENT_SYSTEM_SLEEP_WHILE_WORKING_SETTING_ID)).isFalse()
@@ -199,7 +204,7 @@ class AgentWorkbenchSettingsConfigurableTest {
 
         assertThat(component.componentsOfType(JBCheckBox::class.java).map { it.text })
           .containsSubsequence(
-            AgentSessionsBundle.message("advanced.setting.agent.workbench.chat.open.in.dedicated.frame"),
+            AgentSessionsBundle.message("settings.agent.workbench.chat.open.in.dedicated.frame"),
             TEST_CHAT_COMPONENT_CHECKBOX_TEXT,
             AgentSessionsBundle.message("settings.agent.workbench.show.activity.in.main.toolbar"),
             AgentSessionsBundle.message("advanced.setting.agent.workbench.prevent.system.sleep.while.working"),
@@ -214,13 +219,13 @@ class AgentWorkbenchSettingsConfigurableTest {
   @Test
   fun configurableAppliesProviderSettings() {
     val providerSettings = service<AgentSessionProviderSettingsService>()
-    providerSettings.setProviderEnabled(AgentSessionProvider.CODEX, true)
+    providerSettings.setProviderEnabled(AgentSessionProvider.from("codex"), true)
 
     AgentSessionProviders.withRegistryForTest(
       InMemoryAgentSessionProviderRegistry(
         listOf(
           TestAgentSessionProviderDescriptor(
-            provider = AgentSessionProvider.CODEX,
+            provider = AgentSessionProvider.from("codex"),
             supportedModes = setOf(AgentSessionLaunchMode.STANDARD),
             cliAvailable = true,
           )
@@ -246,28 +251,38 @@ class AgentWorkbenchSettingsConfigurableTest {
       }
     }
 
-    assertThat(providerSettings.isProviderEnabled(AgentSessionProvider.CODEX)).isFalse()
+    assertThat(providerSettings.isProviderEnabled(AgentSessionProvider.from("codex"))).isFalse()
   }
 
   @Test
-  fun configurableAppliesProviderFeatureSettings() {
+  fun configurableAppliesProviderFeatureSettings(@TestDisposable disposable: Disposable) {
     var providerFeatureEnabled = true
+    AgentWorkbenchSettingsContributors.EP_NAME.point.registerExtension(
+      object : AgentWorkbenchSettingsContributor {
+        override fun providerCheckboxSettings(provider: AgentSessionProvider): List<AgentWorkbenchCheckboxSetting> {
+          if (provider != AgentSessionProvider.from("codex")) {
+            return emptyList()
+          }
+          return listOf(
+            AgentWorkbenchCheckboxSetting(
+              text = TEST_PROVIDER_FEATURE_CHECKBOX_TEXT,
+              description = TEST_PROVIDER_FEATURE_CHECKBOX_DESCRIPTION,
+              isSelected = { providerFeatureEnabled },
+              setSelected = { enabled -> providerFeatureEnabled = enabled },
+            )
+          )
+        }
+      },
+      disposable,
+    )
 
     AgentSessionProviders.withRegistryForTest(
       InMemoryAgentSessionProviderRegistry(
         listOf(
           TestAgentSessionProviderDescriptor(
-            provider = AgentSessionProvider.CODEX,
+            provider = AgentSessionProvider.from("codex"),
             supportedModes = setOf(AgentSessionLaunchMode.STANDARD),
             cliAvailable = true,
-            providerSettings = listOf(
-              AgentWorkbenchCheckboxSetting(
-                text = TEST_PROVIDER_FEATURE_CHECKBOX_TEXT,
-                description = TEST_PROVIDER_FEATURE_CHECKBOX_DESCRIPTION,
-                isSelected = { providerFeatureEnabled },
-                setSelected = { enabled -> providerFeatureEnabled = enabled },
-              )
-            ),
           )
         )
       )

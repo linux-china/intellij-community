@@ -4,12 +4,13 @@ package com.intellij.agent.workbench.sessions.toolwindow
 import com.intellij.agent.workbench.sessions.AgentSessionCostHintBanner
 import com.intellij.agent.workbench.sessions.AgentSessionCostPresentationSettings
 import com.intellij.agent.workbench.sessions.AgentSessionCostHintStateService
+import com.intellij.agent.workbench.ui.AgentWorkbenchActionIds
 import com.intellij.agent.workbench.sessions.ScriptedSessionSource
 import com.intellij.agent.workbench.sessions.jbcentral.JbCentralQuotaHintBanner
 import com.intellij.agent.workbench.sessions.jbcentral.JbCentralQuotaHintStateService
-import com.intellij.agent.workbench.common.session.AgentSessionCost
-import com.intellij.agent.workbench.common.session.AgentSessionCostKind
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionCost
+import com.intellij.platform.ai.agent.core.session.AgentSessionCostKind
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.sessions.model.AgentSessionArchivedRangePreset
 import com.intellij.agent.workbench.sessions.model.AgentSessionThreadViewMode
 import com.intellij.agent.workbench.sessions.model.AgentSessionsState
@@ -101,14 +102,27 @@ class AgentSessionsToolWindowFactorySwingTest {
       "AgentWorkbenchSessions.ShowArchivedThreads",
       "AgentWorkbenchSessions.Refresh",
       SEPARATOR_MARKER,
-      "AgentWorkbenchSessions.ToggleSessionCost",
-      "AgentWorkbenchSessions.ToggleJbCentralQuotaWidget",
-      "AgentWorkbenchSessions.ToggleClaudeQuotaWidget",
       "AgentWorkbenchSessions.ToggleDedicatedFrame",
+      "AgentWorkbenchSessions.ToggleCurrentProjectOnly",
+      SEPARATOR_MARKER,
+      "AgentWorkbenchSessions.ToggleSessionCost",
+      "AgentWorkbenchSessions.TogglePreventSleepWhileWorking",
     )
     assertThat(entries)
-      .contains("AgentWorkbenchSessions.TogglePreventSleepWhileWorking")
+      .contains("AgentWorkbenchSessions.MoreSettings")
       .doesNotContain("AgentWorkbenchSessions.OpenDedicatedFrame")
+      .doesNotContain("AgentWorkbenchSessions.ToggleJbCentralQuotaWidget")
+      .doesNotContain("AgentWorkbenchSessions.ToggleClaudeQuotaWidget")
+  }
+
+  @Test
+  fun titleActionsKeepScopeToggleOutOfTitleToolbar() {
+    val actions = createAgentSessionsTitleActions()
+
+    assertThat(actions.take(3)).allMatch { action -> action is AgentSessionsActivityCounterAction }
+    assertThat(actions[3]).isInstanceOf(AgentSessionsShowActiveThreadsHeaderAction::class.java)
+    assertThat(actions.mapNotNull { ActionManager.getInstance().getId(it) })
+      .doesNotContain(AgentWorkbenchActionIds.Sessions.TOGGLE_CURRENT_PROJECT_ONLY)
   }
 
   @Test
@@ -200,11 +214,11 @@ class AgentSessionsToolWindowFactorySwingTest {
     val costLoadCount = AtomicInteger()
     val visibilityService = service<AgentSessionsToolWindowVisibilityService>()
     val source = ScriptedSessionSource(
-      provider = AgentSessionProvider.CLAUDE,
+      provider = AgentSessionProvider.from("claude"),
       listFromOpenProject = { path, _ ->
         refreshCount.incrementAndGet()
         if (path == PROJECT_PATH) {
-          listOf(thread(id = "claude-1", updatedAt = 100, title = "Migrated Claude thread", provider = AgentSessionProvider.CLAUDE))
+          listOf(thread(id = "claude-1", updatedAt = 100, title = "Migrated Claude thread", provider = AgentSessionProvider.from("claude")))
         }
         else {
           emptyList()
@@ -236,7 +250,7 @@ class AgentSessionsToolWindowFactorySwingTest {
             factory.createToolWindowContent(project, manager.toolWindow)
           }
 
-          val threadId = SessionTreeId.Thread(PROJECT_PATH, AgentSessionProvider.CLAUDE, "claude-1")
+          val threadId = SessionTreeId.Thread(PROJECT_PATH, AgentSessionProvider.from("claude"), "claude-1")
           waitForColdStartThreadModel(
             stateProvider = { service.state.value },
             toolWindow = manager.toolWindow,
@@ -386,14 +400,14 @@ class AgentSessionsToolWindowFactorySwingTest {
   @Test
   fun descriptorRegistersTreePopupActions() {
     val actionManager = ActionManager.getInstance()
-    val entries = actionManager.childActionEntries("AgentWorkbenchSessions.TreePopup")
+    val entries = actionManager.childActionEntries(AgentWorkbenchActionIds.Sessions.TreePopup.GROUP)
 
     assertThat(entries)
       .contains("AgentWorkbenchSessions.TreePopup.Open")
       .contains("AgentWorkbenchSessions.TreePopup.More")
-      .contains("AgentWorkbenchSessions.TreePopup.NewThread")
+      .contains(AgentWorkbenchActionIds.Sessions.TreePopup.NEW_THREAD)
       .contains("AgentWorkbenchSessions.TreePopup.Rename")
-      .contains("AgentWorkbenchSessions.TreePopup.Archive")
+      .contains(AgentWorkbenchActionIds.Sessions.TreePopup.ARCHIVE)
       .contains("AgentWorkbenchSessions.TreePopup.Unarchive")
       .contains("CopyReferencePopupGroup")
 
@@ -596,13 +610,13 @@ private const val AGENT_SESSIONS_TOOL_WINDOW_ID = "agent.workbench.sessions"
 private fun AgentSessionsState.hasClaudeThread(): Boolean {
   return projects.firstOrNull { it.path == PROJECT_PATH }
     ?.threads
-    ?.any { it.provider == AgentSessionProvider.CLAUDE && it.id == "claude-1" } == true
+    ?.any { it.provider == AgentSessionProvider.from("claude") && it.id == "claude-1" } == true
 }
 
 private fun AgentSessionsState.claudeThreadCostAmount(): BigDecimal? {
   return projects.firstOrNull { it.path == PROJECT_PATH }
     ?.threads
-    ?.singleOrNull { it.provider == AgentSessionProvider.CLAUDE && it.id == "claude-1" }
+    ?.singleOrNull { it.provider == AgentSessionProvider.from("claude") && it.id == "claude-1" }
     ?.cost
     ?.amountUsd
 }

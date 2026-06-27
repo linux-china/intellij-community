@@ -3,6 +3,7 @@
 
 package org.jetbrains.kotlin.idea.fir.extensions
 
+import com.intellij.openapi.application.runReadActionBlocking
 import com.intellij.openapi.components.PathMacroManager
 import com.intellij.openapi.diagnostic.getOrLogException
 import com.intellij.openapi.diagnostic.logger
@@ -25,7 +26,6 @@ import org.jetbrains.kotlin.analysis.api.platform.projectStructure.areCompilerPl
 import org.jetbrains.kotlin.analysis.api.projectStructure.KaModule
 import org.jetbrains.kotlin.analysis.api.projectStructure.KaScriptModule
 import org.jetbrains.kotlin.analysis.api.projectStructure.KaSourceModule
-import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirInternals
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.create
@@ -305,7 +305,20 @@ class KtCompilerPluginsCache private constructor(
 
         @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
         private fun Module.getCompilerArguments(): CommonCompilerArguments {
-            return KotlinFacet.get(this)?.configuration?.settings?.mergedCompilerArguments
+            val facetOne = KotlinFacet.get(this)
+            val facetTwo = runReadActionBlocking { KotlinFacet.get(this) }
+
+            if (facetOne != facetTwo) {
+                LOG.info(
+                    """
+                    Facets are not equal: 
+                    First (no lock): $facetOne (${System.identityHashCode(facetOne)})
+                    Second (with lock): $facetTwo (${System.identityHashCode(facetTwo)})
+                    """.trimIndent()
+                )
+            }
+
+            return facetOne?.configuration?.settings?.mergedCompilerArguments
                 ?: KotlinCommonCompilerArgumentsHolder.getInstance(project).settings
         }
     }

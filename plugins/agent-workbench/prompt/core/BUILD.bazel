@@ -1,6 +1,15 @@
 load("@community//build:tests-options.bzl", "jps_test")
 load("@rules_jvm//:jvm.bzl", "jvm_library")
 
+jps_test(
+    name = "agent-workbench-prompt-core-tests_test",
+    timeout = "moderate",
+    sandbox = True,
+    tags = ["community-aggregator"],
+    runtime_deps = [":agent-workbench-prompt-core-tests_test_lib"],
+)
+### skip generation section `test intellij.agent.workbench.prompt.core.tests`
+
 ### auto-generated section `build intellij.agent.workbench.prompt.core` start
 
 jvm_library(
@@ -37,7 +46,7 @@ jvm_library(
         "//platform/util",
         "//platform/util:util-ui",
         "//platform/editor-ui-api:editor-ui",
-        "//plugins/agent-workbench/common",
+        "//plugins/agent-workbench/lib-agent/core",
     ],
 )
 
@@ -68,7 +77,7 @@ jvm_library(
         "//platform/util:util_test_lib",
         "//platform/util:util-ui_test_lib",
         "//platform/editor-ui-api:editor-ui_test_lib",
-        "//plugins/agent-workbench/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/core:core_test_lib",
         "//libraries/junit5",
         "//libraries/junit5:junit5_test_lib",
         "//platform/testFramework",
@@ -155,8 +164,8 @@ jvm_library(
         "//platform/util:util_test_lib",
         "//platform/util:util-ui",
         "//platform/util:util-ui_test_lib",
-        "//plugins/agent-workbench/common",
-        "//plugins/agent-workbench/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/core",
+        "//plugins/agent-workbench/lib-agent/core:core_test_lib",
         "//libraries/junit5",
         "//libraries/junit5:junit5_test_lib",
         "//platform/testFramework",
@@ -177,11 +186,3 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 ### auto-generated section `iml intellij.agent.workbench.prompt.core.tests` end
-
-### auto-generated section `test intellij.agent.workbench.prompt.core.tests` start
-
-jps_test(
-    name = "agent-workbench-prompt-core-tests_test",
-    runtime_deps = [":agent-workbench-prompt-core-tests_test_lib"],
-)
-### auto-generated section `test intellij.agent.workbench.prompt.core.tests` end

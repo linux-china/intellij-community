@@ -16,6 +16,7 @@ import com.intellij.openapi.util.NlsSafe
 import com.intellij.util.xmlb.annotations.Attribute
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.XMap
+import kotlinx.serialization.Serializable
 import org.apache.http.client.utils.URIBuilder
 import org.jetbrains.annotations.NonNls
 
@@ -43,14 +44,7 @@ internal class PluginUpdateSourceServiceImpl : PluginUpdateSourceService,
   }
 
   override fun setPluginUpdateSourceId(plugin: PluginUiModel) {
-    setPluginUpdateSourceId(plugin.pluginId, plugin.repositoryName)
-  }
-
-  private fun setPluginUpdateSourceId(pluginId: PluginId, host: String?) {
-    if (!isFunctionalitySupported()) {
-      return
-    }
-    setPluginUpdateSourceId(pluginId, createRepository(host))
+    setPluginUpdateSourceId(plugin.pluginId, createRepository(plugin))
   }
 
   override fun erasePluginUpdateSourceId(pluginId: PluginId) {
@@ -103,6 +97,7 @@ internal class PluginUpdateSourceServiceImpl : PluginUpdateSourceService,
   )
 }
 
+@Serializable
 @Tag("updateSource")
 internal data class Repository(
   @JvmField @Attribute("host") val hostToSerialize: @NlsSafe String,
@@ -120,6 +115,10 @@ internal fun createRepository(initialHost: String?): PluginUpdateSourceId {
   host = URIBuilder(host).removeQuery().build().toString()
   host = host.trimEnd('/')
   return Repository(host, isMarketplace)
+}
+
+internal fun createRepository(model: PluginUiModel): PluginUpdateSourceId {
+  return createRepository(model.repositoryName)
 }
 
 private fun PluginUpdateSourceId.toRepository(): Repository {

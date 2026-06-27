@@ -45,6 +45,7 @@ internal object NoContextParameterFixFactory {
         val symbol = diagnostic.symbol as? KaContextParameterSymbol ?: return@ModCommandBased emptyList()
         val requiredType = symbol.returnType
         val requiredTypeText = requiredType.render(KaTypeRendererForSource.WITH_SHORT_NAMES, Variance.INVARIANT)
+        val requiredTypeFqNameText = requiredType.render(KaTypeRendererForSource.WITH_QUALIFIED_NAMES, Variance.INVARIANT)
 
         buildList {
             val surroundingCall = findSurroundingContextCall(expression)
@@ -52,15 +53,21 @@ internal object NoContextParameterFixFactory {
             if (surroundingCall != null) {
                 if (!candidates.isEmpty()) {
                     candidates.forEach { candidateName ->
-                        add(AddContextParameterToExistingContextFix(surroundingCall, candidateName, requiredTypeText))
+                        if (candidateName != null) {
+                            add(AddContextParameterToExistingContextFix(surroundingCall, candidateName, requiredTypeText, requiredTypeFqNameText))
+                        }
                     }
+                } else {
+                    add(AddContextParameterToExistingContextFix(surroundingCall, null, requiredTypeText, requiredTypeFqNameText))
                 }
             } else {
                 val wrapper = contextWrapperFor(expression)
                 if (!candidates.isEmpty()) {
                     candidates.forEach { candidateName ->
-                        add(SurroundCallWithContextFix(expression, wrapper, candidateName))
+                        add(SurroundCallWithContextFix(expression, wrapper, candidateName, requiredTypeText, requiredTypeFqNameText))
                     }
+                } else {
+                    add(SurroundCallWithContextFix(expression, wrapper, null, requiredTypeText, requiredTypeFqNameText))
                 }
             }
 
@@ -72,7 +79,14 @@ internal object NoContextParameterFixFactory {
 
             val containingFunction = expression.getStrictParentOfType<KtNamedFunction>()
             if (containingFunction != null && !containingFunction.hasModifier(KtTokens.OVERRIDE_KEYWORD)) {
-                add(AddContextParameterFix(expression, requiredTypeText))
+                add(
+                    AddContextParameterFix.ForEnclosingFunction(
+                        element = expression,
+                        contextParameter =
+                            AddContextParameterFix.ContextParameter(name = null, type = requiredTypeText)
+                        ,
+                    )
+                )
             }
         }
     }
@@ -96,7 +110,7 @@ internal object NoContextParameterFixFactory {
         useSite: KtElement,
         surroundingContextCall: KtCallExpression?,
         requiredType: KaType,
-    ): Set<String> {
+    ): Set<String?> {
         if (surroundingContextCall != null &&
             innerContextScopeAlreadyContainsType(useSite, surroundingContextCall, requiredType)) return emptySet()
 

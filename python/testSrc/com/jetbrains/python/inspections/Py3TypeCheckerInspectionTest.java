@@ -1,6 +1,9 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.inspections;
 
+import com.jetbrains.python.allure.Layers;
+import com.jetbrains.python.allure.Subsystems;
+
 import com.intellij.idea.TestFor;
 import com.jetbrains.python.fixtures.PyInspectionTestCase;
 import org.jetbrains.annotations.NotNull;
@@ -8,6 +11,8 @@ import org.jetbrains.annotations.NotNull;
 /**
  * legacy, use a `PyCodeInsightTestCase` suite
  */
+@Subsystems.Inspections
+@Layers.Functional
 public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
   public static final String TEST_DIRECTORY = "inspections/PyTypeCheckerInspection/";
 
@@ -376,7 +381,7 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
 
         t = (1, 2)
         b, c, d = 1, *t
-        b, c, d, e = <warning descr="Not enough values to unpack (expected 4, got 3)">1, *t</warning>
+        b, c, d, e = <warning descr="Not enough values to unpack from 'tuple[Literal[1], Literal[1], Literal[2]]': expected 4, got 3">1, *t</warning>
         """);
   }
 
@@ -384,17 +389,17 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
   public void testTupleUnpackCountBalance() {
     doTestByText(
       """
-        a, b, c = <warning descr="Too many values to unpack (expected 3, got 4)">1, 2, 3, 4</warning>
+        a, b, c = <warning descr="Too many values to unpack from 'tuple[Literal[1], Literal[2], Literal[3], Literal[4]]': expected 3, got 4">1, 2, 3, 4</warning>
         a, b, c, d = 1, 2, 3, 4
         a = 1, 2, 3, 4
 
         c = 1, 2, 3
-        a, b = <warning descr="Too many values to unpack (expected 2, got 3)">c</warning>
-        (a, b) = <warning descr="Too many values to unpack (expected 2, got 3)">1, 2, 3</warning>
+        a, b = <warning descr="Too many values to unpack from 'tuple[Literal[1], Literal[2], Literal[3]]': expected 2, got 3">c</warning>
+        (a, b) = <warning descr="Too many values to unpack from 'tuple[Literal[1], Literal[2], Literal[3]]': expected 2, got 3">1, 2, 3</warning>
 
         *a, b = 1, 2, 3
         *a, b, c = 1, 2
-        b, c, *a, d = <warning descr="Not enough values to unpack (expected 3, got 2)">1, 2</warning>
+        b, c, *a, d = <warning descr="Not enough values to unpack from 'tuple[Literal[1], Literal[2]]': expected 3, got 2">1, 2</warning>
         <warning descr="Only one starred expression allowed in assignment">a, *b, c, *d</warning> = 1, 2, 3, 4, 5, 6
         """);
   }
@@ -473,5 +478,22 @@ public class Py3TypeCheckerInspectionTest extends PyInspectionTestCase {
         def f(n2: N2):
           n4: N = n2
         """);
+  }
+
+  // PY-79220
+  public void testAnnotatedSelfInOverloads() {
+    doTestByText("""
+                   from typing import overload
+
+                   class A[T]:
+                       @overload
+                       def foo(self: A[int]) -> None: ...
+                       @overload
+                       def foo(self: A[str]) -> None: ...
+                       def foo(self): ...
+
+                   A[str]().foo()
+                   <warning descr="Invalid self argument `A[float | int]` to method `A.foo` with type `(self: A[int]) -> None`">A[float]().foo</warning>()
+                   """);
   }
 }

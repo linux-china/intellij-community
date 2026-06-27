@@ -20,6 +20,7 @@ import com.intellij.openapi.application.writeIntentReadAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.CommandProcessorEx
 import com.intellij.openapi.command.UndoConfirmationPolicy
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.Module
@@ -59,12 +60,11 @@ import org.jetbrains.kotlin.idea.statistics.J2KFusCollector
 import org.jetbrains.kotlin.idea.util.application.isUnitTestMode
 import org.jetbrains.kotlin.idea.util.getAllFilesRecursively
 import org.jetbrains.kotlin.j2k.ConverterSettings
+import org.jetbrains.kotlin.j2k.J2KKotlinConfigurationService
 import org.jetbrains.kotlin.j2k.J2kConverterExtension
-import org.jetbrains.kotlin.j2k.J2kConverterExtension.Kind.K1_NEW
 import org.jetbrains.kotlin.j2k.J2kPostprocessorExtension
 import org.jetbrains.kotlin.j2k.J2kPreprocessorExtension
 import org.jetbrains.kotlin.j2k.convertJavaFilesToKotlin
-import org.jetbrains.kotlin.j2k.getJ2kKind
 import org.jetbrains.kotlin.nj2k.KotlinNJ2KBundle
 import org.jetbrains.kotlin.nj2k.externalCodeProcessing.ExternalUsagesFixer
 import org.jetbrains.kotlin.psi.KtFile
@@ -103,10 +103,9 @@ open class JavaToKotlinAction : AnAction() {
             showNothingToConvertErrorMessage(project)
             return
         }
-        val j2kKind = getJ2kKind()
-        val j2kConverterExtension = J2kConverterExtension.extension(j2kKind)
+        val configurationService = project.service<J2KKotlinConfigurationService>()
         if (shouldSkipConversionOfErroneousCode(javaFiles, project)) return
-        if (j2kConverterExtension.doCheckBeforeConversion(project, module)) {
+        if (configurationService.checkKotlinIsConfigured(module)) {
             val launch = e.coroutineScope.launch {
                 JavaToKotlinActionHandler.convertFiles(
                     files = javaFiles,
@@ -116,7 +115,7 @@ open class JavaToKotlinAction : AnAction() {
             }
             j2kJob?.set(launch)
         } else {
-            j2kConverterExtension.setUpAndConvert(project, module, javaFiles) { files, project, module ->
+            configurationService.setUpAndConvert(module, javaFiles) { files, project, module ->
                 val launch = e.coroutineScope.launch {
                     JavaToKotlinActionHandler.convertFiles(
                         files = files,
@@ -211,7 +210,6 @@ object JavaToKotlinActionHandler {
         postprocessorExtensions: List<J2kPostprocessorExtension> = J2kPostprocessorExtension.EP_NAME.extensionList
     ) {
         val javaFiles = files.filter { it.virtualFile.isWritable }.ifEmpty { return }
-        val j2kKind = getJ2kKind()
 
         val (result, conversionTime) = measureTimedValue {
             withModalProgress(project, phaseDescription) {
@@ -224,16 +222,13 @@ object JavaToKotlinActionHandler {
                         settings = settings,
                         preprocessorExtensions = preprocessorExtensions,
                         postprocessorExtensions = postprocessorExtensions,
-                        j2kKind = j2kKind,
                     )
                 }
             }
         }
 
-        // TODO: Support K2 J2K in FUS
         J2KFusCollector.log(
             ConversionType.FILES,
-            j2kKind == K1_NEW,
             conversionTime.inWholeMilliseconds,
             result.javaLines,
             javaFiles.size

@@ -5,7 +5,7 @@ package com.intellij.agent.workbench.prompt.ui
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-suggestions.spec.md
 // @spec community/plugins/agent-workbench/spec/core/agent-workbench-telemetry.spec.md
 
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AGENT_PROMPT_INITIAL_TEXT_DATA_KEY
 import com.intellij.agent.workbench.prompt.core.AgentPromptAddContextTargetCandidate
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
@@ -33,7 +33,6 @@ import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -51,6 +50,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.Nls
+import org.jetbrains.annotations.TestOnly
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.event.ChangeListener
@@ -69,11 +69,11 @@ internal class AgentPromptPaletteSessionController(
   private val contextResolverService: AgentPromptContextResolverService,
   private val uiStateService: AgentPromptUiSessionStateService,
   private val launcherProvider: () -> AgentPromptLauncherBridge?,
-  private val closePopup: () -> Unit,
-  private val isPopupActive: () -> Boolean,
-  private val movePopupToFitScreen: () -> Unit,
-  private val popupScope: CoroutineScope,
-  private val parentDisposable: Disposable,
+  private val closeHost: () -> Unit,
+  private val isHostActive: () -> Boolean,
+  private val revalidateHost: () -> Unit,
+  private val hostMode: AgentPromptPaletteHostMode,
+  private val sessionScope: CoroutineScope,
 ) {
   private val contextState = AgentPromptPaletteContextState()
   private val draftState = AgentPromptPaletteDraftState()
@@ -95,7 +95,7 @@ internal class AgentPromptPaletteSessionController(
       invocationData = invocationData,
       promptArea = promptArea,
       view = view,
-      parentDisposable = parentDisposable,
+      sessionScope = sessionScope,
       contextResolverService = contextResolverService,
       contextChips = contextChips,
       launcherProvider = launcherProvider,
@@ -141,7 +141,7 @@ internal class AgentPromptPaletteSessionController(
       reasoningEffortLink = view.reasoningEffortLink,
       planReasoningEffortLink = view.planReasoningEffortLink,
       defaultProfileActionControl = view.defaultProfileActionControl,
-      modelCatalogScope = popupScope,
+      modelCatalogScope = sessionScope,
       launcherProvider = launcherProvider,
       onDefaultSaved = ::showInfo,
       onLaunchProfileApplied = {
@@ -167,6 +167,7 @@ internal class AgentPromptPaletteSessionController(
       onSubmitBlocked = ::showError,
       onSubmitSucceeded = ::closeAfterSuccessfulSubmit,
       onPromptSubmitted = uiStateService::saveSubmittedPromptHistoryEntry,
+      launchProfileIdProvider = generationSettingsController::currentLaunchProfileId,
       generationSettingsProvider = generationSettingsController::currentLaunchSettings,
       generationModelCatalogProvider = generationSettingsController::currentGenerationModelCatalog,
       isContainerModeSelected = ::isContainerModeSelectedForCurrentState,
@@ -182,14 +183,20 @@ internal class AgentPromptPaletteSessionController(
     contextController.loadInitialContext(initialAddContextRequest?.contextItems)
     contextController.resolveExtensionTabs()
 
-    val draft = draftController.restoreDraft(restoreContextSnapshot = initialAddContextRequest == null)
+    val forcedTargetMode = if (hostMode == AgentPromptPaletteHostMode.INLINE_EMPTY_STATE) PromptTargetMode.NEW_TASK else null
+    val draft = draftController.restoreDraft(
+      restoreContextSnapshot = initialAddContextRequest == null,
+      targetModeOverride = forcedTargetMode,
+    )
     draftController.restoreTaskDrafts(draft)
     generationSettingsController.restoreLaunchProfiles(
       launcherProvider()?.loadProviderPreferences() ?: AgentPromptLauncherBridge.ProviderPreferences()
     )
+    generationSettingsController.restoreDraftLaunchProfile(draft.selectedLaunchProfileId)
     refreshExtensionTaskDraftsFromContext()
 
-    if (invocationData.attributes[com.intellij.agent.workbench.prompt.core.AGENT_PROMPT_INVOCATION_PREFER_EXTENSIONS_KEY] == true) {
+    if (hostMode != AgentPromptPaletteHostMode.INLINE_EMPTY_STATE &&
+        invocationData.attributes[com.intellij.agent.workbench.prompt.core.AGENT_PROMPT_INVOCATION_PREFER_EXTENSIONS_KEY] == true) {
       contextController.selectAutoSelectExtensionTab()
     }
     contextController.syncActiveExtensionTab(view.tabbedPane.selectedComponent as? JPanel)
@@ -234,7 +241,7 @@ internal class AgentPromptPaletteSessionController(
       handleTabSwitch()
       updateTargetModeUi()
       updateSendAvailability()
-      movePopupToFitScreen()
+      revalidateHost()
     })
 
     promptArea.addDocumentListener(object : DocumentListener {
@@ -245,7 +252,7 @@ internal class AgentPromptPaletteSessionController(
     })
   }
 
-  fun onPopupClosed() {
+  fun onHostClosed() {
     existingTaskController.dispose()
     suggestionController.dispose()
     draftController.saveProviderPreferences()
@@ -253,12 +260,12 @@ internal class AgentPromptPaletteSessionController(
       uiStateService.clearDraft()
     }
     else {
-      draftController.saveDraft(currentTargetMode())
+      draftController.saveDraft(currentTargetMode(), generationSettingsController.selectedLaunchProfileIdForDraft())
     }
   }
 
   fun showPromptLibraryChooser() {
-    popupScope.launch {
+    sessionScope.launch {
       val sourceEntries = collectReusablePromptSourceEntries(
         workingProjectPaths = reusableSourceProjectPaths(),
       )
@@ -296,7 +303,7 @@ internal class AgentPromptPaletteSessionController(
   }
 
   fun onProviderSelectionChanged() {
-    generationSettingsController.refreshPresentation()
+    generationSettingsController.onProviderSelectionChanged()
     updateProviderOptionsVisibility()
     if (contextState.activeExtensionTab == null && currentTargetMode() == PromptTargetMode.EXISTING_TASK) {
       reloadExistingTasks()
@@ -317,6 +324,11 @@ internal class AgentPromptPaletteSessionController(
   fun codexSkillCompletionEntriesForCompletion(): List<AgentPromptReusableSourceEntry> = codexSkillCompletionEntries
 
   fun resolveWorkingProjectPath(): String? = submitController.resolveWorkingProjectPath()
+
+  @TestOnly
+  internal fun applyLaunchProfileForTest(profileId: String): Boolean {
+    return generationSettingsController.applyLaunchProfileForTest(profileId)
+  }
 
   fun applyAddContextRequest(request: AgentPromptAddContextRequest): AgentPromptAddContextApplyResult {
     val result = contextController.addExternalContextItems(request.contextItems)
@@ -349,14 +361,16 @@ internal class AgentPromptPaletteSessionController(
 
     fun refreshPromptLibraryPopup(preselectNormalizedPromptText: String?) {
       val popupToRefresh = promptLibraryPopup ?: return
-      ApplicationManager.getApplication().invokeLater {
-        if (project.isDisposed || promptLibraryPopup !== popupToRefresh || popupToRefresh.isDisposed) {
-          return@invokeLater
+      sessionScope.launch {
+        withContext(Dispatchers.EDT) {
+          if (project.isDisposed || promptLibraryPopup !== popupToRefresh || popupToRefresh.isDisposed) {
+            return@withContext
+          }
+          popupsWithoutPromptRestore.add(popupToRefresh)
+          popupToRefresh.cancel()
+          promptLibraryPopup = null
+          openPromptLibraryPopup(preselectNormalizedPromptText)
         }
-        popupsWithoutPromptRestore.add(popupToRefresh)
-        popupToRefresh.cancel()
-        promptLibraryPopup = null
-        openPromptLibraryPopup(preselectNormalizedPromptText)
       }
     }
 
@@ -429,10 +443,12 @@ internal class AgentPromptPaletteSessionController(
           if (promptLibraryPopup === popup) {
             promptLibraryPopup = null
           }
-          ApplicationManager.getApplication().invokeLater {
-            if (!skipPromptRestore && chosenEntry == null && !project.isDisposed) {
-              draftController.restorePromptSnapshot(snapshot)
-              IdeFocusManager.getInstance(project).requestFocusInProject(promptArea, project)
+          sessionScope.launch {
+            withContext(Dispatchers.EDT) {
+              if (!skipPromptRestore && chosenEntry == null && !project.isDisposed) {
+                draftController.restorePromptSnapshot(snapshot)
+                IdeFocusManager.getInstance(project).requestFocusInProject(promptArea, project)
+              }
             }
           }
         }
@@ -528,7 +544,7 @@ internal class AgentPromptPaletteSessionController(
       return
     }
 
-    popupScope.launch {
+    sessionScope.launch {
       val skillEntries = loadCodexSkillCompletionEntries()
       if (skillEntries.isEmpty()) {
         return@launch
@@ -543,7 +559,8 @@ internal class AgentPromptPaletteSessionController(
   private suspend fun loadCodexSkillCompletionEntries(): List<AgentPromptReusableSourceEntry> {
     val launcher = launcherProvider() ?: return emptyList()
     val projectPath = submitController.resolveWorkingProjectPath()?.takeIf(String::isNotBlank) ?: return emptyList()
-    return runCatching { launcher.listReusablePromptSourceEntries(projectPath, AgentSessionProvider.CODEX) }
+    val provider = providerSelector.selectedProvider?.bridge?.provider ?: return emptyList()
+    return runCatching { launcher.listReusablePromptSourceEntries(projectPath, provider) }
       .getOrDefault(emptyList())
       .filter { entry ->
         entry.kind == AgentPromptReusableSourceKind.SKILL && entry.insertText.trim().startsWith('$')
@@ -551,7 +568,7 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun invokePromptCompletionWhenReady(editor: Editor, expectedPrefix: Char) {
-    popupScope.launch {
+    sessionScope.launch {
       withContext(Dispatchers.EDT) {
         if (project.isDisposed || editor.isDisposed || !editor.contentComponent.hasFocus()) {
           return@withContext
@@ -655,7 +672,7 @@ internal class AgentPromptPaletteSessionController(
       selectedProviderEntry = providerSelector.selectedProvider,
       launcher = launcher,
       projectPath = submitController.resolveWorkingProjectPath(),
-      isPopupActive = isPopupActive,
+      isHostActive = isHostActive,
     )
   }
 
@@ -664,7 +681,7 @@ internal class AgentPromptPaletteSessionController(
     val mode = currentTargetMode()
     view.existingTaskScrollPane.isVisible = !isExtensionTab && mode == PromptTargetMode.EXISTING_TASK
     view.rootPanel.revalidate()
-    movePopupToFitScreen()
+    revalidateHost()
     if (!isExtensionTab && mode == PromptTargetMode.EXISTING_TASK) {
       if (!existingTaskController.hasLoadedEntries()) {
         reloadExistingTasks()
@@ -677,7 +694,7 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun refreshPreselection() {
-    popupScope.launch {
+    sessionScope.launch {
       val preferredId = resolvePreferredThreadId() ?: return@launch
       existingTaskController.setPreselection(preferredId)
     }
@@ -773,12 +790,16 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun currentTargetMode(): PromptTargetMode {
+    if (hostMode == AgentPromptPaletteHostMode.INLINE_EMPTY_STATE) {
+      return PromptTargetMode.NEW_TASK
+    }
     val selectedComponent = view.tabbedPane.selectedComponent as? JPanel ?: return PromptTargetMode.NEW_TASK
     return selectedComponent.getClientProperty("targetMode") as? PromptTargetMode ?: PromptTargetMode.NEW_TASK
   }
 
   private fun setTargetMode(mode: PromptTargetMode) {
-    val index = findTabIndexForMode(mode) ?: return
+    val targetMode = if (hostMode == AgentPromptPaletteHostMode.INLINE_EMPTY_STATE) PromptTargetMode.NEW_TASK else mode
+    val index = findTabIndexForMode(targetMode) ?: return
     view.tabbedPane.selectedIndex = index
   }
 
@@ -793,6 +814,11 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun clearStatus() {
+    if (hostMode == AgentPromptPaletteHostMode.INLINE_EMPTY_STATE) {
+      setInlineStatusVisible(false)
+      return
+    }
+
     val extensionTab = contextState.activeExtensionTab
     val message = if (extensionTab != null) {
       extensionTab.extension.getFooterHint() ?: AgentPromptBundle.message("popup.footer.hint.default.tab")
@@ -843,11 +869,11 @@ internal class AgentPromptPaletteSessionController(
   }
 
   private fun closeAfterSuccessfulSubmit() {
-    closePopup()
+    closeHost()
   }
 
   private fun runManageProfilesDialog(openDialog: AgentPromptLaunchProfileEditorOpenDialog) {
-    closePopup()
+    closeHost()
     ApplicationManager.getApplication().invokeLater {
       if (project.isDisposed) return@invokeLater
       openDialog {
@@ -860,10 +886,20 @@ internal class AgentPromptPaletteSessionController(
 
   private fun showError(message: @Nls String) {
     view.statusStrip.showError(message)
+    setInlineStatusVisible(true)
   }
 
   private fun showInfo(message: @Nls String) {
     view.statusStrip.showInfo(message)
+    setInlineStatusVisible(true)
+  }
+
+  private fun setInlineStatusVisible(visible: Boolean) {
+    if (hostMode != AgentPromptPaletteHostMode.INLINE_EMPTY_STATE || view.footerPanel.isVisible == visible) {
+      return
+    }
+    view.footerPanel.isVisible = visible
+    revalidateHost()
   }
 }
 

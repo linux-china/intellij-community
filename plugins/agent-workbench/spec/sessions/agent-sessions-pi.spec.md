@@ -3,8 +3,8 @@ name: Agent Workbench Pi Sessions
 description: Requirements for first-class pi.dev session support in Agent Workbench.
 targets:
   - ../../common/src/session/AgentSessionModels.kt
-  - ../../pi/sessions/resources/intellij.agent.workbench.pi.sessions.xml
-  - ../../pi/sessions-filewatch/resources/intellij.agent.workbench.pi.sessions.filewatch.xml
+  - ../../pi/sessions/resources/intellij.platform.ai.agent.pi.sessions.xml
+  - ../../pi/sessions-filewatch/resources/intellij.platform.ai.agent.pi.sessions.filewatch.xml
   - ../../pi/sessions/resources/pi-extension/agent-workbench-extension.ts
   - ../../pi/sessions/resources/pi-extension/control.ts
   - ../../pi/sessions/src/**/*.kt
@@ -27,7 +27,7 @@ Date: 2026-06-05
 Agent Workbench treats Pi as a first-class terminal-backed provider. Pi sessions are discovered from Pi JSONL session files, can be launched and resumed from Agent Workbench, and support rename/archive state without requiring a Pi-specific backend API.
 
 ## Requirements
-- Pi must be exposed as `AgentSessionProvider.PI`, registered after Junie and before Terminal, and shown in provider menus with a Pi icon and localized labels.
+- Pi must be exposed as `AgentSessionProvider.from("pi")`, registered after Junie and before Terminal, and shown in provider menus with a Pi icon and localized labels.
   [@test] ../../pi/sessions/testSrc/PiAgentSessionProviderDescriptorTest.kt
   [@test] ../../plugin/testSrc/AgentWorkbenchProviderRegistrationTest.kt
 
@@ -42,9 +42,9 @@ Agent Workbench treats Pi as a first-class terminal-backed provider. Pi sessions
 - When Pi generation model selection is enabled, Agent Workbench must scope launched Pi sessions from Pi's own `--list-models` output after loading the managed extension and Agent Workbench model-registration metadata. The resulting `--models` scope must keep the selected model first and include Pi built-in/custom models together with Agent Workbench-registered oMLX/JetBrains Central models, so Pi's `/model` selector is not limited to extension-provided models.
   Pi-provided rows from the popup catalog are still persisted as Agent Workbench generation model ids (for example, encoded `pi:` rows), not as raw Pi CLI model strings. New-session launches, prompt launches into existing threads, editor restore, and pending/concrete tab resume must all replay the persisted Agent Workbench generation settings through the shared launch planner before constructing the Pi command, so an Agent Workbench-selected model wins over later runtime `/model` changes made inside Pi.
   Pi-reported Claude rows must be filtered before they enter the Agent Workbench catalog or are recoded as JetBrains Central fallback rows: hide all Claude 3 rows, all Claude rows with parsed version lower than 4.6, and all Claude rows containing an 8-digit `20xx` date token. Profile-backed Central rows are not filtered by this Pi row rule.
-  JetBrains Central launch metadata must be resolved from `jbcentral status`, including the proxy port and the supported wired agent set. Wired `Codex` must register Central models from Pi's `openai-codex` source through the `codex/openai` proxy route; wired `Claude Code` must register Central models from Pi's `anthropic` source through the `claude-code/anthropic` proxy route. Both routes must be presented to users under the single `JetBrains Central` provider name, including Claude Code models such as Opus.
-  JetBrains Central rows should be derived from available JetBrains Central LLM profiles through the direct local `jbcentral` proxy probe only when it is explicitly enabled, not from Pi's static model registry: real `profilesV8` rows can omit `providerModelID`, so Agent Workbench must use `providerModelID` only when present and otherwise launch by the Central profile id such as `openai-gpt-5` or `anthropic-claude-4-5-sonnet`. OpenAI/Codex Central profiles may be `Responses`-only and must not be filtered out for missing `Chat`; Anthropic/Claude Code profiles must still support chat. Deprecated and experimental Central profiles must stay hidden.
-  When profile-backed JetBrains Central models are available, Pi's Central-looking fallback rows (`JetBrains Central`, `openai-codex`, and wired `anthropic`) must be suppressed so stale or future entries such as unavailable Fable models do not appear as normal choices. If the direct profiles probe is disabled or returns no profiles, Agent Workbench must still wire JetBrains Central into Pi through the managed extension, use Pi's static `openai-codex`/`anthropic` model registry as a last-resort fallback, and recode those rows as `JetBrains Central` models before showing or launching them. If the full Pi catalog probe fails, launch must fall back to the discovered Agent Workbench extension models.
+  JetBrains Central launch metadata must be resolved from `jbcentral status`, including the proxy port. The status agent list describes wired terminal CLI tools, not the complete model proxy surface; Agent Workbench must therefore expose its supported Central proxy routes by default once JBCentral is available. Codex models must be registered from Pi's `openai-codex` source through the `codex/openai` proxy route; Claude Code models from Pi's `anthropic` source through the `claude-code/anthropic` proxy route; Gemini models from Pi's `google-vertex` source through the `gemini-cli/vertex` proxy route using the Central Vertex placeholder path `v1beta1/projects/wire-project/locations/wire-location`. All routes must be presented to users under the single `JetBrains Central` provider name, including Claude Code models such as Opus and Gemini models such as Flash.
+  JetBrains Central rows should be derived from available JetBrains Central LLM profiles through the direct local `jbcentral` proxy probe only when it is explicitly enabled, not from Pi's static model registry: real `profilesV8` rows can omit `providerModelID`, so Agent Workbench must use `providerModelID` only when present and otherwise launch by the Central profile id such as `openai-gpt-5`, `anthropic-claude-4-5-sonnet`, or `google-gemini-2-5-flash`. OpenAI/Codex Central profiles may be `Responses`-only and must not be filtered out for missing `Chat`; Anthropic/Claude Code and Google/Gemini profiles must still support chat, tools, and system messages. Deprecated and experimental Central profiles must stay hidden.
+  When profile-backed JetBrains Central models are available, Pi's Central-looking fallback rows (`JetBrains Central`, `openai-codex`, wired `anthropic`, and wired `google-vertex`) must be suppressed so stale or future entries such as unavailable Fable models do not appear as normal choices. If the direct profiles probe is disabled or returns no profiles, Agent Workbench must still wire JetBrains Central into Pi through the managed extension, use Pi's static `openai-codex`/`anthropic`/`google-vertex` model registry as a last-resort fallback, and recode those rows as `JetBrains Central` models before showing or launching them. If the full Pi catalog probe fails, launch must fall back to the discovered Agent Workbench extension models.
   [@test] ../../pi/sessions/testSrc/PiAgentSessionProviderDescriptorTest.kt
   [@test] ../../pi/sessions/testSrc/PiJbCentralModelCatalogTest.kt
   [@test] ../../pi/sessions/testSrc/PiKnownModelCatalogTest.kt
@@ -55,6 +55,7 @@ Agent Workbench treats Pi as a first-class terminal-backed provider. Pi sessions
   [@test] ../../pi/sessions/testSrc/PiJbCentralModelCatalogTest.kt
 
 - The bundled Pi extension is the bridge between Agent Workbench catalog rows and Pi's `/model` selector. During catalog probing, Agent Workbench must pass profile-backed oMLX/JetBrains Central models through `AGENT_WORKBENCH_PI_MODEL_CATALOG`; the extension registers those providers before Pi evaluates `--list-models`. JetBrains Central proxy credentials must not be persisted in model ids, launch metadata, or logs; the extension and IDE-side direct profile probe should obtain the wire secret from `jbcentral proxy start --return-key` and fall back to `.wire/config.json` when the proxy is already running but the CLI cannot return a key.
+  JetBrains Central OpenAI/Codex models that support Pi `xhigh` thinking must include model-level `thinkingLevelMap` metadata in the bundled extension registration, so Pi's runtime Shift+Tab cycle exposes `xhigh` after Agent Workbench registers those models.
   [@test] ../../pi/sessions/testSrc/PiKnownModelCatalogTest.kt
   [@test] ../../pi/sessions/testSrc/PiJbCentralModelCatalogTest.kt
 
@@ -99,8 +100,8 @@ Agent Workbench treats Pi as a first-class terminal-backed provider. Pi sessions
 - Any hardcoded or blended color should be treated as a documented fallback, not as the primary mapping. Prefer replacing such values with stable IDE/editor color keys when a suitable source becomes available.
 
 ## Testing / Local Run
-- `./tests.cmd --module intellij.agent.workbench.pi.sessions.tests --test 'com.intellij.agent.workbench.pi.sessions.*Test'`
-- `./tests.cmd --module intellij.agent.workbench.pi.sessions.filewatch.tests --test 'com.intellij.agent.workbench.pi.sessions.*Test'`
+- `./tests.cmd --module intellij.platform.ai.agent.pi.sessions.tests --test 'com.intellij.platform.ai.agent.pi.sessions.*Test'`
+- `./tests.cmd --module intellij.platform.ai.agent.pi.sessions.filewatch.tests --test 'com.intellij.platform.ai.agent.pi.sessions.*Test'`
 - `./tests.cmd --module intellij.agent.workbench.plugin.tests --test com.intellij.agent.workbench.plugin.AgentWorkbenchProviderRegistrationTest`
 
 ## References

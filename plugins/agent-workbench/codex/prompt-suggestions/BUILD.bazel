@@ -1,6 +1,14 @@
 load("@community//build:tests-options.bzl", "jps_test")
 load("@rules_jvm//:jvm.bzl", "jvm_library")
 
+jps_test(
+    name = "agent-workbench-codex-prompt-suggestions-tests_test",
+    timeout = "moderate",
+    tags = ["community-aggregator"],
+    runtime_deps = [":agent-workbench-codex-prompt-suggestions-tests_test_lib"],
+)
+### skip generation section `test intellij.agent.workbench.codex.prompt.suggestions.tests`
+
 ### auto-generated section `build intellij.agent.workbench.codex.prompt.suggestions` start
 
 jvm_library(
@@ -27,9 +35,10 @@ jvm_library(
         "//platform/execution-impl",
         "//platform/platform-api:ide",
         "//platform/editor-ui-api:editor-ui",
-        "//plugins/agent-workbench/codex/common",
-        "//plugins/agent-workbench/common",
-        "//plugins/agent-workbench/json",
+        "//plugins/agent-workbench/lib-agent/providers/codex/common",
+        "//plugins/agent-workbench/lib-agent/common",
+        "//plugins/agent-workbench/lib-agent/core",
+        "//plugins/agent-workbench/lib-agent/json",
         "//plugins/agent-workbench/prompt/core",
         "//libraries/jackson3/jackson:libraries-jackson3",
         "//platform/platform-util-io:ide-util-io",
@@ -53,9 +62,10 @@ jvm_library(
         "//platform/execution-impl:execution-impl_test_lib",
         "//platform/platform-api:ide_test_lib",
         "//platform/editor-ui-api:editor-ui_test_lib",
-        "//plugins/agent-workbench/codex/common:common_test_lib",
-        "//plugins/agent-workbench/common:common_test_lib",
-        "//plugins/agent-workbench/json:json_test_lib",
+        "//plugins/agent-workbench/lib-agent/providers/codex/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/core:core_test_lib",
+        "//plugins/agent-workbench/lib-agent/json:json_test_lib",
         "//plugins/agent-workbench/prompt/core:core_test_lib",
         "//libraries/jackson3/jackson:libraries-jackson3_test_lib",
         "//platform/platform-util-io:ide-util-io_test_lib",
@@ -120,12 +130,14 @@ jvm_library(
         "//platform/platform-api:ide_test_lib",
         "//platform/editor-ui-api:editor-ui",
         "//platform/editor-ui-api:editor-ui_test_lib",
-        "//plugins/agent-workbench/codex/common",
-        "//plugins/agent-workbench/codex/common:common_test_lib",
-        "//plugins/agent-workbench/common",
-        "//plugins/agent-workbench/common:common_test_lib",
-        "//plugins/agent-workbench/json",
-        "//plugins/agent-workbench/json:json_test_lib",
+        "//plugins/agent-workbench/lib-agent/providers/codex/common",
+        "//plugins/agent-workbench/lib-agent/providers/codex/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/common",
+        "//plugins/agent-workbench/lib-agent/common:common_test_lib",
+        "//plugins/agent-workbench/lib-agent/core",
+        "//plugins/agent-workbench/lib-agent/core:core_test_lib",
+        "//plugins/agent-workbench/lib-agent/json",
+        "//plugins/agent-workbench/lib-agent/json:json_test_lib",
         "//plugins/agent-workbench/prompt/core",
         "//plugins/agent-workbench/prompt/core:core_test_lib",
         "//libraries/jackson3/jackson:libraries-jackson3",
@@ -151,11 +163,3 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 ### auto-generated section `iml intellij.agent.workbench.codex.prompt.suggestions.tests` end
-
-### auto-generated section `test intellij.agent.workbench.codex.prompt.suggestions.tests` start
-
-jps_test(
-    name = "agent-workbench-codex-prompt-suggestions-tests_test",
-    runtime_deps = [":agent-workbench-codex-prompt-suggestions-tests_test_lib"],
-)
-### auto-generated section `test intellij.agent.workbench.codex.prompt.suggestions.tests` end

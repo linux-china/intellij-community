@@ -3,8 +3,7 @@ package com.intellij.agent.workbench.prompt.ui
 
 // @spec community/plugins/agent-workbench/spec/actions/global-prompt-entry.spec.md
 
-import com.intellij.agent.workbench.common.session.AgentSessionProvider
-import com.intellij.agent.workbench.common.session.isClaudeMenuCommandPrompt
+import com.intellij.platform.ai.agent.core.session.AgentSessionProvider
 import com.intellij.agent.workbench.prompt.core.AgentPromptContextItem
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModel
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationSettings
@@ -16,9 +15,9 @@ import com.intellij.agent.workbench.prompt.core.AgentPromptLauncherBridge
 import com.intellij.agent.workbench.prompt.core.AgentPromptProjectPathCandidate
 import com.intellij.agent.workbench.prompt.core.dataContextOrNull
 import com.intellij.agent.workbench.prompt.ui.context.buildExtensionActionDataContext
-import com.intellij.agent.workbench.sessions.core.providers.AgentPromptProviderOptionTarget
-import com.intellij.agent.workbench.sessions.core.providers.isPlanModeBlockedForExistingThread
-import com.intellij.agent.workbench.sessions.core.providers.resolveEffectiveProviderOptionIds
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentPromptProviderOptionTarget
+import com.intellij.platform.ai.agent.sessions.core.providers.isPlanModeBlockedForExistingThread
+import com.intellij.platform.ai.agent.sessions.core.providers.resolveEffectiveProviderOptionIds
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -47,6 +46,7 @@ internal class AgentPromptPaletteSubmitController(
   private val onSubmitBlocked: (@Nls String) -> Unit,
   private val onSubmitSucceeded: () -> Unit,
   private val onPromptSubmitted: (AgentPromptHistoryEntry) -> Unit = {},
+  private val launchProfileIdProvider: () -> String? = { null },
   private val generationSettingsProvider: () -> AgentPromptGenerationSettings = { AgentPromptGenerationSettings.AUTO },
   private val generationModelCatalogProvider: () -> List<AgentPromptGenerationModel> = { emptyList() },
   private val isContainerModeSelected: () -> Boolean = { false },
@@ -83,16 +83,18 @@ internal class AgentPromptPaletteSubmitController(
     val hasProjectPath = resolveWorkingProjectPath() != null
     val hasExistingTaskTarget = !existingTaskController.selectedExistingTaskId.isNullOrBlank()
 
-    if (activeExtensionTab() != null) {
+    val extensionTab = activeExtensionTab()
+    if (extensionTab?.extension?.getSubmitActionId() != null) {
       launchState.canSubmitNow = true
       return
     }
+    val targetMode = if (extensionTab != null) PromptTargetMode.NEW_TASK else currentTargetMode()
 
     val submitPrerequisitesMet = hasPrompt &&
-                                 hasProjectPath &&
-                                 selectedProviderEntry != null &&
-                                 selectedProviderEntry.isCliAvailable
-    launchState.canSubmitNow = when (currentTargetMode()) {
+                                  hasProjectPath &&
+                                  selectedProviderEntry != null &&
+                                  selectedProviderEntry.isCliAvailable
+    launchState.canSubmitNow = when (targetMode) {
       PromptTargetMode.NEW_TASK -> submitPrerequisitesMet
       PromptTargetMode.EXISTING_TASK -> submitPrerequisitesMet && hasExistingTaskTarget
     }
@@ -133,6 +135,7 @@ internal class AgentPromptPaletteSubmitController(
           val dataContext = buildExtensionActionDataContext(
             baseDataContext = baseDataContext,
             selectedProviderId = providerSelector.selectedProvider?.bridge?.provider?.value,
+            selectedLaunchMode = providerSelector.selectedLaunchMode,
             messageRequest = messageRequest,
             generationSettings = if (showsGenerationControls) generationSettingsProvider() else null,
             generationModelCatalog = if (showsGenerationControls) generationModelCatalogProvider() else emptyList(),
@@ -146,11 +149,13 @@ internal class AgentPromptPaletteSubmitController(
       }
     }
 
+    val extensionNormalLaunch = extensionTab != null
     val selectedProviderEntry = providerSelector.selectedProvider
     val launcher = launcherProvider()
     val projectPath = resolveWorkingProjectPath()
+    val targetMode = if (extensionNormalLaunch) PromptTargetMode.NEW_TASK else currentTargetMode()
     val validationErrorKey = resolveSubmitValidationErrorMessageKey(
-      targetMode = currentTargetMode(),
+      targetMode = targetMode,
       prompt = promptArea.text,
       selectedProvider = selectedProviderEntry?.bridge?.provider,
       isProviderCliAvailable = selectedProviderEntry?.isCliAvailable == true,
@@ -166,7 +171,6 @@ internal class AgentPromptPaletteSubmitController(
     val prompt = promptArea.text.trim()
     val providerEntry = selectedProviderEntry ?: return
     val effectiveProjectPath = projectPath ?: return
-    val targetMode = currentTargetMode()
     val selectedThreadActivity = existingTaskController.selectedEntry()?.activity
     val effectiveProviderOptionIds = resolveEffectiveProviderOptionIds(
       selectedProvider = providerEntry.bridge,
@@ -189,7 +193,7 @@ internal class AgentPromptPaletteSubmitController(
       return
     }
 
-    val shouldStripContext = providerEntry.bridge.provider == AgentSessionProvider.CLAUDE && prompt.isClaudeMenuCommandPrompt()
+    val shouldStripContext = providerEntry.bridge.shouldStripContextForPrompt(prompt)
     val contextSelection = if (shouldStripContext) {
       null
     }
@@ -200,15 +204,15 @@ internal class AgentPromptPaletteSubmitController(
     val launcherBridge = launcher ?: return
 
     val targetThreadId = when {
-      activeExtensionTab() != null -> null
       targetMode == PromptTargetMode.NEW_TASK -> null
       else -> existingTaskController.selectedExistingTaskId ?: return
     }
-    val generationSettings =
-      if (targetMode == PromptTargetMode.NEW_TASK) generationSettingsProvider() else AgentPromptGenerationSettings.AUTO
-    val generationModelCatalog = if (targetMode == PromptTargetMode.NEW_TASK) generationModelCatalogProvider() else emptyList()
+    val isNewTaskLaunch = targetThreadId == null
+    val generationSettings = if (isNewTaskLaunch) generationSettingsProvider() else AgentPromptGenerationSettings.AUTO
+    val generationModelCatalog = if (isNewTaskLaunch) generationModelCatalogProvider() else emptyList()
 
     val request = AgentPromptLaunchRequest(
+      launchProfileId = launchProfileIdProvider(),
       provider = providerEntry.bridge.provider,
       projectPath = effectiveProjectPath,
       launchMode = providerSelector.selectedLaunchMode,
@@ -226,7 +230,7 @@ internal class AgentPromptPaletteSubmitController(
       containerMode = shouldSubmitContainerMode(
         isSelected = isContainerModeSelected(),
         selectedProvider = providerEntry.bridge.provider,
-        isExtensionTab = activeExtensionTab() != null,
+        isExtensionTab = extensionNormalLaunch,
         supportsContainerMode = isContainerModeSupported,
         isContainerRuntimeAvailable = isContainerModeRuntimeAvailable,
       ),

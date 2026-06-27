@@ -338,7 +338,6 @@ com.intellij.xdebugger.breakpoints.XLineBreakpoint
 f:com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo
 - f:getLogExpressionIfEnabled():java.lang.String
 - f:getSuspendPolicy():com.intellij.xdebugger.breakpoints.SuspendPolicy
-- f:getVerticalPlacement():com.intellij.xdebugger.breakpoints.XLineBreakpointVerticalPlacement
 - f:isTemporary():Z
 f:com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
 - <init>():V
@@ -346,7 +345,6 @@ f:com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
 - f:setLogExpressionIfEnabled(java.lang.String):com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
 - f:setSuspendPolicy(com.intellij.xdebugger.breakpoints.SuspendPolicy):com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
 - f:setTemporary(Z):com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
-- f:setVerticalPlacement(com.intellij.xdebugger.breakpoints.XLineBreakpointVerticalPlacement):com.intellij.xdebugger.breakpoints.XLineBreakpointAdditionalInfo$Builder
 a:com.intellij.xdebugger.breakpoints.XLineBreakpointType
 - com.intellij.xdebugger.breakpoints.XBreakpointType
 - p:<init>(java.lang.String,java.lang.String):V
@@ -729,6 +727,7 @@ com.intellij.xdebugger.frame.presentation.XValuePresentation$XValueTextRenderer
 com.intellij.xdebugger.hotswap.HotSwapProvider
 - a:createChangesCollector(com.intellij.xdebugger.hotswap.HotSwapSession,kotlinx.coroutines.CoroutineScope,com.intellij.xdebugger.hotswap.SourceFileChangesListener):com.intellij.xdebugger.hotswap.SourceFileChangesCollector
 - a:performHotSwap(com.intellij.xdebugger.hotswap.HotSwapSession):V
+- restart():V
 com.intellij.xdebugger.hotswap.HotSwapResultListener
 - a:onCanceled():V
 - a:onFailure():V
@@ -748,6 +747,7 @@ com.intellij.xdebugger.hotswap.SourceFileChangesCollector
 - a:resetChanges():V
 com.intellij.xdebugger.hotswap.SourceFileChangesListener
 - a:onChangesCanceled():V
+- a:onIncompatibleChanges(java.lang.String):V
 - a:onNewChanges():V
 a:com.intellij.xdebugger.settings.DebuggerConfigurableProvider
 - sf:EXTENSION_POINT:com.intellij.openapi.extensions.ExtensionPointName

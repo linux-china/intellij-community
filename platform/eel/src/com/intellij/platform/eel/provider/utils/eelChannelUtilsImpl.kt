@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream
 import java.io.Flushable
 import java.io.IOException
 import java.io.InputStream
+import java.io.InterruptedIOException
 import java.io.OutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
@@ -70,6 +71,9 @@ internal class NioReadToEelAdapter(
           do {
             while (selector.select(100) == 0) {  // I choose 100 ms at random.
               ensureActive()
+              if (!readableByteChannel.isOpen) {
+                throw EelReceiveChannelException(this@NioReadToEelAdapter, "The channel is closed")
+              }
             }
             selector.selectedKeys().clear()
             read = readableByteChannel.read(dst)
@@ -175,7 +179,11 @@ internal class NioWriteToEelAdapter(
             }
           }
         }
-        flushable?.flush()
+        if (flushable != null) {
+          computeDetached {
+            flushable.flush()
+          }
+        }
       }
       catch (err: IOException) {
         throw EelSendChannelException(this@NioWriteToEelAdapter, err)
@@ -223,7 +231,8 @@ internal class InputStreamAdapterImpl(
       return -1
     }
     else {
-      return oneByte.flip().get().toInt()
+      oneByte.flip()
+      return oneByte.get().toInt()
     }
   }
 
@@ -256,8 +265,14 @@ internal class InputStreamAdapterImpl(
         receiveChannel.receiveAvailable(dst)
       }
       else {
-        runBlocking(blockingContext) {
-          receiveChannel.receive(dst)
+        try {
+          runBlocking(blockingContext) {
+            receiveChannel.receive(dst)
+          }
+        } catch (e: InterruptedException) {
+          throw InterruptedIOException().apply {
+            addSuppressed(e)
+          }
         }
       }
       when (r) {
@@ -281,7 +296,9 @@ internal class OutputStreamAdapterImpl(
 ) : OutputStream() {
   private val oneByte = ByteBuffer.allocate(1)
   override fun write(b: Int) {
-    oneByte.clear().put(b.toByte()).flip()
+    oneByte.clear()
+    oneByte.put(b.toByte())
+    oneByte.flip()
     write(oneByte)
   }
 
@@ -321,7 +338,8 @@ internal fun CoroutineScope.consumeReceiveChannelAsKotlinImpl(receiveChannel: Ee
           }
           ReadResult.NOT_EOF -> {
             // Direct buffers are likely to get lost from the pool and collected by GC, but it just brings a tiny performance penalty.
-            channel.send(buffer.flip())
+            buffer.flip()
+            channel.send(buffer)
           }
         }
       }
@@ -355,7 +373,8 @@ internal fun EelReceiveChannel.linesImpl(charset: Charset): Flow<String> = flow 
       emitBuffer()
       return@flow
     }
-    val b = tmpBuffer.flip().get().toInt()
+    tmpBuffer.flip()
+    val b = tmpBuffer.get().toInt()
     result.write(b)
     if (b == 10) {
       emitBuffer()

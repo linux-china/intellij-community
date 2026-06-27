@@ -6,14 +6,15 @@
 
 ## 1. Quick start
 
-| I want to… | Go to |
-|---|---|
-| Add a WebView UI to a feature | [guides/WebView-UI-Authoring-Guide](guides/WebView-UI-Authoring-Guide.md) |
-| Understand the runtime (engines, providers, asset loading) | [architecture/WebView-Runtime-Architecture](architecture/WebView-Runtime-Architecture.md) |
-| Review the API surface and the 13-item cleanup state | [architecture/WebView-Architecture-Review](architecture/WebView-Architecture-Review.md) |
-| Design a new JSON-RPC contract | [architecture/WebView-JsonRpc-Design](architecture/WebView-JsonRpc-Design.md) + [architecture/WebView-TS-RPC-API-Design](architecture/WebView-TS-RPC-API-Design.md) |
-| Know what's pending vs done | § 3 Roadmap (this doc) |
-| Understand why an old approach was changed | [historical/historical-decisions](historical/historical-decisions.md) |
+| I want to…                                                     | Go to                                                                                                                                                                         |
+|----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Add a WebView UI to a feature                                  | [guides/WebView-UI-Authoring-Guide](guides/WebView-UI-Authoring-Guide.md)                                                                                                     |
+| Understand the runtime (engines, providers, asset loading)      | [architecture/WebView-Runtime-Architecture](architecture/WebView-Runtime-Architecture.md)                                                                                     |
+| Review the API surface and the 13-item cleanup state            | [architecture/WebView-Architecture-Review](architecture/WebView-Architecture-Review.md)                                                                                       |
+| Design a new JSON-RPC contract                                 | [architecture/WebView-JsonRpc-Design](architecture/WebView-JsonRpc-Design.md) + [architecture/WebView-TS-RPC-API-Design](architecture/WebView-TS-RPC-API-Design.md)           |
+| Preview or browser-test a WebView UI without IDE/Kotlin         | [frontend/WebView-Frontend-Testability](frontend/WebView-Frontend-Testability.md)                                                                                             |
+| Know what's pending vs done                                     | § 3 Roadmap (this doc)                                                                                                                                                        |
+| Understand why an old approach was changed                      | [historical/historical-decisions](historical/historical-decisions.md)                                                                                                         |
 
 ## 2. Decision trees
 
@@ -104,6 +105,7 @@ Use the same status legend everywhere; don't invent new icons.
 - ⬜ Windows WebView2 off-EDT Stage 2 (`AttachThreadInput`) — [backends/windows-webview2-off-edt-plan](backends/windows-webview2-off-edt-plan.md#stage-status)
 - ⬜ Windows WebView2 off-EDT Stage 3 (`assert_owning_thread`) — closes rust-review H1
 - ✅ Windows WebView2 application-mode defaults — disable browser-like UI behavior by default; [backends/windows-webview2-application-mode-plan](backends/windows-webview2-application-mode-plan.md)
+- ✅ macOS WKWebView application-mode defaults — disable browser-like UI behavior by default; [backends/macos-wkwebview-application-mode-plan](backends/macos-wkwebview-application-mode-plan.md)
 - ⬜ Architecture Review cleanup #1–7 (pure cleanup, no public API break)
 - ⬜ Architecture Review cleanup #8 (`WebViewMessageRegistration` → `AutoCloseable`)
 - ⬜ Architecture Review cleanup #10–13 (engine type unification, first-class `WebViewTransport`, `WebViewMessageContext` decision)
@@ -113,7 +115,8 @@ Use the same status legend everywhere; don't invent new icons.
 
 ### P2 — Medium (planned)
 - ⬜ DnD Interop v1 (macOS WKWebView + Windows WebView2) — [interop/WebView-Drag-And-Drop-Interop-Plan](interop/WebView-Drag-And-Drop-Interop-Plan.md)
-- ⬜ Frontend Testability harness — [frontend/WebView-Frontend-Testability](frontend/WebView-Frontend-Testability.md)
+- ⏳ Frontend Testability harness — Browser mock testkit V1 exists for TypeScript/Vite previews; Java backend layer deferred — [frontend/WebView-Frontend-Testability](frontend/WebView-Frontend-Testability.md)
+- ⬜ WebView IconSet loading for classloader-backed IntelliJ icons — [frontend/WebView-IconSet-Loading-Plan](frontend/WebView-IconSet-Loading-Plan.md)
 - ⬜ Frontend SDK Distribution (versioned npm + SDK tarball + compatibility check) — [frontend/WebView-Frontend-SDK-Distribution](frontend/WebView-Frontend-SDK-Distribution.md)
 - ⬜ Control Parity scaffold (`@jetbrains/intellij-webview-controls`) — [frontend/WebView-Control-Parity-Design](frontend/WebView-Control-Parity-Design.md)
 - ⬜ Bazel `webview_assets` rule (replace manual build) — [frontend/WebView-Frontend-Build-Strategy](frontend/WebView-Frontend-Build-Strategy.md)
@@ -152,7 +155,8 @@ Use the same status legend everywhere; don't invent new icons.
 - [Framework Policy](frontend/WebView-Frontend-Framework-Policy.md) — Custom Elements, Lit, Preact/React/Svelte tradeoffs.
 - [View Model Patterns](frontend/WebView-Frontend-View-Model-Patterns.md) — Kotlin/WebView state boundary, DTOs, stores, projections.
 - [SDK Distribution](frontend/WebView-Frontend-SDK-Distribution.md) — ⬜ design only.
-- [Testability Without IDE](frontend/WebView-Frontend-Testability.md) — ⬜ design only.
+- [Testability Without IDE](frontend/WebView-Frontend-Testability.md) — ⏳ browser mock testkit V1 implemented; Java backend layer deferred.
+- [IconSet Loading Plan](frontend/WebView-IconSet-Loading-Plan.md) — ⬜ design only.
 - [Control Parity Design](frontend/WebView-Control-Parity-Design.md) — ⬜ design only.
 
 ### `interop/` — Swing ↔ WebView boundary
@@ -165,6 +169,7 @@ Use the same status legend everywhere; don't invent new icons.
 ### `backends/` — Native rendering / engine impls
 - [Windows WebView2 Implementation](backends/windows-webview2-implementation-plan.md) — ✅ done.
 - [Windows WebView2 Application Mode](backends/windows-webview2-application-mode-plan.md) — ✅ implemented.
+- [macOS WKWebView Application Mode](backends/macos-wkwebview-application-mode-plan.md) — ✅ implemented.
 - [Windows WebView2 Off-EDT](backends/windows-webview2-off-edt-plan.md) — Stage 1 ✅, Stages 2–3 ⬜.
 - [Windows WebView2 Rust Bridge Review](backends/windows-webview2-rust-review.md) — issues catalogued with status table; C1/C2/C3/H1–H3 + M/L items mostly ⬜.
 - [Linux WebKitGTK Runtime](backends/linux-webkitgtk-runtime.md) — ⏳ Wayland snapshot display-only; interactive input / asset serving / X11 ⬜.

@@ -2,11 +2,14 @@
 package com.jetbrains.python.types
 
 import com.intellij.idea.TestFor
+import com.intellij.testFramework.TestLoggerFactory
+import com.intellij.testFramework.TestLoggerFactory.TestLoggerAssertionError
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
 import com.jetbrains.python.psi.LanguageLevel
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 /**
  * Type and type-checker tests for [overloads][https://docs.python.org/3/library/typing.html#typing.overload]:
@@ -14,14 +17,12 @@ import org.junit.jupiter.api.Test
  */
 class PyOverloadTypeTest : PyCodeInsightTestCase() {
 
-  override val defaultTestOptions = TestOptions(enablePyAnyType = false)
-
   @Nested
   inner class OverloadResolutionAndImplementation {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `first overload and implementation in class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       class A:
@@ -41,7 +42,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `top level first overload and implementation`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       @overload
@@ -60,7 +61,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `first overload and implementation in imported class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import A
       expr = A().foo(5)
@@ -72,7 +73,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `first overload and implementation in imported module`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import foo
       expr = foo(5)
@@ -84,7 +85,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `second overload and implementation in class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       class A:
@@ -104,7 +105,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `top level second overload and implementation`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       @overload
@@ -123,7 +124,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `second overload and implementation in imported class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import A
       expr = A().foo("5")
@@ -135,7 +136,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `second overload and implementation in imported module`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import foo
       expr = foo("5")
@@ -147,7 +148,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `not matched overloads and implementation in class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       class A:
@@ -160,14 +161,14 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
           def foo(self, value):
               return None
       expr = A().foo(object()) # WARNING No overload of 'foo' matches the arguments. Argument types: (object). Expected one of: (value: int), (value: str)
-      #└ TYPE Union[int, str]
+      #└ TYPE UnsafeUnion[int, str]
       """,
     )
 
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `top level not matched overloads and implementation`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       @overload
@@ -179,18 +180,18 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       def foo(value):
           return None
       expr = foo(object()) # WARNING No overload of 'foo' matches the arguments. Argument types: (object). Expected one of: (value: int), (value: str)
-      #└ TYPE Union[int, str]
+      #└ TYPE UnsafeUnion[int, str]
       """,
     )
 
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `not matched overloads and implementation in imported class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import A
       expr = A().foo(object()) # WARNING No overload of 'foo' matches the arguments. Argument types: (object). Expected one of: (value: int), (value: str)
-      #└ TYPE Union[int, str]
+      #└ TYPE UnsafeUnion[int, str]
       """,
       "b.py" to OVERLOAD_CLASS_MODULE,
     )
@@ -198,11 +199,11 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `not matched overloads and implementation in imported module`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import foo
       expr = foo(object()) # WARNING No overload of 'foo' matches the arguments. Argument types: (object). Expected one of: (value: int), (value: str)
-      # └ TYPE Union[int, str]
+      # └ TYPE UnsafeUnion[int, str]
       """,
       "b.py" to OVERLOAD_TOPLEVEL_MODULE,
     )
@@ -213,7 +214,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-40838"])
     fun `union of many types including literals from overloaded returns`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON27, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON27),
       """
       from typing import overload, Literal
 
@@ -255,7 +256,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-35235"])
     fun `overloads with typing literal - literal argument`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON36, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON36),
       """
       from typing_extensions import Literal
       from typing import overload
@@ -283,7 +284,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-35235"])
     fun `overloads with typing literal - widened argument`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON36, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON36),
       """
       from typing_extensions import Literal
       from typing import overload
@@ -311,7 +312,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-35235"])
     fun `overloads with typing literal - literal expression argument`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON36, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON36),
       """
       from typing_extensions import Literal
       from typing import overload
@@ -376,7 +377,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       class Subclass(Base):
           def test(self, param):
               expr = param
-      #       └ TYPE Any
+      #       └ TYPE Unknown
       """)
 
     @Test
@@ -593,8 +594,8 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       l = [foo]
       l.append(foo)  # ok
       l.append(foo2)  # ok
-      l.append(bar) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str]' (matched generic type '_T'), got 'Overload[(x: int) -> int, (x: str) -> int]' instead
-      l.append(baz) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str]' (matched generic type '_T'), got '(x: int) -> int' instead
+      l.append(bar) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str]', got 'Overload[(x: int) -> int, (x: str) -> int]' instead
+      l.append(baz) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str]', got '(x: int) -> int' instead
       """)
 
     @Test
@@ -656,7 +657,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
           l3.append(c)
 
           l4 = [bad_converter_func]
-          l4.append(c) # WARNING Expected type 'Overload[(x: str) -> str, (x: int) -> int]' (matched generic type '_T'), got 'ConverterProtocol' instead
+          l4.append(c) # WARNING Expected type 'Overload[(x: str) -> str, (x: int) -> int]', got 'ConverterProtocol' instead
       """)
 
     @Test
@@ -689,7 +690,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       l1.append(many_overloads)  # ok
 
       l2 = [many_overloads]
-      l2.append(few_overloads) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str, (x: float | int) -> float | int]' (matched generic type '_T'), got 'Overload[(x: str) -> str, (x: int) -> int]' instead
+      l2.append(few_overloads) # WARNING Expected type 'Overload[(x: int) -> int, (x: str) -> str, (x: float | int) -> float | int]', got 'Overload[(x: str) -> str, (x: int) -> int]' instead
       """)
 
     @Test
@@ -873,91 +874,6 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       """)
   }
 
-  @Nested
-  inner class PyAnyMigrationMirrors {
-    //
-    // These mirror representative cases above but run with `enablePyAnyType = true`, asserting the
-    // expected post-migration types. They currently fail (overload inference on class members hits a
-    // transient `null` type validation or degrades to `Unknown`) and are disabled until the
-    // `python.type.any` migration is complete. Drop the class-wide `enablePyAnyType = false` once it lands.
-
-    @Test
-    @Disabled("python.type.any: overload resolution on class methods fails PyAnyType validation until migration completes")
-    fun `first overload and implementation in class (py-any)`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, enablePyAnyType = true),
-      """
-      from typing import overload
-      class A:
-          @overload
-          def foo(self, value: int) -> int:
-              pass
-          @overload
-          def foo(self, value: str) -> str:
-              pass
-          def foo(self, value):
-              return None
-      expr = A().foo(5)
-      #└ TYPE int
-      """,
-    )
-
-    @Test
-    @Disabled("python.type.any: parameter inference from overloaded base method degrades to Unknown until migration completes")
-    fun `parameter type inference in overloaded methods (py-any)`() = test(
-      TestOptions(enablePyAnyType = true),
-      """
-      from typing import overload
-
-      class Base:
-          @overload
-          def test(self, param: int) -> int: pass
-
-          @overload
-          def test(self, param: str) -> str: pass
-
-      class Subclass(Base):
-          def test(self, param):
-              expr = param
-      #       └ TYPE Any
-      """,
-    )
-
-    @Test
-    @Disabled("python.type.any: variadic-generic overload resolution fails PyAnyType validation until migration completes")
-    fun `variadic generic class overloaded methods - first method (py-any)`() = test(
-      TestOptions(enablePyAnyType = true),
-      """
-      from __future__ import annotations
-
-      from typing import TypeVarTuple
-      from typing import TypeVar
-      from typing import Generic
-      from typing import overload
-
-      Shape = TypeVarTuple("Shape")
-      Axis1 = TypeVar("Axis1")
-      Axis2 = TypeVar("Axis2")
-      Axis3 = TypeVar("Axis3")
-
-
-      class Array(Generic[*Shape]):
-         @overload
-         def transpose(self: Array[Axis1, Axis2]) -> Array[Axis2, Axis1]: ...
-
-         @overload
-         def transpose(self: Array[Axis1, Axis2, Axis3]) -> Array[Axis3, Axis2, Axis1]: ...
-
-         def transpose(self): ...
-
-
-      a: Array[int, str] = Array()
-
-      expr = a.transpose()
-      #└ TYPE Array[str, int]
-      """,
-    )
-  }
-
   companion object {
     private val OVERLOAD_CLASS_MODULE = """
       from typing import overload
@@ -1025,18 +941,19 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     """
     from module import foo, bar
 
-    foo("str")
     foo(5)
-    foo([5]) # WARNING No overload of 'foo' matches the arguments. Argument types: (list[Literal[5]]). Expected one of: (p: str), (p: int)
+    foo("str", 5)
+    foo([5]) # WARNING Expected type 'int', got 'list[Literal[5]]' instead
 
     bar("str")
     bar(5)
     bar([5]) # WARNING No overload of 'bar' matches the arguments. Argument types: (list[Literal[5]]). Expected one of: (p: str), (p: int)
     """,
     "module.pyi" to """
+      import sys
       from typing import overload
 
-      if undefined:
+      if sys.version_info < (3, ):
           def foo(p: str) -> str: pass
       else:
           @overload
@@ -1044,6 +961,7 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
           @overload
           def foo(p: str, i: int) -> str: pass
 
+      @overload
       def bar(p: str) -> str: pass
 
       @overload
@@ -1076,4 +994,81 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
       f = a.f
       """,
   )
+
+  @Test
+  @TestFor(issues=["PY-90419"])
+  fun `Any in overload becomes an unsafe union`() = test("""
+    from typing import overload, Any
+
+
+    @overload
+    def f(a: int) -> int: ...
+    @overload
+    def f(a: str) -> str: ...
+    def f(a): ...
+
+    def main(a: Any):
+        x = f(a)
+        x.as_integer_ratio()
+    #   └ TYPE UnsafeUnion[int, str]
+    """.trimIndent())
+
+  @Test
+  @TestFor(issues = ["PY-84657"])
+  fun `class overloaded function assigned to global function`() = test(
+    """
+    from mod import a, f
+
+    result1 = a.f(1)
+    # └ TYPE str
+    result2 = f(1)
+    # └ TYPE str
+    """,
+    "mod.py" to """
+    from typing import overload
+    
+    
+    class A:
+       @overload
+       def f(self) -> float:
+           pass
+    
+       @overload
+       def f(self, *args: int) -> str:
+           pass
+    
+    
+    a: A
+    f = a.f
+    """)
+
+  @Test
+  @TestFor(issues=["PY-90419"])
+  fun `combining CFG-induced unions and unsafe unions for ambiguous overloads`() = test("""
+    from typing import overload, Any
+
+    class A:
+        @overload
+        def f(self, a: int) -> int: ...
+        @overload
+        def f(self, a: str) -> str: ...
+        def f(self, a): ...
+        
+    class B:
+        @overload
+        def f(self, a: int) -> bool: ...
+        @overload
+        def f(self, a: str) -> str: ...
+        def f(self, a): ...
+
+    def main(cond: bool, a: Any):
+        if cond:
+            obj = A()
+        else:
+            obj = B()
+        x = obj.f(a)
+        x.as_integer_ratio()
+    #   └ TYPE UnsafeUnion[int, str] | UnsafeUnion[bool, str]
+    """.trimIndent())
+
 }

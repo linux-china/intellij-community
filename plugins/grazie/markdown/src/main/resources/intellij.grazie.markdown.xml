@@ -26,6 +26,10 @@
     <localInspection bundle="messages.GrazieBundle" groupKey="specification.group.name" key="specification.inspection.ambiguity.name"
                      shortName="SpecificationAmbiguity" level="WARNING" enabledByDefault="true" language="Markdown" isInternal="true"
                      implementationClass="com.intellij.grazie.ide.language.markdown.semantics.inspection.SpecificationAmbiguityInspection"/>
+
+    <localInspection bundle="messages.GrazieBundle" groupKey="specification.group.name" key="specification.inspection.cognitiveLoad.name"
+                     shortName="SpecificationCognitiveLoad" level="WARNING" enabledByDefault="true" language="Markdown" isInternal="true"
+                     implementationClass="com.intellij.grazie.ide.language.markdown.semantics.inspection.SpecificationCognitiveLoadInspection"/>
   </extensions>
 
   <extensions defaultExtensionNs="com.intellij.grazie">

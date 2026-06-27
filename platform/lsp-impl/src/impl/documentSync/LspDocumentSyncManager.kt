@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Sends document lifecycle notifications (didOpen, didChange, didSave, didClose) and tracks which files are open on the server.
@@ -33,6 +34,7 @@ import java.util.Collections
 internal class LspDocumentSyncManager(private val client: LspClientImpl) {
 
   private val openedFiles: MutableSet<VirtualFile> = Collections.synchronizedSet(HashSet())
+  private val closed = AtomicBoolean(false)
 
   val openedFileCount: Int get() = openedFiles.size
 
@@ -43,8 +45,9 @@ internal class LspDocumentSyncManager(private val client: LspClientImpl) {
 
   fun forEachOpenedFile(action: (VirtualFile) -> Unit) = openedFiles.forEach(action)
 
-  fun clearOpenedFiles() {
+  fun close() {
     openedFiles.clear()
+    closed.set(true)
   }
 
   @RequiresWriteLock
@@ -73,6 +76,9 @@ internal class LspDocumentSyncManager(private val client: LspClientImpl) {
 
   @RequiresWriteLock
   fun close(file: VirtualFile) {
+    // Ignore any close requests once the document sync manager has been closed
+    if (closed.get()) return
+
     if (!openedFiles.remove(file)) {
       client.logError("close() cannot be called for files that haven't been opened. Ignoring: $file")
       return
@@ -148,7 +154,7 @@ internal class LspDocumentSyncManager(private val client: LspClientImpl) {
     val didSaveOptions = client.getDidSaveOptions(file) ?: return
     val manager = LspClientManagerImpl.getInstanceImpl(client.project)
     manager.cs.launch {
-      // Using `readAction` guarantees that the write action in which `beforeDocumentSaving()` was called has finished,
+      // Using `readAction` guarantees that the write action in which calling `beforeDocumentSaving()` was called has finished,
       // so the file has been physically saved, therefore it's now good time to send `textDocument/didSave`
       readAction {
         client.documentMapping.getAdapterForFile(file).sendDidSave(client, file, document, didSaveOptions.includeText == true)

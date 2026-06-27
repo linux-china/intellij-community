@@ -2,10 +2,13 @@
   <!-- region Generated dependencies - run `Generate Product Layouts` to regenerate -->
   <dependencies>
     <plugin id="org.jetbrains.plugins.terminal"/>
-    <module name="intellij.agent.workbench.common"/>
+    <module name="intellij.platform.ai.agent.common"/>
+    <module name="intellij.platform.ai.agent.core"/>
     <module name="intellij.agent.workbench.prompt.context"/>
     <module name="intellij.agent.workbench.prompt.core"/>
-    <module name="intellij.agent.workbench.sessions.core"/>
+    <module name="intellij.platform.ai.agent.sessions.core"/>
+    <module name="intellij.agent.workbench.settings"/>
+    <module name="intellij.agent.workbench.ui"/>
     <module name="intellij.terminal.frontend"/>
   </dependencies>
   <!-- endregion -->
@@ -14,16 +17,20 @@
   <extensionPoints>
     <extensionPoint
       qualifiedName="com.intellij.agent.workbench.chatTerminalTitleThreadRebindContributor"
-      interface="com.intellij.agent.workbench.chat.AgentChatTerminalTitleThreadRebindContributor"
-      dynamic="true"/>
+      beanClass="com.intellij.agent.workbench.chat.AgentChatTerminalTitleThreadRebindContributorBean"
+      dynamic="true">
+      <with attribute="implementation" implements="com.intellij.agent.workbench.chat.AgentChatTerminalTitleThreadRebindContributor"/>
+    </extensionPoint>
     <extensionPoint
       qualifiedName="com.intellij.agent.workbench.chatProviderBehavior"
-      interface="com.intellij.agent.workbench.chat.AgentChatProviderBehaviorContributor"
-      dynamic="true"/>
+      beanClass="com.intellij.agent.workbench.chat.AgentChatProviderBehaviorBean"
+      dynamic="true">
+      <with attribute="implementation" implements="com.intellij.agent.workbench.chat.AgentChatProviderBehavior"/>
+    </extensionPoint>
   </extensionPoints>
 
   <extensions defaultExtensionNs="com.intellij">
-    <applicationService serviceInterface="com.intellij.agent.workbench.sessions.core.providers.AgentOpenTopLevelThreadDispatchService"
+    <applicationService serviceInterface="com.intellij.platform.ai.agent.sessions.core.providers.AgentOpenTopLevelThreadDispatchService"
                         serviceImplementation="com.intellij.agent.workbench.chat.AgentChatOpenTopLevelThreadDispatchService"/>
     <virtualFileSystem key="agent-chat" implementationClass="com.intellij.agent.workbench.chat.AgentChatVirtualFileSystem"/>
     <notificationGroup id="Agent Workbench Chat" displayType="BALLOON" bundle="messages.AgentChatBundle"
@@ -39,7 +46,7 @@
     <listener class="com.intellij.agent.workbench.chat.AgentChatProjectColorChangeListener"
               topic="com.intellij.ide.ProjectColorChangeListener"/>
     <listener class="com.intellij.agent.workbench.chat.AgentChatSettingsChangeListener"
-              topic="com.intellij.agent.workbench.sessions.core.settings.AgentWorkbenchSettingsListener"/>
+              topic="com.intellij.agent.workbench.settings.AgentWorkbenchSettingsListener"/>
     <listener class="com.intellij.agent.workbench.chat.AgentChatThreadPresentationStartupListener" activeInTestMode="true"
               activeInHeadlessMode="true"
               topic="com.intellij.ide.AppLifecycleListener"/>
@@ -47,6 +54,8 @@
 
   <extensions defaultExtensionNs="com.intellij.agent.workbench">
     <settingsContributor implementation="com.intellij.agent.workbench.chat.AgentChatSettingsContributor"/>
+    <chatProviderBehavior providerId="claude"
+                          implementation="com.intellij.agent.workbench.chat.ClaudeAgentChatProviderBehavior"/>
   </extensions>
 
   <actions resource-bundle="messages.AgentChatBundle">

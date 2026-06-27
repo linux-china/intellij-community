@@ -30,7 +30,11 @@
   - name: intellij.libraries.clikt
     libraries:
       clikt:
-      - name: $MAVEN_REPOSITORY$/com/github/ajalt/clikt/clikt-jvm/3/clikt-jvm-3.jar
+      - name: $MAVEN_REPOSITORY$/com/github/ajalt/clikt/clikt-jvm/5/clikt-jvm-5.jar
+      - name: $MAVEN_REPOSITORY$/com/github/ajalt/clikt/clikt-core-jvm/5/clikt-core-jvm-5.jar
+      - name: $MAVEN_REPOSITORY$/com/github/ajalt/mordant/mordant-jvm/3/mordant-jvm-3.jar
+      - name: $MAVEN_REPOSITORY$/com/github/ajalt/mordant/mordant-core-jvm/3/mordant-core-jvm-3.jar
+      - name: $MAVEN_REPOSITORY$/com/github/ajalt/colormath/colormath-jvm/3/colormath-jvm-3.jar
 - name: lib/modules/intellij.evaluationPlugin.agent.jar
   contentModules:
   - name: intellij.evaluationPlugin.agent
@@ -57,6 +61,13 @@
   - name: intellij.evaluationPlugin.languages.python
 - name: lib/modules/intellij.evaluationPlugin.llm.jar
   projectLibraries:
+  - name: io.modelcontextprotocol.kotlin.sdk
+    files:
+    - name: $MAVEN_REPOSITORY$/io/modelcontextprotocol/kotlin-sdk-jvm/0/kotlin-sdk-jvm-0.jar
+    - name: $MAVEN_REPOSITORY$/io/modelcontextprotocol/kotlin-sdk-client-jvm/0/kotlin-sdk-client-jvm-0.jar
+    - name: $MAVEN_REPOSITORY$/io/modelcontextprotocol/kotlin-sdk-server-jvm/0/kotlin-sdk-server-jvm-0.jar
+    - name: $MAVEN_REPOSITORY$/io/modelcontextprotocol/kotlin-sdk-core-jvm/0/kotlin-sdk-core-jvm-0.jar
+    reason: <- intellij.evaluationPlugin.llm
   - name: jerolba.carpet.record
     files:
     - name: $MAVEN_REPOSITORY$/com/jerolba/carpet-record/0/carpet-record-0.jar

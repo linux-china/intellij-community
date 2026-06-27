@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test
  */
 class PyCallableTypeTest : PyCodeInsightTestCase() {
 
-  override val defaultTestOptions = TestOptions(enablePyAnyType = false)
-
   @Nested
   inner class CallableTypeInference {
     @Test
@@ -60,7 +58,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       def f() -> Callable:
           pass
       expr = f()
-      #└ TYPE (...) -> Any
+      #└ TYPE (...) -> Unknown
       """)
 
     @Test
@@ -372,7 +370,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
     fun `dict comprehension from kwargs`() = test("""
       def test(**kwargs):
           expr = {k: v for k, v in kwargs.items()}
-      #   └ TYPE dict[str, Any]
+      #   └ TYPE dict[str, Unknown]
       """)
 
     @Test
@@ -383,7 +381,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
           pass
       def foo(**x: Unpack[Movie]):
           expr = x
-      #   └ TYPE dict[str, Any]
+      #   └ TYPE dict[str, Unknown]
       """)
   }
 
@@ -430,6 +428,235 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       expr = Foo7[str]().meth
       #└ TYPE (/) -> Foo7[str]
       """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `bound method`() = test("""
+      class A:
+          def f(self, x: int) -> str:
+              raise NotImplementedError
+
+      def foo(a: A):
+          f = a.f
+      #   └ TYPE (x: int) -> str
+          expr = f(-1)
+      #   └ TYPE str
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `bound generic method`() = test("""
+      class A:
+          def f[U](self, x: U) -> U:
+              raise NotImplementedError
+
+      def foo(a: A):
+          f = a.f
+      #   └ TYPE [U: Unknown](x: U) -> U
+          expr = f('abb')
+      #   └ TYPE str
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `bound method of generic class`() = test("""
+      class A[T]:
+          def f(self, x: str) -> T:
+              raise NotImplementedError
+
+      def foo(a: A[int]):
+          f = a.f
+      #   └ TYPE (x: str) -> int
+          expr = f('abb')
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `bound generic method of generic class`() = test("""
+      class A[T]:
+          def f[U](self, x: U) -> tuple[T, U]:
+              raise NotImplementedError
+
+      def foo(a: A[int]):
+          f = a.f
+      #   └ TYPE [U: Unknown](x: U) -> tuple[int, U]
+          expr = f('abb')
+      #   └ TYPE tuple[int, str]
+    """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `overloaded bound method`() = test("""
+      from typing import overload
+
+      class A[T]:
+          @overload
+          def f[U](self, x: U, y: int) -> tuple[T, U, str]: ...
+
+          @overload
+          def f[U](self, x: U, y: str) -> tuple[T, U, bytes]: ...
+
+          def f[U](self, x: U, y: object) -> tuple[T, U, object]:
+              raise NotImplementedError
+
+      def foo(a: A[int]):
+          f = a.f
+      #   └ TYPE Overload[[U: Unknown](x: U, y: int) -> tuple[int, U, str], [U: Unknown](x: U, y: str) -> tuple[int, U, bytes]]
+          expr = f('abb', 'abc')
+      #   └ TYPE tuple[int, str, bytes]
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-89401"])
+    fun `overloaded bound method with annotated self`() = test("""
+      from typing import overload
+
+      class A[T]:
+          @overload
+          def f(self: A[int]) -> str: ...
+
+          @overload
+          def f(self: A[str]) -> int: ...
+
+          def f(self) -> object:
+              raise NotImplementedError
+
+      def foo(a: A[str]):
+          f = a.f
+      #   └ TYPE () -> int
+          expr = f()
+      #   └ TYPE int
+      """)
+
+    @TestFor(issues = ["PY-89400"])
+    @Test
+    fun `method call on union of class types`() = test("""
+      class A[T]:
+          def foo[U](self: U) -> tuple[T, U]: ...
+
+      class B[T]:
+          def foo(self) -> T: ...
+
+      def f(receiver: A[int] | B[str]):
+          expr = receiver.foo()
+      #   └ TYPE tuple[int, A[int]] | str
+      """)
+
+    @Test
+    fun `bound method self in varargs`() = test("""
+      from typing import overload
+
+      class A[T]:
+          @overload
+          def f(*args: A[int]) -> str: ...
+
+          @overload
+          def f(*args: A[str]) -> int: ...
+
+          @overload
+          def f(*args: A[list[int]]) -> list[str]: ...
+
+          def f(*args: object) -> object:
+              raise NotImplementedError
+
+      a = A[str]()
+      func = a.f
+      #└ TYPE (*args: A[str]) -> int
+      expr = a.f()
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-90249"])
+    fun `bound method of type var with bound`() = test("""
+      class Box[U]:
+          def get(self) -> U: ...
+
+      def foo[T: Box[int]](x: T):
+          get = x.get
+      #   └ TYPE () -> int
+          expr = x.get()
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-90249"])
+    fun `bound method of type var with constraints`() = test("""
+      class Box[U]:
+          def get(self) -> U: ...
+
+      def foo[T: (Box[int], Box[str])](x: T):
+          get = x.get
+      #   └ TYPE () -> int | () -> str
+          expr = get()
+      #   └ TYPE int | str
+      """)
+
+    @Test
+    fun `bound method returning self of type var`() = test("""
+      from typing import Self
+
+      class Box[U]:
+          def get(self) -> Self: ...
+
+      def foo[T: Box[int], Y: (Box[int], Box[str])](t: T, y: Y):
+          v1 = t.get()
+      #   └ TYPE T
+          v2 = y.get()
+      #   └ TYPE Y
+      """)
+
+    @Test
+    fun `bound method returning generic of type var`() = test("""
+      class Box[U]:
+        def get(self) -> U: ...
+  
+  
+      def foo[T: Box[int], Y: Box[int] | Box[str], Z: (Box[int], Box[str])](t: T, y: Y, z: Z):
+          v1 = t.get()
+      #   └ TYPE int
+          v2 = y.get()
+      #   └ TYPE int | str
+          v3 = z.get()
+      #   └ TYPE int | str
+      """)
+
+    @Test
+    fun `metaclass method call on class`() = test("""
+      class Meta(type):
+          def foo(cls) -> int: ...
+
+      class Class(metaclass=Meta): ...
+
+      expr = Class.foo()
+      #└ TYPE int
+      """)
+
+    @Test
+    fun `call type preserves generic parameter`() = test("""
+      class MyList[T]:
+          def add(self, v: T) -> MyList[T]:
+              raise NotImplementedError
+
+      def add[T](c: MyList[T], v: T):
+          expr = c.add(v)
+      #   └ TYPE MyList[T]
+      """)
+
+    @TestFor(issues = ["PY-89079"])
+    @Test
+    fun `subscription expression as callee`() = test("""
+      class A:
+          def __call__[T](self, x: T) -> T: return x
+
+      def f(items: list[A]):
+          item = items[0]
+          _ = item(-7)
+      #   └ TYPE int
+          _ = items[0](1)
+      #   └ TYPE int
+      """)
   }
 
   @Nested
@@ -445,6 +672,83 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       def f(i):
           expr = i
       #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85768"])
+    fun `infer parameter from generic decorator constrained by outer decorator`() = test("""
+      from collections.abc import Callable
+
+      def d1[T](fn: Callable[[T], object]) -> T: ...
+      def d2(i: int) -> None: ...
+
+      @d2
+      @d1
+      def f(i):
+          expr = i
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85768"])
+    fun `infer parameter from generic decorator through a generic middle decorator`() = test("""
+      from collections.abc import Callable
+
+      def d1[T](fn: Callable[[T], object]) -> T: ...
+      def d2[U](g: U) -> U: ...
+      def d3(i: int) -> None: ...
+
+      @d3
+      @d2
+      @d1
+      def f(i):
+          expr = i
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85768"])
+    fun `infer parameter from generic decorator past a transparent decorator`() = test("""
+      from collections.abc import Callable
+
+      def d1[T](fn: Callable[[T], object]) -> T: ...
+      def ident(f): return f
+      def d2(i: int) -> None: ...
+
+      @d2
+      @ident
+      @d1
+      def f(i):
+          expr = i
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85768"])
+    fun `infer parameter wrapped in a container from generic decorator`() = test("""
+      from collections.abc import Callable
+
+      def d1[T](fn: Callable[[list[T]], object]) -> T: ...
+      def d2(i: int) -> None: ...
+
+      @d2
+      @d1
+      def f(i):
+          expr = i
+      #   └ TYPE list[int]
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-85768"])
+    fun `generic decorator parameter is left unbound without an outer constraint`() = test("""
+      from collections.abc import Callable
+
+      def d1[T](fn: Callable[[T], object]) -> T: ...
+
+      @d1
+      def f(i):
+          expr = i
+      #   └ TYPE T
       """)
 
     @Test
@@ -555,7 +859,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       @d
       def f(*args):
           expr = args[100]
-      #   └ TYPE Any FIXME int
+      #   └ TYPE Unknown FIXME int
       """)
 
     @Test
@@ -571,7 +875,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       @d
       def f(**kwargs):
           expr = kwargs["100"]
-      #   └ TYPE Any FIXME int
+      #   └ TYPE Unknown FIXME int
       """)
 
     @Test
@@ -587,7 +891,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       @d
       def f(*, y, x):
           expr = x
-      #   └ TYPE Any FIXME int
+      #   └ TYPE Unknown FIXME int
       """)
 
     @Test
@@ -618,7 +922,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       @d1
       def f(i):
           expr = i
-      #   └ TYPE T FIXME int
+      #   └ TYPE int
       """)
 
     @Test
@@ -738,6 +1042,21 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
                 return x + y
         """,
     )
+
+    @Test
+    @TestFor(issues = ["PY-90348"])
+    fun `Concatenate-typed decorator keeps the receiver type`() = test("""
+      from typing import Any, Callable, Concatenate
+
+      def deco[**P, R](fn: Callable[Concatenate[Any, P], R]) -> Callable[P, R]: ...
+
+      class C:
+        @deco
+        def m(self, a: int) -> int:
+          expr = self
+      #   └ TYPE Self@C
+          return a
+      """)
   }
 
   @Nested
@@ -1191,7 +1510,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       expr = deco(unresolved)
       #│          ^^^^^^^^^^ ERROR Unresolved reference 'unresolved'
-      #└ TYPE (*args: Any, **kwargs: Any) -> str
+      #└ TYPE (*args: Unknown, **kwargs: Unknown) -> str
       """)
 
     @Test
@@ -1276,7 +1595,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
           def call(self) -> Callable[P, int]: ...
       c = MyClass[str, int]() # WARNING Passed type arguments do not match type parameters [T, **P] of class 'MyClass'
       expr = c.call()
-      #└ TYPE (**P) -> int
+      #└ TYPE (...) -> int
       """)
 
     @Test
@@ -1547,7 +1866,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-71002"])
-    fun `ParamSpec default type refers to another ParamSpec with ellipsis`() = test("""
+    fun `ParamSpec default type refers to another ParamSpec with ellipsis`() = test(TestOptions(enablePyAnyType = false), """
       class Clazz[**P1, **P2 = P1, **P3 = P2]: ...
       expr = Clazz[..., [float]]()
       #└ TYPE Clazz[Any, [float | int], [float | int]]
@@ -1607,8 +1926,8 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       cllbl_c(1, 2) # WARNING Expected type 'str', got 'Literal[2]' instead
       cllbl_c("1", "2") # WARNING Expected type 'int', got 'Literal["1"]' instead
       cllbl_c([], [])
-      #       │   ^^ WARNING Expected type 'str', got 'list[Any]' instead
-      #       ^^ WARNING Expected type 'int', got 'list[Any]' instead
+      #       │   ^^ WARNING Expected type 'str', got 'list[Unknown]' instead
+      #       ^^ WARNING Expected type 'int', got 'list[Unknown]' instead
       """)
 
     @Test
@@ -1752,7 +2071,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-74277"])
     fun `passing TypeIs callable`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON312, enablePyAnyType = false),
+      TestOptions(languageLevel = LanguageLevel.PYTHON312),
       """
       from typing_extensions import TypeIs, Callable
 
@@ -1993,7 +2312,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
-    fun `wildcard signatures`() = test("""
+    fun `wildcard signatures`() = test(TestOptions(enablePyAnyType = false), """
       from typing import Protocol
 
       class Expected(Protocol):
@@ -2053,7 +2372,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-82871"])
-    fun `Concatenate with ellipsis assignability`() = test("""
+    fun `Concatenate with ellipsis assignability`() = test(TestOptions(enablePyAnyType = false), """
       from typing import Callable, Concatenate
 
       call: Callable[Concatenate[int, ...], str]
@@ -2084,6 +2403,28 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       call = empty
       #│     ^^^^^ WARNING Expected type '(Concatenate(int, ...)) -> str', got '() -> str' instead
       #^^^ WARNING Redeclared 'call' defined above without usage
+      """)
+
+    @TestFor(issues = ["PY-89912"])
+    @Test
+    fun `callable with parameter of type Self`() = test("""
+      from typing import Self, Callable
+
+      class Shape:
+          def apply(self, f: Callable[[Self], None]) -> None: ...
+
+      class Circle(Shape): ...
+
+      def accept_circle(c: Circle): ...
+      
+      def accept_shape(s: Shape): ...
+
+      circle = Circle()
+      circle.apply(accept_shape)
+
+      shape = Shape()
+      shape.apply(accept_circle)
+      #           ^^^^^^^^^^^^^ WARNING Expected type '(Shape) -> None', got '(c: Circle) -> None' instead
       """)
   }
 

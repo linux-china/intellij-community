@@ -6,16 +6,16 @@ package com.intellij.agent.workbench.prompt.ui
 import com.intellij.agent.workbench.prompt.core.AgentPromptGenerationModel
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfile
 import com.intellij.agent.workbench.prompt.core.AgentPromptLaunchProfileKind
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderDescriptor
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviderMenuItem
-import com.intellij.agent.workbench.sessions.core.providers.AgentSessionProviders
-import com.intellij.agent.workbench.sessions.core.providers.buildAgentSessionProviderMenuModel
-import com.intellij.agent.workbench.sessions.core.providers.buildBuiltInLaunchProfiles
-import com.intellij.agent.workbench.sessions.core.providers.effectiveLaunchProfiles
-import com.intellij.agent.workbench.sessions.core.providers.launchProfileMatchesBuiltIn
-import com.intellij.agent.workbench.sessions.core.providers.normalizedUserLaunchProfile
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderDescriptor
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviderMenuItem
+import com.intellij.platform.ai.agent.sessions.core.providers.AgentSessionProviders
+import com.intellij.platform.ai.agent.sessions.core.providers.buildAgentSessionProviderMenuModel
+import com.intellij.platform.ai.agent.sessions.core.providers.buildBuiltInLaunchProfiles
+import com.intellij.platform.ai.agent.sessions.core.providers.effectiveLaunchProfiles
+import com.intellij.platform.ai.agent.sessions.core.providers.launchProfileMatchesBuiltIn
+import com.intellij.platform.ai.agent.sessions.core.providers.normalizedUserLaunchProfile
 import com.intellij.agent.workbench.sessions.service.AgentSessionProviderAvailabilityService
-import com.intellij.agent.workbench.sessions.settings.AgentSessionProviderSettingsService
+import com.intellij.agent.workbench.settings.AgentSessionProviderSettingsService
 import com.intellij.agent.workbench.sessions.state.AgentSessionLaunchProfileStateService
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
@@ -65,7 +65,8 @@ internal class AgentPromptLaunchProfileManager(
   }
 
   private fun enabledPromptProviders(): List<AgentSessionProviderDescriptor> {
-    return service<AgentSessionProviderSettingsService>().enabledProviders(providersProvider().filter { provider -> provider.supportsPromptLaunch })
+    val providerSettings = service<AgentSessionProviderSettingsService>()
+    return providersProvider().filter { provider -> provider.supportsPromptLaunch && providerSettings.isProviderEnabled(provider.provider) }
   }
 
   private fun providerEntries(providers: List<AgentSessionProviderDescriptor>): List<ProviderEntry> {

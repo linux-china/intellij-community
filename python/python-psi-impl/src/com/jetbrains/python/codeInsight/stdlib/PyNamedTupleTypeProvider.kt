@@ -30,6 +30,7 @@ import com.jetbrains.python.psi.impl.StubAwareComputation
 import com.jetbrains.python.psi.impl.stubs.PyNamedTupleStubImpl
 import com.jetbrains.python.psi.resolve.PyResolveContext
 import com.jetbrains.python.psi.stubs.PyNamedTupleStub
+import com.jetbrains.python.psi.types.PyAnyType
 import com.jetbrains.python.psi.types.PyCallableParameter
 import com.jetbrains.python.psi.types.PyCallableParameterImpl
 import com.jetbrains.python.psi.types.PyCallableType
@@ -53,6 +54,7 @@ private typealias ImmutableNTFields = Map<String, PyNamedTupleType.FieldTypeAndD
 class PyNamedTupleTypeProvider : PyTypeProviderBase() {
 
   override fun getReferenceType(referenceTarget: PsiElement, context: TypeEvalContext, anchor: PsiElement?): Ref<PyType>? {
+    val anchor = anchor?.let(PyCallExpressionNavigator::getPyCallExpressionByCallee)
     val type = when (referenceTarget) {
       is PyFunction if anchor is PyCallExpression -> getNamedTupleFunctionType(referenceTarget, context, anchor)
       is PyTargetExpression -> getNamedTupleTypeForTarget(referenceTarget, context)
@@ -171,18 +173,20 @@ private fun getCallableType(
 }
 
 private fun getNamedTupleFunctionType(function: PyFunction, context: TypeEvalContext, call: PyCallExpression): PyType? {
-  if (ArrayUtil.contains(function.qualifiedName, PyNames.COLLECTIONS_NAMEDTUPLE_PY2, PyNames.COLLECTIONS_NAMEDTUPLE_PY3) ||
-      PyTypingTypeProvider.NAMEDTUPLE == PyUtil.turnConstructorIntoClass(function)?.qualifiedName) {
+  val isCollectionsNamedTuple = ArrayUtil.contains(function.qualifiedName, PyNames.COLLECTIONS_NAMEDTUPLE_PY2, PyNames.COLLECTIONS_NAMEDTUPLE_PY3)
+  val isTypingNamedTupleInit = !isCollectionsNamedTuple &&
+                               PyTypingTypeProvider.NAMEDTUPLE == PyUtil.turnConstructorIntoClass(function)?.qualifiedName
+  if (isCollectionsNamedTuple || isTypingNamedTupleInit) {
     return if (context.maySwitchToAST(call)) {
       val functionType = context.getType(function) as? PyCallableType ?: return null
       val returnType = getNamedTupleTypeFromStub(call, PyNamedTupleStubImpl.create(call), context) ?: return null
+      val parameters = functionType.getParameters(context)
 
       PyCallableTypeImpl(
-        functionType.getParameters(context),
+        if (isTypingNamedTupleInit) parameters?.drop(1) else parameters,
         returnType,
         functionType.callable,
-        functionType.modifier,
-        functionType.implicitOffset
+        functionType.modifier
       )
     }
     else null
@@ -201,9 +205,10 @@ private fun getNamedTupleTypeForTarget(target: PyTargetExpression, context: Type
 
 private fun getNamedTupleTypeForClass(cls: PyClass, context: TypeEvalContext, call: PyCallExpression): PyType? {
   return getNamedTupleTypeForClass(cls, context)
-         ?: PyUnionType.union(
-           cls.multiFindInitOrNew(false, context).mapSmartNotNull { getNamedTupleFunctionType(it, context, call) }
-         )
+         ?: cls.multiFindInitOrNew(false, context)
+              .mapSmartNotNull { getNamedTupleFunctionType(it, context, call) }
+              .takeIf { it.isNotEmpty() }
+              ?.let(PyUnionType::union)
 }
 
 internal fun getNamedTupleTypeForClass(cls: PyClass, context: TypeEvalContext): PyNamedTupleType? {
@@ -273,7 +278,7 @@ private fun createUntypedNamedTupleReplaceType(
   }
   parameters.add(PyCallableParameterImpl.keywordOnlySeparatorNonPsi())
 
-  fields.keys.mapTo(parameters) { PyCallableParameterImpl.nonPsi(it, null, PyNames.ELLIPSIS) }
+  fields.keys.mapTo(parameters) { PyCallableParameterImpl.nonPsi(it, PyAnyType.unknown, PyNames.ELLIPSIS) }
 
   return if (resultType is PyNamedTupleType && anchor is PyCallExpression) {
     val newFields = mutableMapOf<String?, PyType?>()
@@ -324,7 +329,7 @@ private fun parseNamedTupleFields(
 ): NTFields {
   return fields.entries.associateTo(NTFields()) { (name, typeAndDefault) ->
     val type = typeAndDefault.type()
-    val pyType = type?.let { Ref.deref(PyTypingTypeProvider.getStringBasedType(type, anchor, context)) }
+    val pyType = type?.let { Ref.deref(PyTypingTypeProvider.getStringBasedType(type, anchor, context)) } ?: PyAnyType.unknown
     val defaultValue = if (typeAndDefault.hasDefault()) PyElementGenerator.getInstance(anchor.project).createEllipsis() else null
     name to PyNamedTupleType.FieldTypeAndDefaultValue(pyType, defaultValue)
   }

@@ -2,15 +2,14 @@
 package com.intellij.python.community.impl.poetry.backend
 
 
-import com.intellij.openapi.util.NlsSafe
 import com.intellij.python.community.common.tools.ToolId
 import com.intellij.python.community.impl.poetry.common.POETRY_TOOL_ID
 import com.intellij.python.community.impl.poetry.common.POETRY_UI_INFO
-import com.intellij.python.pyproject.model.internal.pyProjectToml.TomlDependencySpecification
 import com.intellij.python.pyproject.model.spi.ProjectName
 import com.intellij.python.pyproject.model.spi.ProjectStructureInfo
 import com.intellij.python.pyproject.model.spi.PyProjectTomlProject
 import com.intellij.python.pyproject.model.spi.PyProjectManager
+import com.intellij.python.pyproject.model.spi.TomlDependencySpecification
 import com.jetbrains.python.PyToolUIInfo
 import com.jetbrains.python.venvReader.Directory
 import org.apache.tuweni.toml.TomlTable
@@ -21,9 +20,6 @@ internal class PoetryPyProjectManager : PyProjectManager {
   override val ui: PyToolUIInfo = POETRY_UI_INFO
 
   override suspend fun getSrcRoots(toml: TomlTable, projectRoot: Directory): Set<Directory> = emptySet()
-
-  override suspend fun getProjectName(projectToml: TomlTable): @NlsSafe String? =
-    projectToml.getString("tool.poetry.name")
 
   override suspend fun getProjectStructure(
     entries: Map<ProjectName, PyProjectTomlProject>,

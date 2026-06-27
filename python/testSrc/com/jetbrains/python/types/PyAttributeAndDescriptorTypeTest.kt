@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
 
   override val defaultTestOptions =
-    TestOptions(enablePyAnyType = false, assertRecursionPrevention = false)
+    TestOptions(assertRecursionPrevention = false)
 
   @Nested
   inner class PropertyTypeInference {
@@ -164,7 +164,7 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
       class Example:
           def __init__(self):
               expr = self.ins_class
-      #       └ TYPE Type mismatch for code analysis context ('Any') and user initiated context ('type[str]')
+      #       └ TYPE Type mismatch for code analysis context ('Unknown') and user initiated context ('type[str]')
           @property
           def ins_class(self):
               return get_class()
@@ -567,7 +567,7 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
               if self.attr is None:
                   self.attr = 42
               expr = self.attr
-      #       └ TYPE UnsafeUnion[None, Any] | Literal[42]
+      #       └ TYPE UnsafeUnion[None, Unknown] | Literal[42]
       """)
 
     @Test
@@ -621,7 +621,7 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
       class B(A):
           pass
       expr = B().foo()
-      #└ TYPE Generator[B, Any, B]
+      #└ TYPE Generator[B, Unknown, B]
       """)
 
     @Test
@@ -694,7 +694,7 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
       from collections import defaultdict
       data = defaultdict(dict)
       expr = data['name']
-      #└ TYPE dict[Any, Any]
+      #└ TYPE dict
       """)
 
     @Test
@@ -1064,6 +1064,147 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `generic descriptor with own type parameter in get binds the return type variable on instance access`() = test("""
+      from typing import Callable, TypeVar, Generic
+      T = TypeVar("T")
+      T_co = TypeVar("T_co", covariant=True)
+      class CachedSlotProperty(Generic[T, T_co]):
+          def __init__(self, f: Callable[[T], T_co]) -> None:
+              self.f = f
+          def __get__(self, instance: T, owner: type[T]) -> T_co:
+              return self.f(instance) + 1
+      class Foo:
+          @CachedSlotProperty
+          def bar(self) -> int:
+              return 42
+      expr = Foo().bar
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `instance access passes the owner class so a get typed with type T does not drop other bindings`() = test("""
+      from typing import Callable
+      class CachedSlotProperty[T, V]:
+          def __init__(self, f: Callable[[T], V]) -> None: ...
+          def __get__(self, instance: T, owner: type[T]) -> V: ...
+      class Foo:
+          bar: CachedSlotProperty[Foo, int]
+      expr = Foo().bar
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `generic descriptor subclass used as decorator accessed on instance`() = test("""
+      from typing import Any, Callable, Generic, TypeVar, Union, overload
+
+      _T = TypeVar("_T")
+
+      class base(Generic[_T]):
+          def __init__(self, fget: Callable[..., _T]): ...
+          @overload
+          def __get__(self, obj: None, cls: Any) -> "base[_T]": ...
+          @overload
+          def __get__(self, obj: object, cls: Any) -> _T: ...
+          def __get__(self, obj: Any, cls: Any) -> Union["base[_T]", _T]: ...
+
+      class memo(base[_T]):
+          pass
+
+      class C:
+          @memo
+          def x(self) -> int: ...
+
+      c = C()
+      expr = c.x
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `generic descriptor TYPE_CHECKING alias used as decorator accessed on instance`() = test("""
+      from typing import Any, Callable, Generic, TypeVar, Union, overload, TYPE_CHECKING
+
+      _T = TypeVar("_T")
+
+      class generic_fn_descriptor(Generic[_T]):
+          def __init__(self, fget: Callable[..., _T]): ...
+          @overload
+          def __get__(self, obj: None, cls: Any) -> "generic_fn_descriptor[_T]": ...
+          @overload
+          def __get__(self, obj: object, cls: Any) -> _T: ...
+          def __get__(self, obj: Any, cls: Any) -> Union["generic_fn_descriptor[_T]", _T]: ...
+
+      if TYPE_CHECKING:
+          memoized_property = generic_fn_descriptor
+      else:
+          memoized_property = generic_fn_descriptor
+
+      class C:
+          @memoized_property
+          def x(self) -> int: ...
+
+      c = C()
+      expr = c.x
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `generic descriptor subclass used as decorator accessed on class`() = test("""
+      from typing import Any, Callable, Generic, TypeVar, Union, overload
+
+      _T = TypeVar("_T")
+
+      class base(Generic[_T]):
+          def __init__(self, fget: Callable[..., _T]): ...
+          @overload
+          def __get__(self, obj: None, cls: Any) -> "base[_T]": ...
+          @overload
+          def __get__(self, obj: object, cls: Any) -> _T: ...
+          def __get__(self, obj: Any, cls: Any) -> Union["base[_T]", _T]: ...
+
+      class memo(base[_T]):
+          pass
+
+      class C:
+          @memo
+          def x(self) -> int: ...
+
+      expr = C.x
+      #└ TYPE base[int]
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-63737"])
+    fun `covariant generic descriptor subclass used as decorator accessed on instance`() = test("""
+      from typing import Any, Callable, Generic, TypeVar, Union, overload
+
+      _T_co = TypeVar("_T_co", covariant=True)
+
+      class base(Generic[_T_co]):
+          def __init__(self, fget: Callable[..., _T_co]): ...
+          @overload
+          def __get__(self, obj: None, cls: Any) -> "base[_T_co]": ...
+          @overload
+          def __get__(self, obj: object, cls: Any) -> _T_co: ...
+          def __get__(self, obj: Any, cls: Any) -> Union["base[_T_co]", _T_co]: ...
+
+      class memo(base[_T_co]):
+          pass
+
+      class C:
+          @memo
+          def x(self) -> int: ...
+
+      c = C()
+      expr = c.x
+      #└ TYPE int
+      """)
+
+    @Test
     @TestFor(issues = ["PY-26184"])
     fun `generic type from descriptor with type annotation only`() = test("""
       import typing
@@ -1130,12 +1271,10 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
 
       class MyDescriptor[T]:
           @overload
-          def __get__(self, instance: None, owner: Any) -> T: # access via class
-      #       ^^^^^^^ WARNING At least two @overload-decorated methods must be present
-      #       ^^^^^^^ WARNING Signature of this @overload-decorated method is not compatible with the implementation
-              ...
-          def __get__(self, instance: "Bar", owner: Any) -> Union[str, T]:
-              ...
+          def __get__(self, instance: None, owner: Any) -> T: ...  # access via class
+      #       ^^^^^^^ WARNING A series of @overload-decorated methods should always be followed by an implementation that is not @overload-ed
+          @overload
+          def __get__(self, instance: Bar, owner: Any) -> str | T: ...
 
       class Foo():
           x = MyDescriptor[int]()
@@ -1144,7 +1283,7 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
           x = MyDescriptor[int]()
 
       expr = Foo().x
-      #└ TYPE Any
+      #└ TYPE Unknown
       """)
 
     @Test

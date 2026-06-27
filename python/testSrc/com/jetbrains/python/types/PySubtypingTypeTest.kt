@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test
  */
 class PySubtypingTypeTest : PyCodeInsightTestCase() {
 
-  override val defaultTestOptions = TestOptions(enablePyAnyType = false)
-
   @Nested
   inner class AssignmentCompatibility {
 
@@ -425,6 +423,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       d_obj : D[object] = D[object]()
 
       d_int = d_obj # ok
+      #│      ^^^^^ WARNING Expected type 'D[int]', got 'D[object]' instead FIXME # PY-89564
       #^^^^ WARNING Redeclared 'd_int' defined above without usage
       d_obj = d_int # E
       #       ^^^^^ WARNING Expected type 'D[object]', got 'D[int]' instead
@@ -441,6 +440,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       d_obj : E = E()
 
       d_int = d_obj # ok
+      #│      ^^^^^ WARNING Expected type 'D[int]', got 'E' instead FIXME # PY-89564
       #^^^^ WARNING Redeclared 'd_int' defined above without usage
       d_obj = d_int # E
       #       ^^^^^ WARNING Expected type 'E', got 'D[int]' instead
@@ -499,6 +499,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       b : B[object] = B[object]()
 
       a = b # Ok
+      #│  └ WARNING Expected type 'A[int]', got 'B[object]' instead FIXME # PY-89564
       #\ WARNING Redeclared 'a' defined above without usage
       b = a # E
       #   └ WARNING Expected type 'B[object]', got 'A[int]' instead
@@ -518,7 +519,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       b : B[int] = B[int]()
 
       a = b # E
-      #│  └ WARNING Expected type 'A[object]', got 'B[int]' instead
+      #│  └ WARNING FIXME Expected type 'A[object]', got 'B[int]' instead # PY-89564
       #\ WARNING Redeclared 'a' defined above without usage
       b = a # E
       #   └ WARNING Expected type 'B[int]', got 'A[object]' instead
@@ -559,7 +560,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-25989", "PY-84544"])
     fun `type var widening`() = test(
-      TestOptions(enablePyAnyType = false, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       from collections.abc import Iterable
       from typing import assert_type
@@ -606,7 +607,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-28130"])
     fun `lambda parameter uses assignment context split definition class`() = test(
-      TestOptions(enablePyAnyType = false, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       from typing import Callable
 
@@ -863,7 +864,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       expr: int & asdf
       #│        │ ^^^^ ERROR Unresolved reference 'asdf'
       #│        └ WARNING Class 'type' does not define '__and__', so the '&' operator cannot be used on its instances
-      #└ TYPE int & Any
+      #└ TYPE int & Unknown
       """)
   }
 
@@ -1009,8 +1010,6 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       def test_numerics():
           abs(False)
           int(10)
-          long(False)
-      #   ^^^^ ERROR Unresolved reference 'long'
           float(False)
           complex(False)
           divmod(False, False)
@@ -1285,7 +1284,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       class StrBox(Box[str]):
           pass
 
-      StrBox(42) # WARNING Expected type 'str' (matched generic type 'T'), got 'Literal[42]' instead
+      StrBox(42) # WARNING Expected type 'str', got 'Literal[42]' instead
       """)
 
     @Test
@@ -1293,7 +1292,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       class A[T]:
           def __init__(self, v: T) -> None: ...
 
-      A[int]("") # WARNING Expected type 'int' (matched generic type 'T'), got 'Literal[""]' instead
+      A[int]("") # WARNING Expected type 'int', got 'Literal[""]' instead
       """)
 
     @Test
@@ -1397,7 +1396,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
               pass
 
 
-      x = MyClass(1) < MyClass(2) < MyClass('foo') # WARNING Expected type 'MyClass[int]' (matched generic type 'MyClass[T]'), got 'MyClass[str]' instead
+      x = MyClass(1) < MyClass(2) < MyClass('foo') # WARNING Expected type 'MyClass[int]', got 'MyClass[str]' instead
       """)
 
     @Test
@@ -1597,7 +1596,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
     fun `ordinary subscription expression cannot be used as type hint`() = test("""
       xs: list[type[str]]
       expr: xs[0]
-      #└ TYPE Any
+      #└ TYPE Unknown
       """)
 
     @Test
@@ -1609,7 +1608,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
       x: B
       expr: x + 1
       #│    ^^^^^ WARNING Invalid type annotation
-      #└ TYPE Any
+      #└ TYPE Unknown
       """)
   }
 
@@ -1661,11 +1660,11 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-20073"])
     fun `map arguments in opposite order`() = test(
-      TestOptions(enablePyAnyType = false, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       map('foo', lambda c: 42)
-      #   │      ^^^^^^^^^^^^ WARNING Expected type 'Iterable[_T1]', got '(c: Any) -> Literal[42]' instead
-      #   ^^^^^ WARNING Expected type '(_T1) -> Any' (matched generic type '(_T1) -> _S'), got 'Literal["foo"]' instead
+      #   │      ^^^^^^^^^^^^ WARNING Expected type 'Iterable[_T1]', got '(c: Unknown) -> Literal[42]' instead
+      #   ^^^^^ WARNING Expected type '(_T1) -> Unknown' (matched generic type '(_T1) -> _S'), got 'Literal["foo"]' instead
       """,
     )
   }

@@ -126,7 +126,6 @@ class UniversalToolset : McpToolset {
     val sessionHandler = currentCoroutineContext().mcpCallInfo.sessionHandler
                          ?: mcpFail("Session handler not available")
     val routerToolsProvider = sessionHandler.routerToolsProvider
-                              ?: mcpFail("Router tools provider not available")
     return routerToolsProvider.mcpTools.value
   }
 
@@ -181,7 +180,7 @@ class UniversalToolset : McpToolset {
         }
       }
       "array" -> parseAsStructuredJson(paramName, value, "array") { it is JsonArray }
-      "object" -> parseAsStructuredJson(paramName, value, "object") { it is JsonObject }
+      "object" -> parseAsStructuredJson(paramName, value, "object") { it is JsonObject || it is JsonArray }
       else -> JsonPrimitive(value)
     }
   }
