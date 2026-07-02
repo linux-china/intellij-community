@@ -54,6 +54,8 @@ object SpecifyRemainingArgumentsByNameUtil {
         val allContextRemainingArguments: List<Name> = emptyList(),
         // All context parameter names (for identifying existing context args in the call)
         val allContextParameterNames: Set<Name> = emptySet(),
+        // Only context arguments that are implicit receivers
+        val implicitContextArgumentNames: Set<Name> = emptySet()
     )
 
     /**
@@ -181,7 +183,7 @@ object SpecifyRemainingArgumentsByNameUtil {
         val result = linkedMapOf<Name, Name>()
 
         val candidateFunction = candidateCall.symbol as? KaNamedFunctionSymbol ?: return emptyMap()
-        val contextArguments = candidateCall.partiallyAppliedSymbol.contextArguments
+        val contextArguments = candidateCall.contextArguments
 
         // shadowing context case
         val nearestContextParameterByName = candidatesPool.distinctBy { it.name }.associateBy { it.name }
@@ -223,6 +225,13 @@ object SpecifyRemainingArgumentsByNameUtil {
                 arg.value.name.takeIf { !it.isSpecial }?.identifier
             }
 
+        val implicitContextArgumentNames = symbol.contextParameters
+            .mapIndexedNotNullTo(hashSetOf()) { index, parameter ->
+                parameter.name.takeIf {
+                    !it.isSpecial && contextArguments.getOrNull(index) is KaImplicitReceiverValue
+                }
+            }
+
         val existingContextArguments = contextArgumentMapping
             .mapNotNullTo(hashSetOf()) { arg ->
                 arg.value.name.takeIf { !it.isSpecial }?.identifier
@@ -260,14 +269,14 @@ object SpecifyRemainingArgumentsByNameUtil {
             valueRemainingArguments.filter { !it.hasDeclaredDefaultValue }.map { it.name },
             valueRemainingArguments.map { it.name },
             contextRemainingArguments.map { it.name },
-            allContextParamNames
+            allContextParamNames,
+            implicitContextArgumentNames
         )
     }
 
     /**
-     * Given the list of [allCalls] that are possible, this function returns the minimum required arguments
-     * to complete any of the calls and the maximum arguments available (including context parameters).
-     * The largest overload is determined by value parameter count.
+     * Given the list of [allCalls] that are possible, this function returns the [RemainingArgumentsData] from the
+     * overload with the fewest required (not default) value parameters.
      */
     @OptIn(KaExperimentalApi::class)
     private fun KaSession.getRemainingArgumentsData(allCalls: List<KaCallCandidate>, existingArgumentsCount: Int): RemainingArgumentsData? {
@@ -278,18 +287,9 @@ object SpecifyRemainingArgumentsByNameUtil {
         val validPossibleCalls = allFunctionCalls.filter { it.symbol.hasStableParameterNames && isValidArgumentMapping(it.valueArgumentMapping) }
         if (validPossibleCalls.isEmpty()) return null
 
-        val smallestData = validPossibleCalls.minBy { call -> call.symbol.valueParameters.count { !it.hasDeclaredDefaultValue } }
-                .getRemainingArgumentsData(existingArgumentsCount) ?: return null
-        val largestData =
-            validPossibleCalls.maxBy { it.symbol.valueParameters.size }
-                .getRemainingArgumentsData(existingArgumentsCount) ?: return null
-
-        return RemainingArgumentsData(
-            smallestData.remainingRequiredArguments,
-            largestData.allValueRemainingArguments,
-            largestData.allContextRemainingArguments,
-            largestData.allContextParameterNames
-        )
+        return validPossibleCalls
+            .minBy { call -> call.symbol.valueParameters.count { !it.hasDeclaredDefaultValue } }
+            .getRemainingArgumentsData(existingArgumentsCount)
     }
 
     /**

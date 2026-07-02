@@ -198,9 +198,10 @@
 
     <statistics.applicationUsagesCollector implementation="com.jetbrains.python.psi.types.PyTypeEvaluationAggregatesCollector"/>
 
-    <localInspection language="Python" shortName="PyUnusedLocalInspection" suppressId="PyUnusedLocal" bundle="messages.PyPsiBundle" key="INSP.NAME.unused" groupKey="INSP.GROUP.python" enabledByDefault="true" level="WEAK WARNING" implementationClass="com.jetbrains.python.inspections.unusedLocal.PyUnusedLocalInspection"/>
+    <localInspection language="Python" shortName="PyUnusedLocalVariableInspection" suppressId="PyUnusedLocal" bundle="messages.PyPsiBundle" key="INSP.NAME.unused" groupKey="INSP.GROUP.python" enabledByDefault="true" level="WEAK WARNING" implementationClass="com.jetbrains.python.inspections.unusedLocal.PyUnusedLocalVariableInspection"/>
     <localInspection language="Python" shortName="PyUnusedParameterInspection" suppressId="PyUnusedParameter" bundle="messages.PyPsiBundle" key="INSP.NAME.unused.parameter" groupKey="INSP.GROUP.python" enabledByDefault="true" level="WEAK WARNING" implementationClass="com.jetbrains.python.inspections.unusedLocal.PyUnusedParameterInspection"/>
     <localInspection language="Python" shortName="PyUnusedFunctionInspection" suppressId="PyUnusedFunction" bundle="messages.PyPsiBundle" key="INSP.NAME.unused.function" groupKey="INSP.GROUP.python" enabledByDefault="true" level="WEAK WARNING" implementationClass="com.jetbrains.python.inspections.unusedLocal.PyUnusedFunctionInspection"/>
+    <inspectionElementsMerger implementation="com.jetbrains.python.inspections.unusedLocal.PyUnusedLocalVariableInspectionMerger"/>
     <inspectionElementsMerger implementation="com.jetbrains.python.inspections.unusedLocal.PyUnusedParameterInspectionMerger"/>
     <inspectionElementsMerger implementation="com.jetbrains.python.inspections.unusedLocal.PyUnusedFunctionInspectionMerger"/>
     <localInspection language="Python" shortName="PyRedundantParenthesesInspection" suppressId="PyRedundantParentheses" bundle="messages.PyPsiBundle" key="INSP.NAME.redundant.parentheses" groupKey="INSP.GROUP.python" enabledByDefault="true" level="WEAK WARNING" implementationClass="com.jetbrains.python.inspections.PyRedundantParenthesesInspection"/>
@@ -622,6 +623,8 @@
                  description="Enable variance in subtype checks"/>
     <registryKey key="python.skeleton.generator.use.process.pool" defaultValue="true"
                  description="Use a process worker pool for skeleton generation to avoid process creation overhead"/>
+    <registryKey key="python.type.checker.diff.tooltip" defaultValue="false"
+                 description="Show a structural side-by-side type diff in type-mismatch inspection tooltips (otherwise the plain message tooltip is shown)"/>
 
     <virtualFileCustomDataProvider implementation="com.jetbrains.python.formatter.PyCodeStyleSettingsProvider"/>
     <projectSettings service="com.jetbrains.python.findUsages.PyFindUsagesOptions"/>

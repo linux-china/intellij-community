@@ -12,6 +12,7 @@ import com.jetbrains.python.ast.PyAstFunction;
 import com.jetbrains.python.documentation.PythonDocumentationProvider;
 import com.jetbrains.python.fixtures.PyTestCase;
 import com.jetbrains.python.psi.PyCallExpression;
+import com.jetbrains.python.psi.impl.PyCallExpressionHelper;
 import com.jetbrains.python.psi.resolve.PyResolveContext;
 import com.jetbrains.python.psi.types.PyCallableType;
 import com.jetbrains.python.psi.types.TypeEvalContext;
@@ -68,6 +69,6 @@ public class PyResolveCalleeTest extends PyTestCase {
     assertEquals(PyAstFunction.Modifier.STATICMETHOD, resolved.getModifier());
 
     final TypeEvalContext context = TypeEvalContext.codeAnalysis(myFixture.getProject(), myFixture.getFile());
-    assertEquals("(self: Any) -> None", PythonDocumentationProvider.getTypeName(resolved, context));
+    assertEquals("(self: Unknown) -> None", PythonDocumentationProvider.getTypeName(resolved, context));
   }
 }

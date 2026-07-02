@@ -2231,6 +2231,7 @@ f:com.intellij.openapi.command.impl.StartMarkAction$AlreadyStartedException
 - java.lang.Exception
 c:com.intellij.openapi.command.impl.UndoManagerImpl
 - com.intellij.openapi.command.undo.UndoManager
+- com.intellij.openapi.Disposable
 - addDocumentAsAffected(com.intellij.openapi.editor.Document):V
 - clearUndoRedoQueueInTests(com.intellij.openapi.vfs.VirtualFile):V
 - dropHistoryInTests():V
@@ -3543,6 +3544,24 @@ f:com.intellij.openapi.options.newEditor.SettingsDialogFactory$Companion
 c:com.intellij.openapi.progress.BackgroundTaskQueue
 - clear():V
 - run(com.intellij.openapi.progress.Task$Backgroundable):V
+com.intellij.openapi.progress.ProgressModel
+- a:addOnChangeAction(kotlin.jvm.functions.Function0):V
+- a:addOnFinishAction(kotlin.jvm.functions.Function1):V
+- a:cancel():V
+- a:finish(com.intellij.openapi.progress.TaskInfo):V
+- a:getCancelTooltipText():java.lang.String
+- a:getCancellation():com.intellij.platform.ide.progress.TaskCancellation
+- a:getDetails():java.lang.String
+- a:getFraction():D
+- a:getProgressIndicator():com.intellij.openapi.wm.ex.ProgressIndicatorEx
+- a:getText():java.lang.String
+- a:getTitle():java.lang.String
+- a:getVisibleInStatusBar():Z
+- a:isCancellable():Z
+- a:isFinished(com.intellij.openapi.progress.TaskInfo):Z
+- a:isIndeterminate():Z
+- a:isRunning():Z
+- a:isStopping(com.intellij.openapi.progress.TaskInfo):Z
 c:com.intellij.openapi.progress.impl.BackgroundableProcessIndicator
 - com.intellij.openapi.progress.util.ProgressWindow
 - <init>(com.intellij.openapi.progress.Task$Backgroundable):V
@@ -5791,38 +5810,6 @@ f:com.intellij.ui.filterField.FilterMultiSelectAction
 - com.intellij.openapi.actionSystem.AnAction
 f:com.intellij.ui.filterField.FilterValueAction
 - com.intellij.openapi.actionSystem.AnAction
-com.intellij.ui.layout.BaseBuilder
-e:com.intellij.ui.layout.CCFlags
-- java.lang.Enum
-a:com.intellij.ui.layout.Cell
-- com.intellij.ui.layout.BaseBuilder
-- <init>():V
-- f:getGrowX():com.intellij.ui.layout.CCFlags
-com.intellij.ui.layout.CellBuilder
-- a:constraints(com.intellij.ui.layout.CCFlags[]):com.intellij.ui.layout.CellBuilder
-- ba:focused():com.intellij.ui.layout.CellBuilder
-- a:getComponent():javax.swing.JComponent
-@:com.intellij.ui.layout.CellMarker
-- java.lang.annotation.Annotation
-e:com.intellij.ui.layout.LCFlags
-- java.lang.Enum
-c:com.intellij.ui.layout.LayoutBuilder
-- com.intellij.ui.layout.RowBuilder
-- f:getBuilder():com.intellij.ui.layout.LayoutBuilderImpl
-com.intellij.ui.layout.LayoutBuilderImpl
-- a:build(java.awt.Container,com.intellij.ui.layout.LCFlags[]):V
-- a:getPreferredFocusedComponent():javax.swing.JComponent
-f:com.intellij.ui.layout.LayoutImplKt
-- sf:createLayoutBuilder():com.intellij.ui.layout.LayoutBuilder
-a:com.intellij.ui.layout.Row
-- com.intellij.ui.layout.Cell
-- com.intellij.ui.layout.RowBuilder
-com.intellij.ui.layout.RowBuilder
-- com.intellij.ui.layout.BaseBuilder
-- b:row(java.lang.String,Z,kotlin.jvm.functions.Function1):com.intellij.ui.layout.Row
-- bs:row$default(com.intellij.ui.layout.RowBuilder,java.lang.String,Z,kotlin.jvm.functions.Function1,I,java.lang.Object):com.intellij.ui.layout.Row
-f:com.intellij.ui.layout.RowBuilder$DefaultImpls
-- bs:row(com.intellij.ui.layout.RowBuilder,java.lang.String,Z,kotlin.jvm.functions.Function1):com.intellij.ui.layout.Row
 f:com.intellij.ui.layout.ValidationInfoBuilder
 - <init>(javax.swing.JComponent):V
 - f:error(java.lang.String):com.intellij.openapi.ui.ValidationInfo

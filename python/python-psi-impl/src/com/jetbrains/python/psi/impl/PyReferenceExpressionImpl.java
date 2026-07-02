@@ -4,7 +4,6 @@ package com.jetbrains.python.psi.impl;
 import com.intellij.codeInsight.controlflow.ConditionalInstruction;
 import com.intellij.codeInsight.controlflow.ControlFlowUtil;
 import com.intellij.codeInsight.controlflow.Instruction;
-import com.intellij.codeInspection.util.InspectionMessage;
 import com.intellij.diagnostic.PluginException;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.diagnostic.Logger;
@@ -29,6 +28,7 @@ import com.jetbrains.python.codeInsight.controlflow.PyTypeAssertionEvaluator;
 import com.jetbrains.python.codeInsight.controlflow.ReadWriteInstruction;
 import com.jetbrains.python.codeInsight.controlflow.ScopeOwner;
 import com.jetbrains.python.codeInsight.dataflow.scope.ScopeUtil;
+import com.jetbrains.python.inspections.PyInspectionMessages.ProblemMessage;
 import com.jetbrains.python.psi.AccessDirection;
 import com.jetbrains.python.psi.Property;
 import com.jetbrains.python.psi.PyAnnotationOwner;
@@ -84,7 +84,6 @@ import com.jetbrains.python.psi.types.TypeEvalContextImpl;
 import com.jetbrains.python.codeInsight.typing.PyTypingTypeProvider;
 import com.jetbrains.python.pyi.PyiUtil;
 import com.jetbrains.python.refactoring.PyDefUseUtil;
-import kotlin.sequences.SequencesKt;
 import one.util.streamex.StreamEx;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -312,7 +311,7 @@ public class PyReferenceExpressionImpl extends PyElementImpl implements PyRefere
 
   public static @Nullable Ref<PyType> getQualifiedReferenceType(@NotNull PyReferenceExpression refExpr,
                                                                 @NotNull TypeEvalContext context,
-                                                                @Nullable List<@InspectionMessage String> errors) {
+                                                                @Nullable List<ProblemMessage> errors) {
     final PyExpression qualifier = refExpr.getQualifier();
     if (qualifier == null) return null;
 
@@ -450,6 +449,18 @@ public class PyReferenceExpressionImpl extends PyElementImpl implements PyRefere
                                                          @NotNull TypeEvalContext context) {
     if (qualifierType instanceof PyClassType classType) {
       final PyClass pyClass = classType.getPyClass();
+
+      // TODO PY-90645: This special-casing should be revisited and possibly removed once we handle data descriptors generically.
+      // on a class object, a property defined on the metaclass is a data descriptor and takes
+      // precedence over a member of the same name on the class itself. The class is an instance of its
+      // metaclass, so the metaclass property's getter is invoked with the class object as the receiver.
+      if (classType.isDefinition() && AccessDirection.of(refExpr) == AccessDirection.READ) {
+        final Ref<PyType> metaClassProperty = getMetaclassPropertyTypeForClassAccess(refExpr, classType, name, context);
+        if (metaClassProperty != null) {
+          return metaClassProperty;
+        }
+      }
+
       final Property property = pyClass.findProperty(name, true, context);
 
       if (property != null) {
@@ -491,11 +502,27 @@ public class PyReferenceExpressionImpl extends PyElementImpl implements PyRefere
     return null;
   }
 
+  private static @Nullable Ref<PyType> getMetaclassPropertyTypeForClassAccess(@NotNull PyReferenceExpression refExpr,
+                                                                              @NotNull PyClassType classType,
+                                                                              @NotNull String name,
+                                                                              @NotNull TypeEvalContext context) {
+    final PyClassLikeType metaClassType = classType.getMetaClassType(context, true);
+    if (!(metaClassType instanceof PyClassType metaPyClassType)) {
+      return null;
+    }
+    final Property metaProperty = metaPyClassType.getPyClass().findProperty(name, true, context);
+    if (metaProperty == null) {
+      return null;
+    }
+    final PyType type = metaProperty.getType(refExpr.getQualifier(), context);
+    return Ref.create(type);
+  }
+
   private static @Nullable Ref<PyType> getTypeOfMember(@Nullable PyType type,
                                                        @NotNull String attrName,
                                                        @NotNull PyQualifiedExpression anchor,
                                                        @NotNull PyResolveContext resolveContext,
-                                                       @Nullable List<@InspectionMessage String> errors) {
+                                                       @Nullable List<ProblemMessage> errors) {
     if (type instanceof PyUnionType union) {
       var result = StreamEx.of(union.getMembers())
           .map(it -> getTypeOfMember(it, attrName, anchor, resolveContext, errors))
@@ -556,7 +583,7 @@ public class PyReferenceExpressionImpl extends PyElementImpl implements PyRefere
                                                                  @NotNull String name,
                                                                  @NotNull PyQualifiedExpression anchor,
                                                                  @NotNull PyResolveContext resolveContext,
-                                                                 @Nullable List<@InspectionMessage String> errors) {
+                                                                 @Nullable List<ProblemMessage> errors) {
     List<? extends RatedResolveResult> resolveResults =
       classType.toClass().resolveMember(name, null, AccessDirection.READ, resolveContext);
     if (resolveResults == null || resolveResults.isEmpty()) return null;

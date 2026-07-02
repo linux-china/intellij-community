@@ -22,10 +22,10 @@ import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.diagnostic.debug
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.WindowStateService
 import com.intellij.openapi.wm.WindowManager
-import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.openapi.wm.impl.IdeFrameDecorator
 import com.intellij.openapi.wm.impl.IdeGlassPaneImpl
 import com.intellij.openapi.wm.impl.customFrameDecorations.header.CustomFrameDialogContent
@@ -33,6 +33,7 @@ import com.intellij.ui.ComponentUtil
 import com.intellij.ui.FullScreenSupport
 import com.intellij.ui.ScreenUtil
 import com.intellij.ui.ToolbarService
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.launchOnShow
 import kotlinx.coroutines.FlowPreview
@@ -181,7 +182,13 @@ abstract class NonModalWindowWrapper(
    * [switchWindowMode], which requires [activeWindow] to be initialised — so the action must
    * not be activated before [initWindow] is called.)
    */
-  fun createModeAction(): ToggleAction = object : ToggleAction(
+  fun createModeAction(): ToggleAction {
+    val action = PinWindowAction()
+    ActionUtil.mergeFrom(action, ACTION_PIN_WINDOW_ID)
+    return action
+  }
+
+  private inner class PinWindowAction : ToggleAction(
     IdeBundle.messagePointer("action.ToggleAction.text.pin.window"),
     IdeBundle.messagePointer("action.ToggleAction.description.pin.window"),
     AllIcons.General.Pin_tab,
@@ -269,6 +276,7 @@ abstract class NonModalWindowWrapper(
         dialog.setLocationRelativeTo(dialog.owner)
         dialog.glassPane = IdeGlassPaneImpl(dialog.rootPane)
         ComponentUtil.decorateWindowHeader(dialog.rootPane)
+        dialog.rootPane.border = JBUI.CurrentTheme.Window.getDialogBorder(false)
         dialog.accessibleContext.accessibleName = getAccessibleWindowName()
         val wd = Disposer.newDisposable(frameDisposable)
         windowDisposable = wd
@@ -291,6 +299,7 @@ abstract class NonModalWindowWrapper(
         frame.setLocationRelativeTo(getIdeJFrame())
         frame.glassPane = IdeGlassPaneImpl(frame.rootPane)
         ComponentUtil.decorateWindowHeader(frame.rootPane)
+        frame.rootPane.border = JBUI.CurrentTheme.Window.getDialogBorder(false)
         frame.accessibleContext.accessibleName = getAccessibleWindowName()
         val wd = Disposer.newDisposable(frameDisposable)
         windowDisposable = wd
@@ -625,3 +634,5 @@ private fun Window.isSameOrOwnedBy(ancestor: Window): Boolean {
 }
 
 private val LOG = logger<NonModalWindowWrapper>()
+
+internal const val ACTION_PIN_WINDOW_ID = "NonModalWindow.PinUnpin"

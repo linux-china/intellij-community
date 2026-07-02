@@ -2,14 +2,10 @@
 package com.jetbrains.python.types
 
 import com.intellij.idea.TestFor
-import com.intellij.testFramework.TestLoggerFactory
-import com.intellij.testFramework.TestLoggerFactory.TestLoggerAssertionError
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
 import com.jetbrains.python.psi.LanguageLevel
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 /**
  * Type and type-checker tests for [overloads][https://docs.python.org/3/library/typing.html#typing.overload]:
@@ -148,7 +144,6 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `not matched overloads and implementation in class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       class A:
@@ -168,7 +163,6 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `top level not matched overloads and implementation`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from typing import overload
       @overload
@@ -187,7 +181,6 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22971"])
     fun `not matched overloads and implementation in imported class`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35),
       """
       from b import A
       expr = A().foo(object()) # WARNING No overload of 'foo' matches the arguments. Argument types: (object). Expected one of: (value: int), (value: str)
@@ -1040,6 +1033,33 @@ class PyOverloadTypeTest : PyCodeInsightTestCase() {
     
     a: A
     f = a.f
+    """)
+
+  @Test
+  @TestFor(issues = ["PY-84004"])
+  fun `module overloaded function assigned to global function`() = test(
+    """
+    from mod import g
+
+    expr1 = g(1)
+    # └ TYPE bytes
+    expr2 = g("s")
+    # └ TYPE str
+    """,
+    "mod.py" to """
+    import lib
+
+    g = lib.func
+    """,
+    "lib.py" to """
+    from typing import overload
+
+
+    @overload
+    def func(x: int) -> bytes: ...
+    @overload
+    def func(x: str) -> str: ...
+    def func(x): ...
     """)
 
   @Test

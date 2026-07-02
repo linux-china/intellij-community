@@ -3,6 +3,7 @@ package com.jetbrains.python.types
 
 import com.intellij.idea.TestFor
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
+import com.jetbrains.python.psi.impl.PyClassImpl
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -180,6 +181,131 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
               return "42"
 
           serial_number = property(_get_serial_number)
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `metaclass property takes precedence over class property on class`() = test("""
+      class Meta(type):
+          @property
+          def prop(cls) -> str: ...
+
+      class C(metaclass=Meta):
+          @property
+          def prop(self) -> int: ...
+
+      expr0 = Meta.prop
+      #└ TYPE property
+
+      expr = C.prop
+      # └ TYPE str
+
+      expr2 = C().prop
+      #└ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `metaclass property takes precedence over class attribute on class`() = test("""
+      class Meta(type):
+          @property
+          def prop(cls) -> str: ...
+
+      class C(metaclass=Meta):
+          prop: int = 0
+
+      expr = C.prop
+      # └ TYPE str
+      
+      expr1 = C().prop
+      # └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `metaclass method does not shadow class attribute on class`() = test("""
+      class Meta(type):
+          def member(cls) -> str: ...
+
+      class C(metaclass=Meta):
+          member: int = 0
+
+      expr = C.member
+      # └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `metaclass-only property accessed on class invokes the getter`() = test("""
+      class MyMeta(type):
+          @property
+          def attr(cls) -> int:
+              return 1
+
+      class A(metaclass=MyMeta): ...
+
+      expr = A.attr
+      # └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `class-only property accessed on class returns the descriptor`() = test("""
+      class MyMeta(type): ...
+
+      class A(metaclass=MyMeta):
+          @property
+          def attr(self) -> int:
+              return 2
+
+      expr = A.attr
+      # └ TYPE property
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `class-only property accessed on instance invokes the getter`() = test("""
+      class MyMeta(type): ...
+
+      class A(metaclass=MyMeta):
+          @property
+          def attr(self) -> int:
+              return 2
+
+      expr = A().attr
+      # └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `metaclass property is ignored when accessing attr on instance`() = test("""
+      class MyMeta(type):
+          @property
+          def attr(cls) -> int:
+              return 3
+
+      class A(metaclass=MyMeta):
+          @property
+          def attr(self) -> str:
+              return "3"
+
+      expr2 = A().attr
+      #└ TYPE str
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-88967"])
+    fun `non-descriptor metaclass attribute does not shadow class property`() = test("""
+      class MyMeta(type):
+          attr = "4"
+
+      class A(metaclass=MyMeta):
+          @property
+          def attr(self) -> int:
+              return 4
+
+      expr = A.attr
+      # └ TYPE property
       """)
   }
 
@@ -579,6 +705,32 @@ class PyAttributeAndDescriptorTypeTest : PyCodeInsightTestCase() {
               g().x = 'foo'
           expr = x
       #   └ TYPE Literal[42]
+      """)
+
+    @Test
+    @TestFor(issues = ["PY-40882"])
+    fun `type hinted instance attribute without assignment is resolved`() = test("""
+      class A:
+          def __init__(self, a: int):
+              self.a: int | None
+              if bool():
+                  self.a = a
+              else:
+                  self.a = None
+
+
+      class B:
+          def __init__(self):
+              self.b: int
+
+          def get_b(self) -> int:
+              return self.b
+
+
+      print(A(1).a)
+
+      expr = B().b
+      # └ TYPE int
       """)
   }
 

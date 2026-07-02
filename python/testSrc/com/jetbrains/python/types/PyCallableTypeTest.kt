@@ -28,8 +28,25 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       dd = spam if random.randint != 42 else Eggs2()
       var = dd if random.randint != 42 else dd
       expr = var()
+      # │    ^^^^^ WARNING Member 'Eggs2' of '() -> Literal["D"] | Eggs2' is not callable
       # └ TYPE Literal["D"]
       """)
+
+    @Test
+    @TestFor(issues = ["PY-84030"])
+    fun `calling union of callables`() = test("""
+    from typing import Callable
+
+    def f(x: Callable[[int], None] | Callable[[str], None]):
+        x(1)
+    #     └ WARNING Expected type 'str', got 'Literal[1]' instead
+
+    def g(x: Callable[[], None] | Callable[[str], None]):
+        x()
+    #     └ WARNING No signature matches the arguments
+        x(1)
+    #     └ WARNING Expected type 'str', got 'Literal[1]' instead
+    """)
 
     @Test
     @TestFor(issues = ["PY-9605"])
@@ -452,7 +469,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       def foo(a: A):
           f = a.f
-      #   └ TYPE [U: Unknown](x: U) -> U
+      #   └ TYPE [U](x: U) -> U
           expr = f('abb')
       #   └ TYPE str
       """)
@@ -480,7 +497,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       def foo(a: A[int]):
           f = a.f
-      #   └ TYPE [U: Unknown](x: U) -> tuple[int, U]
+      #   └ TYPE [U](x: U) -> tuple[int, U]
           expr = f('abb')
       #   └ TYPE tuple[int, str]
     """)
@@ -502,7 +519,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       def foo(a: A[int]):
           f = a.f
-      #   └ TYPE Overload[[U: Unknown](x: U, y: int) -> tuple[int, U, str], [U: Unknown](x: U, y: str) -> tuple[int, U, bytes]]
+      #   └ TYPE Overload[[U](x: U, y: int) -> tuple[int, U, str], [U](x: U, y: str) -> tuple[int, U, bytes]]
           expr = f('abb', 'abc')
       #   └ TYPE tuple[int, str, bytes]
       """)
@@ -631,6 +648,13 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       expr = Class.foo()
       #└ TYPE int
+      """)
+
+    @TestFor(issues = ["PY-90557"])
+    @Test
+    fun `method inherited from object stays unbound when accessed on class`() = test("""
+      expr = int.__str__
+      #└ TYPE (self: int) -> str
       """)
 
     @Test
@@ -1510,7 +1534,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
       expr = deco(unresolved)
       #│          ^^^^^^^^^^ ERROR Unresolved reference 'unresolved'
-      #└ TYPE (*args: Unknown, **kwargs: Unknown) -> str
+      #└ TYPE (*args, **kwargs) -> str
       """)
 
     @Test
@@ -1866,10 +1890,10 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-71002"])
-    fun `ParamSpec default type refers to another ParamSpec with ellipsis`() = test(TestOptions(enablePyAnyType = false), """
+    fun `ParamSpec default type refers to another ParamSpec with ellipsis`() = test("""
       class Clazz[**P1, **P2 = P1, **P3 = P2]: ...
       expr = Clazz[..., [float]]()
-      #└ TYPE Clazz[Any, [float | int], [float | int]]
+      #└ TYPE Clazz[Unknown, [float | int], [float | int]]
       """)
   }
 
@@ -2312,7 +2336,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
       """)
 
     @Test
-    fun `wildcard signatures`() = test(TestOptions(enablePyAnyType = false), """
+    fun `wildcard signatures`() = test("""
       from typing import Protocol
 
       class Expected(Protocol):
@@ -2372,7 +2396,7 @@ class PyCallableTypeTest : PyCodeInsightTestCase() {
 
     @Test
     @TestFor(issues = ["PY-82871"])
-    fun `Concatenate with ellipsis assignability`() = test(TestOptions(enablePyAnyType = false), """
+    fun `Concatenate with ellipsis assignability`() = test("""
       from typing import Callable, Concatenate
 
       call: Callable[Concatenate[int, ...], str]

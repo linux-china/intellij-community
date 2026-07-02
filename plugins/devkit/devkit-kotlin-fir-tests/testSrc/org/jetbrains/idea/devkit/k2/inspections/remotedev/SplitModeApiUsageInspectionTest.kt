@@ -357,7 +357,7 @@ Frontend dependency 'intellij.platform.frontend' from descriptor 'plugin.xml' in
     myFixture.checkHighlighting()
   }
 
-  fun testConfigurableApiInBackendModule() {
+  fun testFrontendOrBackendApiInBackendModule() {
     configurePluginXml(
       """
       <idea-plugin>
@@ -369,12 +369,12 @@ Frontend dependency 'intellij.platform.frontend' from descriptor 'plugin.xml' in
     )
 
     myFixture.configureByText(
-      "BackendConfigurable.kt", """
+      "BackendDynamicPluginListener.kt", """
       package com.example.backend
 
-      import com.intellij.openapi.options.Configurable
+      import com.intellij.ide.plugins.DynamicPluginListener
 
-      class BackendConfigurable : Configurable
+      class BackendDynamicPluginListener : DynamicPluginListener
     """.trimIndent()
     )
 
@@ -732,7 +732,9 @@ No frontend or backend dependencies were found for module 'light_idea_test_case'
     """.trimIndent()
     )
 
-    launchActionAndWait("Make module 'light_idea_test_case' work in 'frontend' only") {
+    val intention = myFixture.findSingleIntention("Make module 'light_idea_test_case' work in 'frontend' only")
+    assertNull(myFixture.getIntentionPreviewText(intention))
+    launchActionAndWait(intention) {
       getModuleDependencyNames().contains("intellij.platform.frontend")
     }
 
@@ -854,7 +856,8 @@ No frontend or backend dependencies were found for module 'light_idea_test_case'
     )
     addCurrentModuleDependencies("intellij.platform.frontend")
 
-    launchActionAndWait("Make module 'light_idea_test_case' work in 'backend' only") {
+    val intention = myFixture.findSingleIntention("Make module 'light_idea_test_case' work in 'backend' only")
+    launchActionAndWait(intention) {
       !getModuleDependencyNames().contains("intellij.platform.frontend")
     }
 
@@ -877,11 +880,6 @@ No frontend or backend dependencies were found for module 'light_idea_test_case'
         }
       }
     }
-  }
-
-  private fun launchActionAndWait(intentionText: String, condition: () -> Boolean) {
-    val intention = myFixture.findSingleIntention(intentionText)
-    launchActionAndWait(intention, condition)
   }
 
   private fun launchActionAndWait(intention: IntentionAction, condition: () -> Boolean) {

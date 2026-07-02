@@ -1617,7 +1617,6 @@ val servicePreloadingAllowListForNonCorePlugin: Set<String> = java.util.Set.of(
   "com.jetbrains.rdserver.daemon.BackendHighlighterRegistrationsHost",
   "com.jetbrains.rdserver.daemon.inlays.BackendCodeVisionHost.Settings",
   $$"com.jetbrains.rdserver.daemon.inlays.BackendCodeVisionHost$Settings",
-  "com.jetbrains.rdserver.debugger.BackendBreakpointHost",
   "com.jetbrains.rdserver.debugger.BackendConsoleInfoHost",
   "com.jetbrains.rdserver.debugger.BackendDebuggerHost",
   "com.jetbrains.rdserver.execution.BackendExternalSystemHost",

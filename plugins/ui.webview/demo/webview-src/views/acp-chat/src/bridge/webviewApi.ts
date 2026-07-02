@@ -7,6 +7,7 @@ import { apiId, webView, type WebViewCallable, type WebViewImplementable } from 
 export interface AgentDto {
   id: string
   name: string
+  icon?: "junie"
 }
 
 export interface AgentListDto {
@@ -25,6 +26,30 @@ export interface StartAgentResult {
   error?: string | null
 }
 
+export interface OpenAcpConfigResult {
+  ok: boolean
+  error?: string | null
+}
+
+export interface ResolvePathLinksRequest {
+  candidates: PathLinkCandidateDto[]
+}
+
+export interface ResolvePathLinksResult {
+  resolvedIds: string[]
+}
+
+export interface PathLinkCandidateDto {
+  id: string
+  rawPath: string
+}
+
+export interface NavigatePathLinkRequest {
+  rawPath: string
+  clientX: number
+  clientY: number
+}
+
 export interface LineDto {
   line: string
 }
@@ -37,6 +62,9 @@ export interface ExitDto {
 export interface AcpBridgeHostApi extends WebViewCallable {
   listAgents(): Promise<AgentListDto>
   startAgent(params: StartAgentRequest): Promise<StartAgentResult>
+  openAcpConfig(): Promise<OpenAcpConfigResult>
+  resolvePathLinks(params: ResolvePathLinksRequest): Promise<ResolvePathLinksResult>
+  navigatePathLink(params: NavigatePathLinkRequest): Promise<void>
   sendStdin(params: LineDto): Promise<void>
   stopAgent(): Promise<void>
 }

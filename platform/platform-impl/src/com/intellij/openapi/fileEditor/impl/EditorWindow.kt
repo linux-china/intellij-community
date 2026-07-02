@@ -18,6 +18,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.UI
+import com.intellij.openapi.application.UiWithModelAccess
 import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.application.impl.InternalUICustomization
@@ -430,7 +431,8 @@ class EditorWindow internal constructor(
         if (options.requestFocus) {
           withContext(Dispatchers.Default) {
             composite.waitForAvailable()
-            withContext(Dispatchers.UI) {
+            // IJPL-237573
+            withContext(Dispatchers.UiWithModelAccess) {
               focusEditorOnComposite(composite = composite, splitters = owner, forceFocus = options.forceFocus)
             }
           }
@@ -1038,6 +1040,8 @@ class EditorWindow internal constructor(
       owner.scheduleUpdateFileColor(composite.file)
     }
     if (wasPinned != pinned && EDT.isCurrentThreadEdt()) {
+      owner.manager.project.messageBus.syncPublisher(FileEditorManagerListener.FILE_EDITOR_MANAGER)
+        .filePinStateChanged(owner.manager, composite.file)
       (tabbedPane.tabs as? JBTabsImpl)?.doLayout()
     }
   }

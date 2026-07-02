@@ -75,7 +75,7 @@ object PyTypeChecker {
   @JvmStatic
   fun match(expected: PyType?, actual: PyType?, context: TypeEvalContext): Boolean {
     val substitutions = GenericSubstitutions()
-    return match(expected, actual, MatchContext(context, substitutions, false, )).orElse(true)!!
+    return match(expected, actual, MatchContext(context, substitutions, false)).orElse(true)!!
   }
 
   /**
@@ -634,7 +634,7 @@ object PyTypeChecker {
   }
 
   private fun match(expected: PyPositionalVariadicType, actual: PyType?, context: MatchContext): Boolean {
-    if (actual == null) {
+    if (actual.isUnknown) {
       return true
     }
     if (actual !is PyPositionalVariadicType) {
@@ -1018,15 +1018,15 @@ object PyTypeChecker {
       val protocolElementType = substitute(rawProtocolElementType, expectedSubstitutions, context)
       val elementResult: Boolean =
         recordFrameBool(protocolContext, { protocolMemberFailureMessage(protocolMember, subclassElementMembers) }) {
-          subclassElementMembers.any { subclassElementMember: PyTypeMember? ->
-            if (protocolMember.isWritable && !subclassElementMember!!.isWritable) {
+          subclassElementMembers.any { subclassElementMember ->
+            if (protocolMember.isWritable && !subclassElementMember.isWritable) {
               return@any false
             }
-            if (protocolMember.isDeletable && !subclassElementMember!!.isDeletable) {
+            if (protocolMember.isDeletable && !subclassElementMember.isDeletable) {
               return@any false
             }
             val isProtocolMemberClassVar = protocolMember.isClassVar
-            val isSubclassMemberClassVar = subclassElementMember!!.isClassVar
+            val isSubclassMemberClassVar = subclassElementMember.isClassVar
             if (isSubclassMemberClassVar != isProtocolMemberClassVar) {
               return@any false
             }
@@ -1166,7 +1166,7 @@ object PyTypeChecker {
     if (actual.isHomogeneous) {
       // The type tuple[Any, ...] is consistent with any tuple
       val elementType = actual.iteratedItemType
-      if (elementType == null) {
+      if (elementType.isAnyOrUnknown) {
         return Optional.of(true)
       }
     }
@@ -1764,7 +1764,7 @@ object PyTypeChecker {
     }
     // TODO Don't consider other type parameters unknown (PY-85653)
     // Since Self is always bound, don't consider it unknown, e.g. in Py3TypeCheckerInspectionTest.testSelfAssignedToOtherTypeBad
-    if (isAnyOrUnknown || (genericsAreUnknown && this is PyTypeParameterType && (this !is PySelfType))) {
+    if (this.isAnyOrUnknown || (genericsAreUnknown && this is PyTypeParameterType && (this !is PySelfType))) {
       return true
     }
     return when (this) {
@@ -2081,7 +2081,7 @@ object PyTypeChecker {
           .collect(PyTypeUtil.toUnion(qualifierType))
         // If no qualifier type matched Self's scope class, Self was probably inferred from a different context
         // (e.g. protocol matching for a parameter type) and should be preserved as-is.
-        return result ?: selfType
+        return result.takeUnless { it.isUnknown } ?: selfType
       }
 
       override fun visitPyClassType(classType: PyClassType): PyType? {
@@ -2195,6 +2195,7 @@ object PyTypeChecker {
         val firstParamTypeSubs = concatenateType.firstTypes.flatMap {
           flattenUnpackedTuple(clone(it))
         }
+        if (concatenateType.paramSpec == null) return PyAnyType.unknown
         val paramSpecSubs = when (val it = clone<PyType?>(concatenateType.paramSpec)) {
           is PyCallableParameterVariadicType -> it
           else if it.isUnknown -> null
@@ -2437,40 +2438,38 @@ object PyTypeChecker {
   }
 
   @JvmStatic
-  fun isCallable(type: PyType?): Boolean? {
-    return when (type) {
-      null, is PyAnyType -> null
-      is PyUnionType -> isUnionCallable(type)
-      is PyOverloadType -> true
-      is PyCallableType -> type.isCallable
-      is PyStructuralType if type.isInferredFromUsages -> true
-      is PyTypeVarType -> {
-        if (type.isDefinition) {
-          true
-        }
-        else isCallable(type.effectiveBound)
+  val PyType?.isCallable: Boolean?
+    get() {
+      PyAnyType.validate(this)
+      return when (this) {
+        null, is PyAnyType -> null
+        is PyUnionType -> this.isCallable
+        is PyUnsafeUnionType -> this.isCallable
+        is PyOverloadType -> true
+        is PyCallableType -> this.isCallable
+        is PyStructuralType if this.isInferredFromUsages -> true
+        is PyTypeVarType -> if (this.isDefinition) true else this.effectiveBound.isCallable
+        else -> false
       }
-      else -> false
     }
-  }
+
+  /**
+   * If any are not callable -- it is not callable.
+   * If any are unknown -- it is unknown.
+   * It is true otherwise.
+   */
+  private val PyUnionType.isCallable: Boolean?
+    get() = if (PyUnionType.isStrictSemanticsEnabled())
+      members.all { it.isCallable ?: return null }
+      else members.any { it.isCallable ?: return null }
 
   /**
    * If at least one is callable -- it is callable.
    * If at least one is unknown -- it is unknown.
    * It is false otherwise.
    */
-  private fun isUnionCallable(type: PyUnionType): Boolean? {
-    for (member in type.members) {
-      val callable = isCallable(member)
-      if (callable == null) {
-        return null
-      }
-      if (callable) {
-        return true
-      }
-    }
-    return false
-  }
+  private val PyUnsafeUnionType.isCallable: Boolean?
+    get() = members.any { it.isCallable ?: return null }
 
   @JvmStatic
   fun definesGetAttr(file: PyFile, context: TypeEvalContext): Boolean {

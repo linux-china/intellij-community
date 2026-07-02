@@ -958,11 +958,10 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-22769"])
     fun `replace called on union of str and bytes with str arguments`() = test("""
-      from typing import Union
-
-
-      def foo(path: Union[bytes, str]) -> None:
+      def foo(path: bytes | str) -> None:
           path.replace("/", "\\")
+      #                │    ^^^^ WARNING Expected type 'Buffer', got 'Literal["\"]' instead
+      #                ^^^ WARNING Expected type 'Buffer', got 'Literal["/"]' instead
       """)
 
     @Test
@@ -1421,7 +1420,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
 
     @Test
     fun `function return type checks`() = test(
-      TestOptions(enablePyAnyType = false, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       from typing import List, Optional, Union, Generator, Iterable
 
@@ -1453,7 +1452,7 @@ class PySubtypingTypeTest : PyCodeInsightTestCase() {
           if x:
               return 'abc' # WARNING Expected type 'int', got 'Literal["abc"]' instead
           else:
-              return {} # WARNING Expected type 'int', got 'dict[Any, Any]' instead
+              return {} # WARNING Expected type 'int', got 'dict[Unknown, Unknown]' instead
 
       def h(x) -> int:
           return # WARNING Expected type 'int', got 'None' instead

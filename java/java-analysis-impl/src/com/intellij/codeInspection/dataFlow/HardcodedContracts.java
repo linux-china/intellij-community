@@ -548,7 +548,14 @@ public final class HardcodedContracts {
     }
 
     if (junit && "assertInstanceOf".equals(methodName)) {
-      return Collections.singletonList(StandardMethodContract.trivialContract(paramCount, returnNotNull()));
+      ValueConstraint[] constraintsNotNull = createConstraintArray(paramCount);
+      constraintsNotNull[1] = NOT_NULL_VALUE;
+      ValueConstraint[] constraintsNull = createConstraintArray(paramCount);
+      constraintsNull[1] = NULL_VALUE;
+      return List.of(
+        new StandardMethodContract(constraintsNotNull, returnNotNull()),
+        new StandardMethodContract(constraintsNull, fail())
+      );
     }
 
     if (paramCount == 0) return Collections.emptyList();

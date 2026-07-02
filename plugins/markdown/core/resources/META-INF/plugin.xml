@@ -278,7 +278,7 @@
     <usageViewElementsListener implementation="org.intellij.plugins.markdown.lang.references.backtick.BacktickUsageViewElementsListener"/>
 
     <todoIndexer filetype="Markdown" implementationClass="org.intellij.plugins.markdown.highlighting.MarkdownTodoIndexer"/>
-    <indexPatternBuilder implementation="org.intellij.plugins.markdown.highlighting.MarkdownIndexPatternBuilder"/>
+    <indexPatternBuilder implementation="org.intellij.plugins.markdown.highlighting.MarkdownIndexPatternBuilder" order="last"/>
     <copyPastePreProcessor implementation="org.intellij.plugins.markdown.editor.MarkdownLinkPastePreProcessor"/>
     <enterHandlerDelegate id="MarkdownEnterHandler"
                           implementation="org.intellij.plugins.markdown.editor.MarkdownEnterHandler"/>
@@ -432,6 +432,7 @@
 
   <extensions defaultExtensionNs="org.intellij.markdown">
     <fenceLanguageProvider implementation="org.intellij.plugins.markdown.extensions.common.plantuml.PlantUMLCodeFenceLanguageProvider"/>
+    <fenceLanguageProvider id="default" implementation="org.intellij.plugins.markdown.injection.DefaultCodeFenceLanguageProvider" order="last"/>
     <!--suppress PluginXmlValidity -->
     <fenceGeneratingProvider implementation="org.intellij.plugins.markdown.extensions.common.plantuml.PlantUMLCodeGeneratingProvider"/>
 

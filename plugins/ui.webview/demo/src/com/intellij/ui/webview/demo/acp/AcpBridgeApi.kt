@@ -15,6 +15,12 @@ internal interface AcpBridgeHostApi : WebViewImplementable {
 
   suspend fun startAgent(params: StartAgentRequest): StartAgentResult
 
+  suspend fun openAcpConfig(): OpenAcpConfigResult
+
+  suspend fun resolvePathLinks(params: ResolvePathLinksRequest): ResolvePathLinksResult
+
+  suspend fun navigatePathLink(params: NavigatePathLinkRequest)
+
   suspend fun sendStdin(params: LineDto)
 
   suspend fun stopAgent()
@@ -39,7 +45,7 @@ internal interface AcpBridgePageApi : WebViewCallable {
 }
 
 @Serializable
-internal data class AgentDto(val id: String, val name: String)
+internal data class AgentDto(val id: String, val name: String, val icon: String? = null)
 
 @Serializable
 internal data class AgentListDto(val agents: List<AgentDto>)
@@ -49,6 +55,21 @@ internal data class StartAgentRequest(val agentId: String, val extraEnv: Map<Str
 
 @Serializable
 internal data class StartAgentResult(val ok: Boolean, val cwd: String? = null, val error: String? = null)
+
+@Serializable
+internal data class OpenAcpConfigResult(val ok: Boolean, val error: String? = null)
+
+@Serializable
+internal data class ResolvePathLinksRequest(val candidates: List<PathLinkCandidateDto>)
+
+@Serializable
+internal data class ResolvePathLinksResult(val resolvedIds: List<String>)
+
+@Serializable
+internal data class PathLinkCandidateDto(val id: String, val rawPath: String)
+
+@Serializable
+internal data class NavigatePathLinkRequest(val rawPath: String, val clientX: Double, val clientY: Double)
 
 @Serializable
 internal data class LineDto(val line: String)
