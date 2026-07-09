@@ -652,7 +652,9 @@ c:com.intellij.pom.tree.events.impl.ChangeInfoImpl
 a:com.intellij.psi.AbstractFileViewProvider
 - com.intellij.openapi.util.UserDataHolderBase
 - com.intellij.psi.FileViewProvider
+- correspondsToRealFile():Z
 - f:markInvalidated():V
+- supportsSendingPsiEvents():Z
 com.intellij.psi.CustomHighlighterTokenType
 - sf:CHARACTER:com.intellij.psi.tree.IElementType
 - sf:CUSTOM_CONTENT:com.intellij.psi.tree.IElementType
@@ -1406,6 +1408,8 @@ f:com.intellij.util.indexing.FileContentImpl
 - s:createByFile(com.intellij.openapi.vfs.VirtualFile):com.intellij.util.indexing.FileContent
 - getPsiFile():com.intellij.psi.PsiFile
 c:com.intellij.util.ref.DebugReflectionUtil$BackLink
+- getValue():java.lang.Object
+- prev():com.intellij.util.ref.DebugReflectionUtil$BackLink
 org.picocontainer.MutablePicoContainer
 - a:getComponentAdapter(java.lang.Object):org.picocontainer.ComponentAdapter
 - registerComponentImplementation(java.lang.Class):org.picocontainer.ComponentAdapter

@@ -31,6 +31,7 @@ internal class JvmHotSwapProvider(private val debuggerSession: DebuggerSession) 
     val filtersFromProviders = HotSwapSourceFileFilterProvider.findSourceFiltersForSession(debuggerSession)
     val compatibilityCheckers = HotSwapSourceChangeCompatibilityCheckerProvider.findCompatibilityCheckersForSession(debuggerSession)
     return SourceFileChangesCollectorImpl(
+      session.project,
       coroutineScope,
       listener,
       filters = listOf(FileExtensionFilter(jvmExtensions), InProjectFilter(session.project)) + filtersFromProviders,
@@ -39,7 +40,7 @@ internal class JvmHotSwapProvider(private val debuggerSession: DebuggerSession) 
   }
 
   override fun performHotSwap(session: HotSwapSession<VirtualFile>) {
-    HotSwapUI.getInstance(session.project).compileAndReload(debuggerSession, *session.getChanges().toTypedArray())
+    HotSwapUI.getInstance(session.project).compileAndReload(debuggerSession, session.source, *session.getChanges().toTypedArray())
   }
 
   override fun restart() {

@@ -29,6 +29,7 @@ import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileVisitor;
 import com.intellij.psi.AbstractFileViewProvider;
+import com.intellij.psi.FileThreadingContracts;
 import com.intellij.psi.FileTypeFileViewProviders;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.FileViewProviderFactory;
@@ -283,6 +284,7 @@ public final class FileManagerImpl implements FileManagerEx {
 
   @Override
   public void setViewProvider(@NotNull VirtualFile vFile, @Nullable FileViewProvider viewProvider) {
+    FileThreadingContracts.assertWriteAccessForExposedLightFile(vFile);
     // todo IJPL-339 investigate if we need a context here
     if (viewProvider == null) {
       // Let's drop all providers.
@@ -432,7 +434,7 @@ public final class FileManagerImpl implements FileManagerEx {
       FileViewProvider viewProvider = entry.getProvider();
       LOG.assertTrue(vFile.isValid());
       PsiFile psiFile1 = findFile(vFile, context);
-      if (psiFile1 != null && viewProvider.isPhysical()) {
+      if (psiFile1 != null && viewProvider.correspondsToRealFile()) {
         PsiFile psi = viewProvider.getPsi(viewProvider.getBaseLanguage());
         assert psi != null : viewProvider + "; " + viewProvider.getBaseLanguage() + "; " + psiFile1;
         assert psiFile1.getClass().equals(psi.getClass()) : psiFile1 + "; " + psi + "; " + psiFile1.getClass() + "; " + psi.getClass();

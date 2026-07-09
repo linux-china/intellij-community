@@ -21,7 +21,7 @@ private class WinWebView2BridgePluginAnchor
 
 @ApiStatus.Internal
 internal object WinWebView2Bridge {
-  private const val EXPECTED_NATIVE_ABI_VERSION = "wvi-dedicated-thread-v3"
+  private const val EXPECTED_NATIVE_ABI_VERSION = "wvi-custom-scheme-assets-v10"
 
   init {
     if (SystemInfo.isWindows) {
@@ -33,7 +33,7 @@ internal object WinWebView2Bridge {
   private external fun abiVersionNative(): String
 
   @JvmStatic
-  private external fun createNative(parentHwnd: Long, userDataDir: String, callbacks: Callbacks): Long
+  private external fun createNative(parentHwnd: Long, userDataDir: String, documentStartScript: String, callbacks: Callbacks): Long
 
   @JvmStatic
   private external fun destroyNative(handle: Long)
@@ -60,10 +60,16 @@ internal object WinWebView2Bridge {
   private external fun loadUrlNative(handle: Long, url: String)
 
   @JvmStatic
+  private external fun setVirtualHostNameToFolderMappingNative(handle: Long, hostName: String, folderPath: String)
+
+  @JvmStatic
   private external fun loadHtmlNative(handle: Long, html: String, baseUrl: String?)
 
   @JvmStatic
   private external fun evaluateJavaScriptNative(handle: Long, evalId: Long, script: String)
+
+  @JvmStatic
+  private external fun callDevToolsProtocolMethodNative(handle: Long, callId: Long, methodName: String, paramsJson: String)
 
   @JvmStatic
   private external fun transferToJsNative(handle: Long, rawJson: String)
@@ -80,7 +86,9 @@ internal object WinWebView2Bridge {
   @JvmStatic
   private external fun currentThreadIdNative(): Long
 
-  fun create(parentHwnd: Long, userDataDir: String, callbacks: Callbacks): Long = createNative(parentHwnd, userDataDir, callbacks)
+  fun create(parentHwnd: Long, userDataDir: String, documentStartScript: String, callbacks: Callbacks): Long =
+    createNative(parentHwnd, userDataDir, documentStartScript, callbacks)
+
   fun destroy(handle: Long) = destroyNative(handle)
   fun attachToParent(handle: Long, parentHwnd: Long) = attachToParentNative(handle, parentHwnd)
   fun detachFromParent(handle: Long) = detachFromParentNative(handle)
@@ -89,8 +97,14 @@ internal object WinWebView2Bridge {
   fun focus(handle: Long) = focusNative(handle)
   fun clearFocus(handle: Long) = clearFocusNative(handle)
   fun loadUrl(handle: Long, url: String) = loadUrlNative(handle, url)
+  fun setVirtualHostNameToFolderMapping(handle: Long, hostName: String, folderPath: String) =
+    setVirtualHostNameToFolderMappingNative(handle, hostName, folderPath)
+
   fun loadHtml(handle: Long, html: String, baseUrl: String?) = loadHtmlNative(handle, html, baseUrl)
   fun evaluateJavaScript(handle: Long, evalId: Long, script: String) = evaluateJavaScriptNative(handle, evalId, script)
+  fun callDevToolsProtocolMethod(handle: Long, callId: Long, methodName: String, paramsJson: String) =
+    callDevToolsProtocolMethodNative(handle, callId, methodName, paramsJson)
+
   fun transferToJs(handle: Long, rawJson: String) = transferToJsNative(handle, rawJson)
 
   internal fun runMessageLoop() = runMessageLoopNative()
@@ -131,7 +145,9 @@ internal object WinWebView2Bridge {
     fun onMessage(raw: String)
     fun onEvaluationResult(evalId: Long, result: String?)
     fun onEvaluationError(evalId: Long, message: String)
+    fun onDevToolsProtocolMethodResult(callId: Long, result: String?, error: String?)
     fun onAcceleratorKeyPressed(keyEventKind: Int, virtualKey: Int, modifiers: Int, keyEventLParam: Int): Boolean
+    fun onBeforeMouseFocus()
     fun onFocusGained()
     fun onLog(level: Int, message: String)
     fun onNativeDiagnostic(level: Int, event: String, message: String, data: String)
@@ -172,7 +188,7 @@ internal object WinWebView2Bridge {
 
 @ApiStatus.Internal
 internal interface WinWebView2BridgeApi {
-  fun create(parentHwnd: Long, userDataDir: String, callbacks: WinWebView2Bridge.Callbacks): Long
+  fun create(parentHwnd: Long, userDataDir: String, documentStartScript: String, callbacks: WinWebView2Bridge.Callbacks): Long
   fun destroy(handle: Long)
   fun attachToParent(handle: Long, parentHwnd: Long)
   fun detachFromParent(handle: Long)
@@ -181,15 +197,17 @@ internal interface WinWebView2BridgeApi {
   fun focus(handle: Long)
   fun clearFocus(handle: Long)
   fun loadUrl(handle: Long, url: String)
+  fun setVirtualHostNameToFolderMapping(handle: Long, hostName: String, folderPath: String)
   fun loadHtml(handle: Long, html: String, baseUrl: String?)
   fun evaluateJavaScript(handle: Long, evalId: Long, script: String)
+  fun callDevToolsProtocolMethod(handle: Long, callId: Long, methodName: String, paramsJson: String)
   fun transferToJs(handle: Long, rawJson: String)
 }
 
 @ApiStatus.Internal
 internal object NativeWinWebView2BridgeApi : WinWebView2BridgeApi {
-  override fun create(parentHwnd: Long, userDataDir: String, callbacks: WinWebView2Bridge.Callbacks): Long =
-    WinWebView2Bridge.create(parentHwnd, userDataDir, callbacks)
+  override fun create(parentHwnd: Long, userDataDir: String, documentStartScript: String, callbacks: WinWebView2Bridge.Callbacks): Long =
+    WinWebView2Bridge.create(parentHwnd, userDataDir, documentStartScript, callbacks)
 
   override fun destroy(handle: Long) = WinWebView2Bridge.destroy(handle)
   override fun attachToParent(handle: Long, parentHwnd: Long) = WinWebView2Bridge.attachToParent(handle, parentHwnd)
@@ -201,7 +219,13 @@ internal object NativeWinWebView2BridgeApi : WinWebView2BridgeApi {
   override fun focus(handle: Long) = WinWebView2Bridge.focus(handle)
   override fun clearFocus(handle: Long) = WinWebView2Bridge.clearFocus(handle)
   override fun loadUrl(handle: Long, url: String) = WinWebView2Bridge.loadUrl(handle, url)
+  override fun setVirtualHostNameToFolderMapping(handle: Long, hostName: String, folderPath: String) =
+    WinWebView2Bridge.setVirtualHostNameToFolderMapping(handle, hostName, folderPath)
+
   override fun loadHtml(handle: Long, html: String, baseUrl: String?) = WinWebView2Bridge.loadHtml(handle, html, baseUrl)
   override fun evaluateJavaScript(handle: Long, evalId: Long, script: String) = WinWebView2Bridge.evaluateJavaScript(handle, evalId, script)
+  override fun callDevToolsProtocolMethod(handle: Long, callId: Long, methodName: String, paramsJson: String) =
+    WinWebView2Bridge.callDevToolsProtocolMethod(handle, callId, methodName, paramsJson)
+
   override fun transferToJs(handle: Long, rawJson: String) = WinWebView2Bridge.transferToJs(handle, rawJson)
 }

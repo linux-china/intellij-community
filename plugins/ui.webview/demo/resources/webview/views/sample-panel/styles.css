@@ -10,6 +10,51 @@
   padding: 12px;
 }
 
+.app-shell :where(
+  .search-input,
+  .title-block,
+  .title-block *,
+  .clock,
+  .metric-card,
+  .metric-card *,
+  .panel-title,
+  .timeline-list,
+  .timeline-list *,
+  .activity-list,
+  .activity-list *,
+  .details-grid,
+  .details-grid *,
+  .footer-row,
+  .fallback,
+  .fallback *,
+  .mermaid-hint
+) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.app-shell :where(
+  .select-control,
+  .select-control *,
+  .combo-button,
+  .combo-button *,
+  .menu-button,
+  .menu-button *,
+  .combo-option,
+  .combo-option *,
+  .menu-item,
+  .menu-item *,
+  .btn-control,
+  .btn-control *,
+  .task-card,
+  .task-card *,
+  .mermaid-wrapper,
+  .mermaid-wrapper *
+) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .panel {
   border: 1px solid var(--ij-border);
   border-radius: var(--ij-radius-panel);
@@ -81,8 +126,9 @@
 
 .search-input:focus,
 .select-control:focus,
-.combo-button:focus-visible,
-.btn-control:focus-visible {
+.combo-button:focus,
+.menu-button:focus,
+.btn-control:focus {
   outline: none;
   border-color: var(--ij-accent);
   box-shadow: var(--ij-focus-ring);
@@ -668,7 +714,6 @@
   background: var(--ij-bg-panel-alt);
   border: 1px solid var(--ij-border-inline);
   border-radius: var(--ij-radius-panel);
-  user-select: none;
 }
 
 .mermaid-viewport {

@@ -1,18 +1,58 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
-import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react"
-import { AllIcons } from "@jetbrains/intellij-webview"
-import "@jetbrains/intellij-webview-controls/define/icon"
-import renderMathInElement from "katex/contrib/auto-render"
+import { lazy, Suspense, useEffect, useMemo, useState, type MouseEvent } from "react"
 import ReactMarkdown, { type Components, type Options } from "react-markdown"
-import rehypeHighlight from "rehype-highlight"
+import { getPerfLogger } from "@jetbrains/intellij-webview"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize from "rehype-sanitize"
 import rehypeSlug from "rehype-slug"
 import remarkFrontmatter from "remark-frontmatter"
 import remarkGfm from "remark-gfm"
-import { MermaidBlock } from "./MermaidBlock"
+import { FloatingMarkdownControls } from "./FloatingMarkdownControls"
+import { markdownDiagnosticDetails } from "./markdownDiagnostics"
+import { codeNodeFromPreNode, type HastNode } from "./markdownHastUtils"
+import { collectPathLinkCandidates, renderPathLinks } from "./markdownPathLinks"
+import type {
+  MarkdownChangedBlockDescriptor,
+  MarkdownCommandCandidate,
+  MarkdownCommandDescriptor,
+  MarkdownPreviewSettings,
+  MarkdownNavigatePathLinkRequest,
+  MarkdownResolvePathLinksRequest,
+  MarkdownResolvedPathLinksResponse,
+  MarkdownResolveRunCommandsRequest,
+  MarkdownResolvedRunCommandsResponse,
+  MarkdownRunCommandRequest,
+  MarkdownSourceRange,
+} from "./markdownPreviewTypes"
+import { codeToString } from "./markdownReactUtils"
+import { markdownResourceSrc } from "./markdownResources"
+import { frontmatterBlockFromPreNode, frontmatterLanguageFromPreNode, remarkFrontmatterBlocks, remarkSourcePositionAttributes } from "./markdownRemarkPlugins"
+import {
+  CodeFenceRunGutter,
+  RunCommandButton,
+  codeFenceCommandCandidates,
+  createCommandLookup,
+  findBlockCommand,
+  findInlineCommand,
+  findLineCommands,
+  hasLanguageClass,
+  inlineCommandCandidate,
+  isMermaidCodeNode,
+  uniqueCommandCandidates,
+} from "./markdownRunCommands"
 import { markdownSanitizeSchema } from "./markdownSanitizeSchema"
+import {
+  cancelScheduledMarkdownPreviewScroll,
+  clearSourceDecorations,
+  decorateSourceBlocks,
+  positionKey,
+  scrollMarkdownPreviewToLine,
+  sourcePositionFromHastNode,
+  sourcePositionFromPreNode,
+} from "./markdownSourcePositions"
+
+export { scrollMarkdownPreviewToLine } from "./markdownSourcePositions"
 
 interface MarkdownPreviewAppProps {
   markdown: string
@@ -20,173 +60,27 @@ interface MarkdownPreviewAppProps {
   contentVersion: number
   changes: MarkdownChangedBlockDescriptor[]
   selection: MarkdownSourceRange | undefined
+  settings: MarkdownPreviewSettings
   theme: "light" | "dark"
   onOpenLink: (href: string) => void
   onResolveRunCommands: (request: MarkdownResolveRunCommandsRequest) => Promise<MarkdownResolvedRunCommandsResponse>
   onRunCommand: (request: MarkdownRunCommandRequest) => void
+  onResolvePathLinks: (request: MarkdownResolvePathLinksRequest) => Promise<MarkdownResolvedPathLinksResponse>
+  onNavigatePathLink: (request: MarkdownNavigatePathLinkRequest) => void
+  onSetFontSize: (fontSize: number) => void
 }
 
-export interface MarkdownCommandDescriptor {
-  id: string
-  kind: MarkdownCommandKind
-  startLine: number
-  startColumn: number
-  endLine: number
-  endColumn: number
-  title: string
-  firstLineCommandId?: string
+const emptyPathSet = new Set<string>()
+const markdownLogger = getPerfLogger("markdown")
+const LazyMarkdownImageBlock = lazy(() => import("./MarkdownImageBlock").then(module => ({ default: module.MarkdownImageBlock })))
+const LazyMermaidBlock = lazy(() => import("./MermaidBlock").then(module => ({ default: module.MermaidBlock })))
+type RehypePlugin = NonNullable<Options["rehypePlugins"]>[number]
+type IdleCallbackHandle = number
+
+type WindowWithIdleCallback = Window & {
+  requestIdleCallback: ((callback: () => void, options?: { timeout?: number }) => IdleCallbackHandle) | undefined
+  cancelIdleCallback: ((handle: IdleCallbackHandle) => void) | undefined
 }
-
-export type MarkdownCommandKind = "BLOCK" | "LINE" | "INLINE"
-
-export interface MarkdownCommandCandidate {
-  id: string
-  kind: MarkdownCommandKind
-  startLine: number
-  startColumn: number
-  endLine: number
-  endColumn: number
-  rawCommand: string
-  language?: string
-  firstLineCommandId?: string
-}
-
-export interface MarkdownResolveRunCommandsRequest {
-  contentVersion: number
-  candidates: MarkdownCommandCandidate[]
-}
-
-export interface MarkdownResolvedRunCommandsResponse {
-  commands: MarkdownCommandDescriptor[]
-}
-
-export type MarkdownChangedBlockKind = "ADDED" | "MODIFIED" | "REMOVED"
-
-export interface MarkdownChangedBlockDescriptor {
-  kind: MarkdownChangedBlockKind
-  startLine: number
-  endLine: number
-}
-
-export interface MarkdownRunCommandRequest {
-  contentVersion: number
-  id: string
-  clientX: number
-  clientY: number
-}
-
-interface SourcePositionElement {
-  element: HTMLElement
-  startLine: number
-  startColumn: number
-  endLine: number
-  endColumn: number
-}
-
-interface SourcePositionRange {
-  startLine: number
-  startColumn: number
-  endLine: number
-  endColumn: number
-}
-
-export interface MarkdownSourceRange {
-  startLine: number
-  startColumn: number
-  endLine: number
-  endColumn: number
-}
-
-interface MarkdownSourcePosition {
-  start?: MarkdownSourcePoint
-  end?: MarkdownSourcePoint
-}
-
-interface MarkdownSourcePoint {
-  line?: number
-  column?: number
-}
-
-interface MarkdownNode {
-  type?: string
-  value?: string
-  position?: MarkdownSourcePosition
-  data?: {
-    hProperties?: Record<string, unknown>
-    [key: string]: unknown
-  }
-  children?: MarkdownNode[]
-}
-
-interface HastNode {
-  tagName?: string
-  value?: string
-  properties?: Record<string, unknown>
-  children?: HastNode[]
-}
-
-interface TableOfContentsEntry {
-  id: string
-  text: string
-  level: number
-  element: HTMLElement
-}
-
-const sourcePositionPattern = /^(\d+):(\d+)-(\d+):(\d+)$/
-const sourceDecorationClassNames = ["is-source-selected", "is-vcs-added", "is-vcs-modified"]
-const sourceDecorationClassSelector = sourceDecorationClassNames.map(className => `.${className}`).join(", ")
-const sourceDecorationBlockTagNames = new Set([
-  "BLOCKQUOTE",
-  "DD",
-  "DETAILS",
-  "DIV",
-  "DL",
-  "DT",
-  "H1",
-  "H2",
-  "H3",
-  "H4",
-  "H5",
-  "H6",
-  "LI",
-  "OL",
-  "P",
-  "PRE",
-  "SECTION",
-  "TABLE",
-  "TBODY",
-  "TD",
-  "TFOOT",
-  "TH",
-  "THEAD",
-  "TR",
-  "UL",
-])
-const removedBlockPlaceholderClassName = "markdownRemovedBlockPlaceholder"
-const headingSelector = "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]"
-const activeHeadingTopOffset = 80
-const markdownResourcePrefix = "./__markdown-preview-resource/"
-let scheduledScrollFrame: number | undefined
-
-const runLineIcon = {
-  src: () => AllIcons.src("expui/gutter/run.svg"),
-}
-
-const runBlockIcon = {
-  src: () => AllIcons.src("expui/gutter/rerun.svg"),
-}
-
-const latexDelimiters = [
-  { left: "$$", right: "$$", display: true },
-  { left: "\\[", right: "\\]", display: true },
-  { left: "\\(", right: "\\)", display: false },
-  { left: "$", right: "$", display: false },
-  { left: "\\begin{equation}", right: "\\end{equation}", display: true },
-  { left: "\\begin{align}", right: "\\end{align}", display: true },
-  { left: "\\begin{alignat}", right: "\\end{alignat}", display: true },
-  { left: "\\begin{gather}", right: "\\end{gather}", display: true },
-  { left: "\\begin{CD}", right: "\\end{CD}", display: true },
-]
 
 const remarkPlugins: Options["remarkPlugins"] = [
   remarkGfm,
@@ -194,11 +88,10 @@ const remarkPlugins: Options["remarkPlugins"] = [
   remarkFrontmatterBlocks,
   remarkSourcePositionAttributes,
 ]
-const rehypePlugins: Options["rehypePlugins"] = [
+const baseRehypePlugins: NonNullable<Options["rehypePlugins"]> = [
   rehypeRaw,
   rehypeSlug,
   [rehypeSanitize, markdownSanitizeSchema],
-  [rehypeHighlight, { detect: true, plainText: ["mermaid", "text", "txt"] }],
 ]
 
 export function MarkdownPreviewApp({
@@ -207,23 +100,54 @@ export function MarkdownPreviewApp({
   contentVersion,
   changes,
   selection,
+  settings,
   theme,
   onOpenLink,
   onResolveRunCommands,
   onRunCommand,
+  onResolvePathLinks,
+  onNavigatePathLink,
+  onSetFontSize,
 }: MarkdownPreviewAppProps) {
   const commandCandidates: MarkdownCommandCandidate[] = []
+  const pathLinkCandidates = useMemo(() => {
+    const startedAtMs = performance.now()
+    const candidates = collectPathLinkCandidates(markdown)
+    markdownLogger.perfSince("pathLinks.collect", startedAtMs, markdownDiagnosticDetails(markdown, contentVersion, `candidates=${candidates.length}`))
+    return candidates
+  }, [contentVersion, markdown])
   const [resolvedCommands, setResolvedCommands] = useState<{ contentVersion: number, commands: MarkdownCommandDescriptor[] }>({
     contentVersion: -1,
     commands: [],
   })
-  const commands = resolvedCommands.contentVersion === contentVersion ? resolvedCommands.commands : []
+  const [resolvedPathLinks, setResolvedPathLinks] = useState<{ contentVersion: number, rawPaths: ReadonlySet<string> }>({
+    contentVersion: -1,
+    rawPaths: emptyPathSet,
+  })
+  const commandsReady = resolvedCommands.contentVersion === contentVersion
+  const pathLinksReady = resolvedPathLinks.contentVersion === contentVersion
+  const commands = commandsReady ? resolvedCommands.commands : []
+  const resolvedRawPaths = pathLinksReady ? resolvedPathLinks.rawPaths : emptyPathSet
   const commandLookup = createCommandLookup(commands)
+  const [rehypeHighlightState, setRehypeHighlightState] = useState<{ contentVersion: number, plugin: RehypePlugin } | undefined>()
+  const rehypeHighlightPlugin = rehypeHighlightState?.contentVersion === contentVersion ? rehypeHighlightState.plugin : undefined
+  const rehypePlugins = useMemo<Options["rehypePlugins"]>(() => {
+    if (!rehypeHighlightPlugin) return baseRehypePlugins
+    return [
+      ...baseRehypePlugins,
+      [rehypeHighlightPlugin, { detect: true, plainText: ["mermaid", "text", "txt"] }],
+    ] as Options["rehypePlugins"]
+  }, [rehypeHighlightPlugin])
   const components: Components = {
     a({ href, children, ...props }) {
       function handleClick(event: MouseEvent<HTMLAnchorElement>): void {
         if (!href) return
         event.preventDefault()
+        const localFragment = localAnchorFragment(href)
+        if (localFragment !== undefined) {
+          navigateToLocalAnchor(localFragment)
+          return
+        }
         onOpenLink(href)
       }
 
@@ -232,28 +156,53 @@ export function MarkdownPreviewApp({
     img({ src, alt, ...props }) {
       return <img {...props} src={markdownResourceSrc(src)} alt={alt} />
     },
+    p({ node, className, children, ...props }) {
+      const image = standaloneImageFromParagraphNode(node)
+      if (image) {
+        const imageSrc = markdownResourceSrc(image.src) ?? image.src
+        return (
+          <Suspense fallback={<p {...props} className={className}><img src={imageSrc} alt={image.alt ?? ""} title={image.title} /></p>}>
+            <LazyMarkdownImageBlock {...props} className={className} src={imageSrc} alt={image.alt} title={image.title} />
+          </Suspense>
+        )
+      }
+      return <p {...props} className={className}>{children}</p>
+    },
     pre({ node, className, children, ...props }) {
       const frontmatterLanguage = frontmatterLanguageFromPreNode(node)
       if (frontmatterLanguage) {
+        const frontmatterBlock = frontmatterBlockFromPreNode(node)
+        if (!frontmatterBlock) return null
+
+        const sourcePosition = sourcePositionFromPreNode(node)
         return (
-          <section className="frontmatterBlock">
-            <div className="frontmatterHeader">{frontmatterTitle(frontmatterLanguage)}</div>
-            <pre className={classNames("frontmatterPre", className)} {...props}>{children}</pre>
+          <section className="frontmatterBlock" data-sourcepos={sourcePosition ? positionKey(sourcePosition) : undefined}>
+            <details className="frontmatterMetadata">
+              <summary>Frontmatter metadata</summary>
+              <dl>
+                {frontmatterBlock.metadata.map((entry, index) => (
+                  <div className="frontmatterMetadataEntry" key={`${entry.key}-${index}`}>
+                    <dt>{entry.key}</dt>
+                    <dd>{entry.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
           </section>
         )
       }
       const sourcePosition = sourcePositionFromPreNode(node)
       const codeNode = codeNodeFromPreNode(node)
       const isMermaidFence = codeNode ? isMermaidCodeNode(codeNode) : false
-      if (sourcePosition && codeNode && !isMermaidFence) {
-        commandCandidates.push(...codeFenceCommandCandidates(sourcePosition, codeNode))
-      }
+      const codeFenceCandidates = sourcePosition && codeNode && !isMermaidFence ? codeFenceCommandCandidates(sourcePosition, codeNode) : []
+      commandCandidates.push(...codeFenceCandidates)
       if (isMermaidFence) {
         return <>{children}</>
       }
       const blockCommand = sourcePosition ? findBlockCommand(commandLookup, sourcePosition) : undefined
       const lineCommands = sourcePosition ? findLineCommands(commandLookup, sourcePosition, blockCommand?.firstLineCommandId) : []
-      if (!blockCommand && lineCommands.length === 0) {
+      const hasCommandGutter = codeFenceCandidates.length > 0 || blockCommand || lineCommands.length > 0
+      if (!hasCommandGutter) {
         return <pre className={className} {...props}>{children}</pre>
       }
       return (
@@ -272,38 +221,123 @@ export function MarkdownPreviewApp({
     code({ node, className, children, ...props }) {
       const code = codeToString(children).replace(/\n$/, "")
       if (className?.split(/\s+/).includes("language-mermaid")) {
-        return <MermaidBlock chart={code} theme={theme} />
+        return (
+          <Suspense fallback={<div className="mermaidBlock isRendering">Rendering diagram...</div>}>
+            <LazyMermaidBlock chart={code} theme={theme} />
+          </Suspense>
+        )
       }
       const sourcePosition = sourcePositionFromHastNode(node)
       if (sourcePosition && !hasLanguageClass(className)) {
         commandCandidates.push(inlineCommandCandidate(sourcePosition, code))
       }
       const inlineCommand = sourcePosition ? findInlineCommand(commandLookup, sourcePosition) : undefined
+      const linkedChildren = renderPathLinks(children, resolvedRawPaths, "code", contentVersion, onNavigatePathLink)
       if (inlineCommand) {
         return (
           <code className={className} {...props}>
             <RunCommandButton contentVersion={contentVersion} command={inlineCommand} variant="inline" onRunCommand={onRunCommand} />
-            {children}
+            {linkedChildren}
           </code>
         )
       }
-      return <code className={className} {...props}>{children}</code>
+      return <code className={className} {...props}>{linkedChildren}</code>
     },
   }
 
   useEffect(() => {
+    if (pathLinkCandidates.length === 0) {
+      setResolvedPathLinks({ contentVersion, rawPaths: emptyPathSet })
+      return
+    }
+
     let cancelled = false
-    void onResolveRunCommands({ contentVersion, candidates: uniqueCommandCandidates(commandCandidates) }).then(response => {
-      if (!cancelled) setResolvedCommands({ contentVersion, commands: response.commands })
+    setResolvedPathLinks({ contentVersion: -1, rawPaths: emptyPathSet })
+    const cancelIdle = executeWhenIdle(() => {
+      const startedAtMs = performance.now()
+      void onResolvePathLinks({ contentVersion, candidates: pathLinkCandidates }).then(response => {
+        if (cancelled) return
+        const resolvedIds = new Set(response.resolvedIds)
+        markdownLogger.perfSince(
+          "pathLinks.resolve",
+          startedAtMs,
+          markdownDiagnosticDetails(markdown, contentVersion, `candidates=${pathLinkCandidates.length}, resolved=${resolvedIds.size}`),
+        )
+        setResolvedPathLinks({
+          contentVersion,
+          rawPaths: new Set(pathLinkCandidates.filter(candidate => resolvedIds.has(candidate.id)).map(candidate => candidate.rawPath)),
+        })
+      }).catch(() => {
+        if (!cancelled) setResolvedPathLinks({ contentVersion, rawPaths: emptyPathSet })
+      })
     })
     return () => {
       cancelled = true
+      cancelIdle()
+    }
+  }, [contentVersion, onResolvePathLinks, pathLinkCandidates])
+
+  useEffect(() => {
+    let cancelled = false
+    setResolvedCommands({ contentVersion: -1, commands: [] })
+    const candidates = uniqueCommandCandidates(commandCandidates)
+    if (candidates.length === 0) {
+      setResolvedCommands({ contentVersion, commands: [] })
+      return
+    }
+
+    const cancelIdle = executeWhenIdle(() => {
+      const startedAtMs = performance.now()
+      void onResolveRunCommands({ contentVersion, candidates }).then(response => {
+        if (cancelled) return
+        setResolvedCommands({ contentVersion, commands: response.commands })
+        markdownLogger.perfSince(
+          "runCommands.resolve",
+          startedAtMs,
+          markdownDiagnosticDetails(markdown, contentVersion, `candidates=${candidates.length}, resolved=${response.commands.length}`),
+        )
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelIdle()
     }
   }, [contentVersion, onResolveRunCommands])
 
   useEffect(() => {
-    renderLatex()
-  }, [markdown, theme])
+    if (!markdownMayNeedSyntaxHighlighting(markdown) || rehypeHighlightState?.contentVersion === contentVersion) return
+
+    let cancelled = false
+    const cancelIdle = executeWhenIdle(() => {
+      void import("rehype-highlight").then(module => {
+        if (!cancelled) {
+          setRehypeHighlightState({ contentVersion, plugin: module.default as RehypePlugin })
+        }
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelIdle()
+    }
+  }, [contentVersion, markdown, rehypeHighlightState])
+
+  useEffect(() => {
+    if (!commandsReady || !pathLinksReady || !markdownMayContainLatex(markdown)) return
+
+    let cancelled = false
+    const cancelIdle = executeWhenIdle(() => {
+      const startedAtMs = performance.now()
+      void import("./markdownLatex").then(({ renderMarkdownLatex }) => {
+        if (cancelled) return
+        renderMarkdownLatex()
+        markdownLogger.perfSince("latex.render", startedAtMs, markdownDiagnosticDetails(markdown, contentVersion))
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelIdle()
+    }
+  }, [commandsReady, contentVersion, markdown, pathLinksReady, theme])
 
   useEffect(() => {
     scrollMarkdownPreviewToLine(scrollLine)
@@ -317,678 +351,189 @@ export function MarkdownPreviewApp({
 
   return (
     <>
-      <ReactMarkdown
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={rehypePlugins}
-        components={components}
-        urlTransform={url => url}
-      >
-        {markdown}
-      </ReactMarkdown>
-      <FloatingTableOfContents markdown={markdown} />
+      <div key={contentVersion} className="markdownPreviewContent webview-selectable-text">
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+          components={components}
+          urlTransform={url => url}
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
+      <FloatingMarkdownControls markdown={markdown} settings={settings} onSetFontSize={onSetFontSize} />
     </>
   )
 }
 
-interface FloatingTableOfContentsProps {
-  markdown: string
+interface MarkdownImageDescriptor {
+  src: string
+  alt?: string
+  title?: string
 }
 
-function FloatingTableOfContents({ markdown }: FloatingTableOfContentsProps) {
-  const [entries, setEntries] = useState<TableOfContentsEntry[]>([])
-  const [expanded, setExpanded] = useState(false)
-  const [activeId, setActiveId] = useState<string | undefined>()
+function standaloneImageFromParagraphNode(node: unknown): MarkdownImageDescriptor | undefined {
+  const children = (node as HastNode | undefined)?.children ?? []
+  const contentChildren = children.filter(child => !isWhitespaceTextNode(child))
+  if (contentChildren.length !== 1) return undefined
 
-  useEffect(() => {
-    const nextEntries = collectTableOfContentsEntries()
-    setEntries(nextEntries)
-    setActiveId(nextEntries[0]?.id)
-  }, [markdown])
+  const imageNode = contentChildren[0]
+  if (imageNode.tagName !== "img") return undefined
 
-  useEffect(() => {
-    if (entries.length < 2) {
-      setActiveId(undefined)
-      return
-    }
+  const src = stringProperty(imageNode.properties?.src)
+  if (!src) return undefined
 
-    let scheduledFrame: number | undefined
-    const updateActiveHeading = (): void => {
-      let active = entries[0].id
-      for (const entry of entries) {
-        if (entry.element.getBoundingClientRect().top <= activeHeadingTopOffset) {
-          active = entry.id
-        }
-        else {
-          break
-        }
-      }
-      setActiveId(current => current === active ? current : active)
-    }
-    const scheduleUpdate = (): void => {
-      if (scheduledFrame !== undefined) return
-      scheduledFrame = window.requestAnimationFrame(() => {
-        scheduledFrame = undefined
-        updateActiveHeading()
-      })
-    }
-
-    scheduleUpdate()
-    window.addEventListener("scroll", scheduleUpdate, { passive: true })
-    window.addEventListener("resize", scheduleUpdate)
-    return () => {
-      if (scheduledFrame !== undefined) window.cancelAnimationFrame(scheduledFrame)
-      window.removeEventListener("scroll", scheduleUpdate)
-      window.removeEventListener("resize", scheduleUpdate)
-    }
-  }, [entries])
-
-  if (entries.length < 2) return null
-
-  if (!expanded) {
-    return (
-      <button
-        type="button"
-        className="markdownTocRail"
-        title="Table of contents"
-        aria-label="Show table of contents"
-        aria-expanded="false"
-        onClick={() => setExpanded(true)}
-      >
-        <span className="markdownTocRailIcon" aria-hidden="true" />
-      </button>
-    )
-  }
-
-  function scrollToEntry(entry: TableOfContentsEntry): void {
-    const target = document.getElementById(entry.id)
-    if (!target) return
-    target.scrollIntoView({ block: "start", behavior: "smooth" })
-    setActiveId(entry.id)
-  }
-
-  return (
-    <nav
-      className="markdownTocPanel"
-      aria-label="Table of contents"
-      onKeyDown={event => {
-        if (event.key === "Escape") setExpanded(false)
-      }}
-    >
-      <div className="markdownTocHeader">
-        <span className="markdownTocTitle">Contents</span>
-        <button
-          type="button"
-          className="markdownTocCollapseButton"
-          title="Collapse"
-          aria-label="Collapse table of contents"
-          aria-expanded="true"
-          onClick={() => setExpanded(false)}
-        >
-          <span className="markdownTocCollapseIcon" aria-hidden="true" />
-        </button>
-      </div>
-      <ol className="markdownTocList">
-        {entries.map(entry => (
-          <li key={entry.id} className="markdownTocItem">
-            <button
-              type="button"
-              className={classNames("markdownTocLink", entry.id === activeId ? "is-active" : undefined)}
-              style={{ paddingLeft: `${8 + Math.max(0, entry.level - 1) * 12}px` }}
-              aria-current={entry.id === activeId ? "location" : undefined}
-              title={entry.text}
-              onClick={() => scrollToEntry(entry)}
-            >
-              <span className="markdownTocText">{entry.text}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  )
-}
-
-function collectTableOfContentsEntries(): TableOfContentsEntry[] {
-  const contentElement = document.getElementById("content")
-  if (!contentElement) return []
-
-  return Array.from(contentElement.querySelectorAll<HTMLElement>(headingSelector))
-    .map(heading => {
-      const text = normalizeHeadingText(heading.textContent ?? "")
-      if (!heading.id || !text || heading.classList.contains("sr-only") || heading.closest(".footnotes")) return undefined
-      return {
-        id: heading.id,
-        text,
-        level: headingLevel(heading),
-        element: heading,
-      }
-    })
-    .filter((entry): entry is TableOfContentsEntry => entry !== undefined)
-}
-
-function headingLevel(heading: HTMLElement): number {
-  const level = Number(heading.tagName.substring(1))
-  return Number.isFinite(level) ? Math.min(6, Math.max(1, level)) : 1
-}
-
-function normalizeHeadingText(text: string): string {
-  return text.replace(/\s+/g, " ").trim()
-}
-
-function codeFenceCommandCandidates(sourcePosition: SourcePositionRange, codeNode: HastNode): MarkdownCommandCandidate[] {
-  const code = hastText(codeNode)
-  const language = codeFenceLanguage(codeNode)
-  if (isMermaidLanguage(language)) return []
-  const lineCommands = lineCommandCandidates(sourcePosition, code)
-  const result: MarkdownCommandCandidate[] = []
-  if (language) {
-    result.push({
-      ...commandSource(sourcePosition),
-      id: commandId("BLOCK", sourcePosition, code),
-      kind: "BLOCK",
-      rawCommand: code,
-      language,
-      firstLineCommandId: lineCommands.length > 1 ? lineCommands[0].id : undefined,
-    })
-  }
-  result.push(...lineCommands)
-  return result
-}
-
-function lineCommandCandidates(sourcePosition: SourcePositionRange, code: string): MarkdownCommandCandidate[] {
-  const result: MarkdownCommandCandidate[] = []
-  let offset = 0
-  let lineIndex = 0
-  while (offset < code.length) {
-    const delimiter = code.indexOf("\n", offset)
-    const lineEndOffset = delimiter < 0 ? code.length : delimiter
-    const rawCommand = code.slice(offset, lineEndOffset)
-    const lineSource = codeLineSourcePosition(sourcePosition, lineIndex, rawCommand)
-    result.push({
-      ...commandSource(lineSource),
-      id: commandId("LINE", lineSource, rawCommand),
-      kind: "LINE",
-      rawCommand,
-    })
-    if (delimiter < 0) break
-    offset = delimiter + 1
-    lineIndex++
-  }
-  return result
-}
-
-function inlineCommandCandidate(sourcePosition: SourcePositionRange, rawCommand: string): MarkdownCommandCandidate {
   return {
-    ...commandSource(sourcePosition),
-    id: commandId("INLINE", sourcePosition, rawCommand),
-    kind: "INLINE",
-    rawCommand,
+    src,
+    alt: stringProperty(imageNode.properties?.alt),
+    title: stringProperty(imageNode.properties?.title),
   }
 }
 
-function commandSource(sourcePosition: SourcePositionRange): Pick<MarkdownCommandCandidate, "startLine" | "startColumn" | "endLine" | "endColumn"> {
-  return {
-    startLine: sourcePosition.startLine,
-    startColumn: sourcePosition.startColumn,
-    endLine: sourcePosition.endLine,
-    endColumn: sourcePosition.endColumn,
-  }
-}
+function localAnchorFragment(href: string): string | undefined {
+  if (href.startsWith("#")) return href.slice(1)
 
-function codeLineSourcePosition(sourcePosition: SourcePositionRange, lineIndex: number, rawCommand: string): SourcePositionRange {
-  const line = sourcePosition.startLine + lineIndex + 1
-  return {
-    startLine: line,
-    startColumn: 1,
-    endLine: line,
-    endColumn: rawCommand.length + 1,
-  }
-}
-
-function commandId(kind: MarkdownCommandKind, sourcePosition: SourcePositionRange, rawCommand: string): string {
-  return `${kind}:${positionKey(sourcePosition)}:${hashString(rawCommand)}`
-}
-
-function hashString(value: string): string {
-  let hash = 0
-  for (let index = 0; index < value.length; index++) {
-    hash = (Math.imul(hash, 31) + value.charCodeAt(index)) | 0
-  }
-  return (hash >>> 0).toString(16)
-}
-
-function uniqueCommandCandidates(candidates: MarkdownCommandCandidate[]): MarkdownCommandCandidate[] {
-  const result = new Map<string, MarkdownCommandCandidate>()
-  for (const candidate of candidates) {
-    result.set(candidate.id, candidate)
-  }
-  return Array.from(result.values())
-}
-
-function codeFenceLanguage(codeNode: HastNode): string | undefined {
-  const classNames = hastClassNames(codeNode)
-  const languageClass = classNames.find(className => className.startsWith("language-"))
-  return languageClass?.substring("language-".length)
-}
-
-function isMermaidCodeNode(codeNode: HastNode): boolean {
-  return isMermaidLanguage(codeFenceLanguage(codeNode))
-}
-
-function isMermaidLanguage(language: string | undefined): boolean {
-  return language?.toLowerCase() === "mermaid"
-}
-
-function hasLanguageClass(className: string | undefined): boolean {
-  return className?.split(/\s+/).some(name => name.startsWith("language-")) ?? false
-}
-
-function hastClassNames(node: HastNode | undefined): string[] {
-  const className = node?.properties?.className
-  if (Array.isArray(className)) return className.filter((name): name is string => typeof name === "string")
-  if (typeof className === "string") return className.split(/\s+/)
-  return []
-}
-
-function hastText(node: HastNode | undefined): string {
-  if (!node) return ""
-  if (typeof node.value === "string") return node.value
-  return node.children?.map(hastText).join("") ?? ""
-}
-
-interface CommandLookup {
-  blockCommands: MarkdownCommandDescriptor[]
-  lineCommands: MarkdownCommandDescriptor[]
-  inlineCommands: Map<string, MarkdownCommandDescriptor>
-}
-
-function createCommandLookup(commands: MarkdownCommandDescriptor[]): CommandLookup {
-  const inlineCommands = new Map<string, MarkdownCommandDescriptor>()
-  const blockCommands: MarkdownCommandDescriptor[] = []
-  const lineCommands: MarkdownCommandDescriptor[] = []
-  for (const command of commands) {
-    if (command.kind === "BLOCK") {
-      blockCommands.push(command)
-    }
-    else if (command.kind === "LINE") {
-      lineCommands.push(command)
-    }
-    else if (command.kind === "INLINE") {
-      inlineCommands.set(positionKey(command), command)
+  try {
+    const url = new URL(href, window.location.href)
+    if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.search === window.location.search && url.hash.startsWith("#")) {
+      return url.hash.slice(1)
     }
   }
-  return { blockCommands, lineCommands, inlineCommands }
-}
-
-function findBlockCommand(lookup: CommandLookup, sourcePosition: SourcePositionRange): MarkdownCommandDescriptor | undefined {
-  return lookup.blockCommands.find(command => command.startLine === sourcePosition.startLine)
-}
-
-function findLineCommands(
-  lookup: CommandLookup,
-  sourcePosition: SourcePositionRange,
-  blockFirstLineCommandId: string | undefined
-): MarkdownCommandDescriptor[] {
-  return lookup.lineCommands.filter(command => {
-    return command.id !== blockFirstLineCommandId
-      && command.startLine > sourcePosition.startLine
-      && command.endLine <= sourcePosition.endLine
-  })
-}
-
-function findInlineCommand(lookup: CommandLookup, sourcePosition: SourcePositionRange): MarkdownCommandDescriptor | undefined {
-  return lookup.inlineCommands.get(positionKey(sourcePosition))
-}
-
-interface CodeFenceRunGutterProps {
-  contentVersion: number
-  sourcePosition: SourcePositionRange | undefined
-  blockCommand: MarkdownCommandDescriptor | undefined
-  lineCommands: MarkdownCommandDescriptor[]
-  onRunCommand: (request: MarkdownRunCommandRequest) => void
-}
-
-function CodeFenceRunGutter({ contentVersion, sourcePosition, blockCommand, lineCommands, onRunCommand }: CodeFenceRunGutterProps) {
-  if (!sourcePosition || (!blockCommand && lineCommands.length === 0)) return null
-  const contentStartLine = sourcePosition.startLine + 1
-  return (
-    <div className="codeFenceRunGutter" aria-hidden={false}>
-      {blockCommand && <RunCommandButton contentVersion={contentVersion} command={blockCommand} variant="block" onRunCommand={onRunCommand} />}
-      {lineCommands.map(command => (
-        <RunCommandButton
-          key={command.id}
-          contentVersion={contentVersion}
-          command={command}
-          variant="line"
-          style={{ top: `calc(${Math.max(0, command.startLine - contentStartLine)} * var(--markdown-code-line-height))` }}
-          onRunCommand={onRunCommand}
-        />
-      ))}
-    </div>
-  )
-}
-
-interface RunCommandButtonProps {
-  contentVersion: number
-  command: MarkdownCommandDescriptor
-  variant: "block" | "line" | "inline"
-  style?: CSSProperties
-  onRunCommand: (request: MarkdownRunCommandRequest) => void
-}
-
-function RunCommandButton({ contentVersion, command, variant, style, onRunCommand }: RunCommandButtonProps) {
-  function handleClick(event: MouseEvent<HTMLButtonElement>): void {
-    event.preventDefault()
-    event.stopPropagation()
-    onRunCommand({ contentVersion, id: command.id, clientX: Math.round(event.clientX), clientY: Math.round(event.clientY) })
+  catch {
   }
-
-  return (
-    <button
-      type="button"
-      className={classNames("markdownRunButton", `is-${variant}`)}
-      title={command.title}
-      aria-label={command.title}
-      style={style}
-      onClick={handleClick}
-    >
-      <jb-icon className="markdownRunIcon" src={runCommandIcon(variant).src()} aria-hidden={true} />
-    </button>
-  )
-}
-
-function runCommandIcon(variant: "block" | "line" | "inline"): typeof runLineIcon {
-  return variant === "block" ? runBlockIcon : runLineIcon
-}
-
-function renderLatex(): void {
-  const contentElement = document.getElementById("content")
-  if (!contentElement) return
-
-  renderMathInElement(contentElement, {
-    delimiters: latexDelimiters,
-    ignoredClasses: ["katex"],
-    throwOnError: false,
-  })
-}
-
-function codeToString(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node)
-  }
-  if (Array.isArray(node)) {
-    return node.map(codeToString).join("")
-  }
-  return ""
-}
-
-function markdownResourceSrc(src: string | undefined): string | undefined {
-  if (!src || !isLocalMarkdownResource(src)) return src
-  return `${markdownResourcePrefix}${base64UrlEncode(src)}`
-}
-
-function isLocalMarkdownResource(src: string): boolean {
-  const trimmed = src.trim()
-  if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("//")) return false
-  const scheme = trimmed.match(/^([A-Za-z][A-Za-z\d+.-]*):/)?.[1]?.toLowerCase()
-  return scheme === undefined || scheme === "file"
-}
-
-function base64UrlEncode(value: string): string {
-  const bytes = new TextEncoder().encode(value)
-  let binary = ""
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
-}
-
-export function scrollMarkdownPreviewToLine(line: number): void {
-  cancelScheduledMarkdownPreviewScroll()
-  scheduledScrollFrame = window.requestAnimationFrame(() => {
-    scheduledScrollFrame = undefined
-    scrollToSourceLine(line)
-  })
-}
-
-function cancelScheduledMarkdownPreviewScroll(): void {
-  if (scheduledScrollFrame === undefined) return
-  window.cancelAnimationFrame(scheduledScrollFrame)
-  scheduledScrollFrame = undefined
-}
-
-function scrollToSourceLine(line: number): void {
-  const contentElement = document.getElementById("content")
-  if (!contentElement) return
-
-  const targetLine = Math.max(1, line + 1)
-  const target = findElementForLine(sourcePositionElements(contentElement), targetLine)
-  if (target) {
-    target.scrollIntoView({ block: "start", behavior: "instant" })
-  }
-  else if (targetLine === 1) {
-    window.scrollTo({ top: 0, behavior: "instant" })
-  }
-}
-
-function sourcePositionElements(root: HTMLElement): SourcePositionElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>("[data-sourcepos]"))
-    .map(element => {
-      const sourcePosition = parseSourcePosition(element.dataset.sourcepos)
-      return sourcePosition ? { element, ...sourcePosition } : undefined
-    })
-    .filter((element): element is SourcePositionElement => element !== undefined)
-}
-
-function sourceDecorationElements(root: HTMLElement): SourcePositionElement[] {
-  const elements: SourcePositionElement[] = []
-  const seenTargets = new Set<HTMLElement>()
-  for (const sourcePosition of sourcePositionElements(root)) {
-    const target = sourceDecorationTarget(sourcePosition.element)
-    if (!target || seenTargets.has(target)) continue
-
-    seenTargets.add(target)
-    elements.push({ ...sourcePosition, element: target })
-  }
-  return elements
-}
-
-function sourceDecorationTarget(element: HTMLElement): HTMLElement | undefined {
-  if (sourceDecorationBlockTagNames.has(element.tagName)) return element
-  if (element.tagName === "CODE" && element.parentElement?.tagName === "PRE") return element.parentElement
   return undefined
 }
 
-function decorateSourceBlocks(selection: MarkdownSourceRange | undefined, changes: MarkdownChangedBlockDescriptor[]): void {
-  const contentElement = document.getElementById("content")
-  if (!contentElement) return
-
-  clearSourceDecorations(contentElement)
-  const elements = sourceDecorationElements(contentElement)
-
-  if (selection) {
-    for (const element of elements) {
-      if (sourceRangesIntersect(element, selection)) {
-        element.element.classList.add("is-source-selected")
-      }
-    }
+function navigateToLocalAnchor(fragment: string): void {
+  if (fragment.length === 0) {
+    updateLocationHash("#")
+    window.scrollTo({ top: 0, left: 0 })
+    return
   }
 
-  for (const change of changes) {
-    if (change.kind === "REMOVED") {
-      insertRemovedBlockPlaceholder(contentElement, elements, change)
+  const target = findLocalAnchorTarget(decodeFragment(fragment))
+  updateLocationHash(`#${fragment}`)
+  target?.scrollIntoView({ block: "start" })
+}
+
+function findLocalAnchorTarget(id: string): HTMLElement | null {
+  const normalizedId = id.replace(/^-+/, "")
+  return document.getElementById(id)
+    ?? document.getElementById(normalizedId)
+    ?? document.getElementById(`user-content-${id}`)
+    ?? document.getElementById(`user-content-${normalizedId}`)
+}
+
+function decodeFragment(fragment: string): string {
+  try {
+    return decodeURIComponent(fragment)
+  }
+  catch {
+    return fragment
+  }
+}
+
+function updateLocationHash(href: string): void {
+  if (!window.history) return
+  try {
+    window.history.pushState(null, "", href)
+  }
+  catch {
+  }
+}
+
+function isWhitespaceTextNode(node: HastNode): boolean {
+  return node.tagName === undefined && (node.value ?? "").trim().length === 0
+}
+
+function stringProperty(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
+function markdownMayNeedSyntaxHighlighting(markdown: string): boolean {
+  return /(^|\n)(```|~~~| {4}|\t|<pre\b|<code\b)/.test(markdown)
+}
+
+function markdownMayContainLatex(markdown: string): boolean {
+  return /\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\\begin\{[A-Za-z*]+}/.test(markdown) || markdownMayContainDollarLatex(markdown)
+}
+
+function markdownMayContainDollarLatex(markdown: string): boolean {
+  for (let index = 0; index < markdown.length; index++) {
+    if (markdown[index] !== "$" || isEscaped(markdown, index)) continue
+
+    const displayMath = markdown[index + 1] === "$"
+    const delimiter = displayMath ? "$$" : "$"
+    const contentStart = index + delimiter.length
+    if (!displayMath && (contentStart >= markdown.length || /\s|\d/.test(markdown[contentStart]))) {
+      index = contentStart - 1
       continue
     }
-    const className = change.kind === "ADDED" ? "is-vcs-added" : "is-vcs-modified"
-    for (const element of elements) {
-      if (sourceLinesIntersect(element, change)) {
-        element.element.classList.add(className)
-      }
-    }
-  }
-}
 
-function clearSourceDecorations(root: HTMLElement | null = document.getElementById("content")): void {
-  if (!root) return
-  root.querySelectorAll<HTMLElement>(sourceDecorationClassSelector).forEach(element => {
-    element.classList.remove(...sourceDecorationClassNames)
-  })
-  root.querySelectorAll<HTMLElement>(`.${removedBlockPlaceholderClassName}`).forEach(placeholder => {
-    placeholder.remove()
-  })
-}
-
-function sourceRangesIntersect(first: SourcePositionRange, second: SourcePositionRange): boolean {
-  if (first.endLine < second.startLine || second.endLine < first.startLine) return false
-  if (first.endLine === second.startLine && first.endColumn < second.startColumn) return false
-  if (second.endLine === first.startLine && second.endColumn < first.startColumn) return false
-  return true
-}
-
-function sourceLinesIntersect(sourcePosition: SourcePositionRange, change: MarkdownChangedBlockDescriptor): boolean {
-  return sourcePosition.startLine <= change.endLine && change.startLine <= sourcePosition.endLine
-}
-
-function insertRemovedBlockPlaceholder(root: HTMLElement, elements: SourcePositionElement[], change: MarkdownChangedBlockDescriptor): void {
-  const placeholder = document.createElement("div")
-  placeholder.className = removedBlockPlaceholderClassName
-  placeholder.setAttribute("aria-hidden", "true")
-
-  const anchorElement = elements.find(element => element.startLine >= change.startLine)?.element
-  const insertionTarget = anchorElement ? directChildOf(root, anchorElement) : undefined
-  root.insertBefore(placeholder, insertionTarget ?? null)
-}
-
-function directChildOf(root: HTMLElement, element: HTMLElement): HTMLElement | undefined {
-  let current = element
-  while (current.parentElement && current.parentElement !== root && root.contains(current.parentElement)) {
-    current = current.parentElement
-  }
-  return current.parentElement === root ? current : undefined
-}
-
-function parseSourcePosition(sourcePosition: string | undefined): SourcePositionRange | undefined {
-  const match = sourcePosition?.match(sourcePositionPattern)
-  if (!match) return undefined
-
-  return {
-    startLine: Number(match[1]),
-    startColumn: Number(match[2]),
-    endLine: Number(match[3]),
-    endColumn: Number(match[4]),
-  }
-}
-
-function sourcePositionFromPreNode(node: unknown): SourcePositionRange | undefined {
-  const prePosition = sourcePositionFromHastNode(node)
-  if (prePosition) return prePosition
-
-  return sourcePositionFromHastNode(codeNodeFromPreNode(node))
-}
-
-function codeNodeFromPreNode(node: unknown): HastNode | undefined {
-  return (node as HastNode | undefined)?.children?.find(child => child.tagName === "code")
-}
-
-function sourcePositionFromHastNode(node: unknown): SourcePositionRange | undefined {
-  const value = (node as HastNode | undefined)?.properties?.dataSourcepos
-  return typeof value === "string" ? parseSourcePosition(value) : undefined
-}
-
-function positionKey(sourcePosition: SourcePositionRange): string {
-  return `${sourcePosition.startLine}:${sourcePosition.startColumn}-${sourcePosition.endLine}:${sourcePosition.endColumn}`
-}
-
-function findElementForLine(elements: SourcePositionElement[], targetLine: number): HTMLElement | undefined {
-  let containingElement: SourcePositionElement | undefined
-  let nextElement: SourcePositionElement | undefined
-  let previousElement: SourcePositionElement | undefined
-
-  for (const element of elements) {
-    if (element.startLine <= targetLine && targetLine <= element.endLine) {
-      if (!containingElement || lineSpan(element) < lineSpan(containingElement)) {
-        containingElement = element
-      }
+    const contentEnd = unescapedIndexOf(markdown, delimiter, contentStart)
+    if (contentEnd < 0) {
+      index = contentStart - 1
       continue
     }
-    if (element.startLine > targetLine) {
-      nextElement = element
-      break
+    if (!displayMath && (contentEnd === contentStart || /\s/.test(markdown[contentEnd - 1]))) {
+      index = contentEnd + delimiter.length - 1
+      continue
     }
-    previousElement = element
+    return true
+  }
+  return false
+}
+
+function unescapedIndexOf(text: string, search: string, startIndex: number): number {
+  let index = text.indexOf(search, startIndex)
+  while (index >= 0 && isEscaped(text, index)) {
+    index = text.indexOf(search, index + search.length)
+  }
+  return index
+}
+
+function isEscaped(text: string, index: number): boolean {
+  let backslashCount = 0
+  for (let offset = index - 1; offset >= 0 && text[offset] === "\\"; offset--) {
+    backslashCount++
+  }
+  return backslashCount % 2 === 1
+}
+
+function executeWhenIdle(callback: () => void): () => void {
+  let cancelled = false
+  let animationFrameHandle: number | undefined
+  let idleCallbackHandle: IdleCallbackHandle | undefined
+  let timeoutHandle: number | undefined
+
+  function run(): void {
+    if (!cancelled) callback()
   }
 
-  return containingElement?.element ?? nextElement?.element ?? previousElement?.element
-}
+  animationFrameHandle = requestAnimationFrame(() => {
+    animationFrameHandle = undefined
+    if (cancelled) return
 
-function lineSpan(element: SourcePositionElement): number {
-  return element.endLine - element.startLine
-}
-
-function remarkFrontmatterBlocks() {
-  return (tree: unknown) => transformFrontmatterNodes(tree as MarkdownNode)
-}
-
-function transformFrontmatterNodes(node: MarkdownNode): void {
-  if (!node.children) return
-
-  node.children = node.children.map(child => {
-    if (isFrontmatterNode(child)) {
-      return frontmatterCodeNode(child)
+    const idleWindow = window as WindowWithIdleCallback
+    if (idleWindow.requestIdleCallback) {
+      idleCallbackHandle = idleWindow.requestIdleCallback(() => {
+        idleCallbackHandle = undefined
+        run()
+      }, { timeout: 1000 })
     }
-    transformFrontmatterNodes(child)
-    return child
+    else {
+      timeoutHandle = window.setTimeout(() => {
+        timeoutHandle = undefined
+        run()
+      }, 0)
+    }
   })
-}
 
-function isFrontmatterNode(node: MarkdownNode): boolean {
-  return node.type === "yaml" || node.type === "toml"
-}
-
-function frontmatterCodeNode(node: MarkdownNode): MarkdownNode {
-  const language = node.type === "toml" ? "toml" : "yaml"
-  return {
-    type: "code",
-    value: node.value ?? "",
-    position: node.position,
-    data: {
-      ...node.data,
-      hProperties: {
-        ...node.data?.hProperties,
-        className: [`language-${language}`, "frontmatterCode"],
-        dataFrontmatter: language,
-      },
-    },
+  return () => {
+    cancelled = true
+    if (animationFrameHandle !== undefined) cancelAnimationFrame(animationFrameHandle)
+    const idleWindow = window as WindowWithIdleCallback
+    if (idleCallbackHandle !== undefined) idleWindow.cancelIdleCallback?.(idleCallbackHandle)
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle)
   }
-}
-
-function frontmatterLanguageFromPreNode(node: unknown): string | undefined {
-  const codeNode = codeNodeFromPreNode(node)
-  const language = codeNode?.properties?.dataFrontmatter
-  return typeof language === "string" ? language : undefined
-}
-
-function frontmatterTitle(language: string): string {
-  return language === "toml" ? "Front matter (TOML)" : "Front matter (YAML)"
-}
-
-function classNames(...names: Array<string | undefined>): string | undefined {
-  const className = names.filter(Boolean).join(" ")
-  return className || undefined
-}
-
-function remarkSourcePositionAttributes() {
-  return (tree: unknown) => addSourcePositionAttributes(tree as MarkdownNode)
-}
-
-function addSourcePositionAttributes(node: MarkdownNode): void {
-  const position = node.position
-  if (position?.start?.line && position.end?.line) {
-    node.data ??= {}
-    node.data.hProperties = {
-      ...node.data.hProperties,
-      dataSourcepos: `${position.start.line}:${position.start.column ?? 1}-${position.end.line}:${position.end.column ?? 1}`,
-    }
-  }
-
-  node.children?.forEach(addSourcePositionAttributes)
 }

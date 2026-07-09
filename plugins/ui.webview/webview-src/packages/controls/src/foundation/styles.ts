@@ -9,6 +9,8 @@ export const hostStyles = css`
     font-family: var(--jb-font-family);
     font-size: var(--jb-font-size);
     line-height: var(--jb-line-height);
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   :host([hidden]) {
@@ -46,11 +48,13 @@ export const buttonStyles = css`
     display: inline-flex;
     gap: var(--jb-control-gap);
     justify-content: center;
+    line-height: var(--jb-line-height);
     min-height: var(--jb-control-height);
     min-width: var(--jb-control-height);
     outline: none;
     padding: 0 var(--jb-control-padding-x);
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
     white-space: nowrap;
   }
@@ -130,17 +134,79 @@ export const buttonStyles = css`
     padding-inline: var(--jb-space-sm);
   }
 
+  .button [part="label"] {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    line-height: var(--jb-line-height);
+    min-height: var(--jb-line-height);
+  }
+
+  .button .icon-slot.empty {
+    display: none;
+  }
+
+  .button-icon {
+    color: currentColor;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 12px;
+    line-height: 1;
+    position: relative;
+    width: 12px;
+  }
+
+  .button-icon::before,
+  .button-icon::after {
+    background: currentColor;
+    border-radius: 1px;
+    content: "";
+    height: 1.5px;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+  }
+
+  .button-icon.plus::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .button-icon.minus::after {
+    display: none;
+  }
+
   .icon-slot,
   .chevron {
     align-items: center;
     display: inline-flex;
+    flex: 0 0 auto;
+    height: 12px;
     justify-content: center;
     line-height: 1;
+    position: relative;
+    width: 12px;
   }
 
   .chevron {
     color: var(--jb-text-muted);
-    font-size: var(--jb-font-size-small);
+  }
+
+  .chevron::before {
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
+    content: "";
+    height: 5px;
+    margin-top: -3px;
+    transform: rotate(45deg);
+    width: 5px;
+  }
+
+  .chevron.right::before {
+    margin-left: -3px;
+    margin-top: 0;
+    transform: rotate(-45deg);
   }
 `
 
@@ -165,11 +231,12 @@ export const inputStyles = css`
     border-color: var(--jb-border-color-strong);
   }
 
-  .field-control:focus-visible,
-  .textarea:focus-visible,
-  .select:focus-visible {
+  .field-control:focus,
+  .textarea:focus,
+  .select:focus {
     border-color: var(--jb-accent-color);
     box-shadow: var(--jb-focus-ring);
+    outline: none;
   }
 
   .field-control:disabled,
@@ -204,17 +271,30 @@ export const inputStyles = css`
 
   .select {
     padding-right: 26px;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .field-control,
+  .textarea {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   .select-wrap::after {
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
     color: var(--jb-text-muted);
-    content: "v";
-    font-size: var(--jb-font-size-small);
+    content: "";
+    height: 5px;
     pointer-events: none;
     position: absolute;
     right: 9px;
     top: 50%;
-    transform: translateY(-52%);
+    transform: translateY(-65%) rotate(45deg);
+    -webkit-user-select: none;
+    user-select: none;
+    width: 5px;
   }
 `
 
@@ -247,6 +327,8 @@ export const popupStyles = css`
     min-height: var(--jb-control-height-compact);
     padding: 0 var(--jb-space-sm);
     text-align: left;
+    -webkit-user-select: none;
+    user-select: none;
     white-space: nowrap;
   }
 
@@ -262,6 +344,11 @@ export const popupStyles = css`
 `
 
 export const choiceStyles = css`
+  :host {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
   .choice {
     align-items: flex-start;
     color: var(--jb-text-color);
@@ -269,6 +356,8 @@ export const choiceStyles = css`
     gap: var(--jb-control-gap);
     min-height: var(--jb-control-height-compact);
     position: relative;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .native-check {
@@ -291,6 +380,13 @@ export const choiceStyles = css`
     justify-content: center;
     margin-top: 1px;
     width: 16px;
+  }
+
+  .mark::before {
+    box-sizing: border-box;
+    content: "";
+    flex: 0 0 auto;
+    opacity: 0;
   }
 
   .checkbox .mark {
@@ -317,8 +413,7 @@ export const choiceStyles = css`
     opacity: 0.72;
   }
 
-  .checkbox .native-check:checked + .mark::before {
-    content: "";
+  .checkbox .mark::before {
     border: solid currentColor;
     border-width: 0 2px 2px 0;
     height: 8px;
@@ -327,18 +422,28 @@ export const choiceStyles = css`
     width: 4px;
   }
 
+  .checkbox .native-check:checked + .mark::before {
+    opacity: 1;
+  }
+
   .checkbox .native-check:indeterminate + .mark::before {
     background: currentColor;
-    content: "";
+    border: 0;
     height: 2px;
+    margin-top: 0;
+    opacity: 1;
+    transform: none;
     width: 8px;
   }
 
-  .radio .native-check:checked + .mark::before {
+  .radio .mark::before {
     background: currentColor;
     border-radius: 50%;
-    content: "";
     height: 6px;
     width: 6px;
+  }
+
+  .radio .native-check:checked + .mark::before {
+    opacity: 1;
   }
 `

@@ -1,6 +1,9 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.types
 
+import com.jetbrains.python.allure.Subsystems
+import com.jetbrains.python.allure.Layers
+import com.jetbrains.python.allure.Components
 import com.intellij.idea.TestFor
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
 import org.junit.jupiter.api.Nested
@@ -9,6 +12,9 @@ import org.junit.jupiter.api.Test
 /**
  * Type and type-checker tests for variadic generics ([TypeVarTuple][https://peps.python.org/pep-0646/]).
  */
+@Subsystems.Typing
+@Components.TypeInference
+@Layers.Functional
 class PyVariadicGenericTypeTest : PyCodeInsightTestCase() {
 
   @Nested
@@ -1317,7 +1323,6 @@ class PyVariadicGenericTypeTest : PyCodeInsightTestCase() {
       #          │   └ WARNING Expected type '*tuple[str, str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[1], Literal[1]]' instead
       #          ^^ WARNING Expected type '*tuple[str, str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[1], Literal[1]]' instead
       x: Any
-      #  ^^^ ERROR Unresolved reference 'Any'
       foo((), '', 42, x, b='')
       #       │   │   └ WARNING Expected type '*tuple[str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[42], Any]' instead
       #       │   ^^ WARNING Expected type '*tuple[str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[42], Any]' instead
@@ -1417,7 +1422,6 @@ class PyVariadicGenericTypeTest : PyCodeInsightTestCase() {
       #          │   └ WARNING Expected type '*tuple[str, str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[1], Literal[1]]' instead
       #          ^^ WARNING Expected type '*tuple[str, str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[1], Literal[1]]' instead
       x: Any
-      #  ^^^ ERROR Unresolved reference 'Any'
       foo((), '', 42, x, b='')
       #       │   │   └ WARNING Expected type '*tuple[str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[42], Any]' instead
       #       │   ^^ WARNING Expected type '*tuple[str, int]' (matched generic type '*tuple[str, *Ts, int]'), got '*tuple[Literal[""], Literal[42], Any]' instead

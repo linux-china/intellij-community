@@ -1,6 +1,9 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.types
 
+import com.jetbrains.python.allure.Subsystems
+import com.jetbrains.python.allure.Layers
+import com.jetbrains.python.allure.Components
 import com.intellij.idea.TestFor
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
 import com.jetbrains.python.psi.LanguageLevel
@@ -11,6 +14,9 @@ import org.junit.jupiter.api.Test
  * Type and type-checker tests for [enum][https://docs.python.org/3/library/enum.html] members,
  * values, aliases and narrowing.
  */
+@Subsystems.Typing
+@Components.TypeInference
+@Layers.Functional
 class PyEnumTypeTest : PyCodeInsightTestCase() {
 
   @Nested
@@ -687,7 +693,7 @@ class PyEnumTypeTest : PyCodeInsightTestCase() {
 
       class MyEnum(Enum):
           OK = 1
-          BAD = "string" # WARNING Expected type 'int', got 'str' instead
+          ALSO_OK = "string"
       """)
 
     @Test
@@ -727,4 +733,47 @@ class PyEnumTypeTest : PyCodeInsightTestCase() {
               return set(self) # OK
       """)
   }
+
+  @Test
+  @TestFor(issues = ["PY-58076"])
+  fun `enum members mapping`() = test(
+    """
+    from enum import Enum, IntEnum
+
+    class Color(Enum):
+        red = 1
+        green = 2
+        blue = 3
+
+    Color.__members__
+    #        └ TYPE MappingProxyType[Literal["red", "green", "blue"], Literal[Color.red, Color.green, Color.blue]]
+    
+    
+    class Empty(Enum):
+        pass
+
+    Empty.__members__
+    #       └ TYPE MappingProxyType[str, object]
+    
+    class EmptyInt(IntEnum):
+        pass
+
+    EmptyInt.__members__
+    #         └ TYPE MappingProxyType[str, int]
+    """)
+
+  @Test
+  fun `empty enum name and value`() = test(
+    """
+    from enum import Enum
+
+    class Empty(Enum):
+        pass
+
+    def f(e: Empty):
+        e.name
+    #       └ TYPE str
+        e.value
+    #       └ TYPE object
+    """)
 }

@@ -11,6 +11,7 @@ import com.intellij.ui.webview.impl.WebViewFocusEntrySink
 import com.intellij.ui.webview.impl.WebViewJsMessageReceiver
 import com.intellij.ui.webview.impl.host.NativeWebViewHostPeer
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -325,6 +326,54 @@ class SwingWebViewHostPanelGeometryTest {
   }
 
   @Test
+  fun swingHostFocusRequest_skipsForcedFallbackForMouseActivation() {
+    val engine = FakeNativeEngine()
+    val peer = RecordingNativePeer()
+    @Suppress("RAW_SCOPE_CREATION") // Test scope has no parent in this pure Swing geometry test.
+    val scope = CoroutineScope(SupervisorJob())
+    try {
+      val host = SwingWebViewHostPanel(
+        scope = scope,
+        engine = engine,
+        nativeHostPeer = peer,
+      ).apply {
+        // Force requestFocusInWindow() to fail so the test covers the fallback branch without
+        // involving the platform focus manager or a native window.
+        isFocusable = false
+      }
+
+      assertFalse(host.requestSwingFocusForWebViewActivation(allowForcedFocusFallback = false))
+    }
+    finally {
+      scope.cancel()
+    }
+  }
+
+  @Test
+  fun swingHostFocusRequest_keepsForcedFallbackForNativeFocusRequests() {
+    val engine = FakeNativeEngine()
+    val peer = RecordingNativePeer()
+    @Suppress("RAW_SCOPE_CREATION") // Test scope has no parent in this pure Swing geometry test.
+    val scope = CoroutineScope(SupervisorJob())
+    try {
+      val host = SwingWebViewHostPanel(
+        scope = scope,
+        engine = engine,
+        nativeHostPeer = peer,
+      ).apply {
+        // Force requestFocusInWindow() to fail so the test covers the fallback branch without
+        // involving the platform focus manager or a native window.
+        isFocusable = false
+      }
+
+      assertTrue(host.requestSwingFocusForWebViewActivation(allowForcedFocusFallback = true))
+    }
+    finally {
+      scope.cancel()
+    }
+  }
+
+  @Test
   fun traversalFocusEntry_requestsWebViewFocusAndNotifiesPageDirection() {
     val engine = FakeComponentBackedEngine()
     val focusEntrySink = RecordingFocusEntrySink()
@@ -370,7 +419,7 @@ class SwingWebViewHostPanelGeometryTest {
   }
 
   @Test
-  fun mouseFocusEntry_requestsWebViewFocusWithoutForcingPageBoundary() {
+  fun mouseFocusEntry_doesNotForceNativeWebViewFocusOrPageBoundary() {
     val engine = FakeComponentBackedEngine()
     val focusEntrySink = RecordingFocusEntrySink()
     @Suppress("RAW_SCOPE_CREATION") // Test scope has no parent in this pure Swing geometry test.
@@ -382,8 +431,33 @@ class SwingWebViewHostPanelGeometryTest {
         listener.focusGained(FocusEvent(host, FocusEvent.FOCUS_GAINED, false, null, FocusEvent.Cause.MOUSE_EVENT))
       }
 
-      assertEquals(1, engine.requestFocusCount)
+      assertEquals(0, engine.requestFocusCount)
       assertEquals(emptyList<WebViewFocusDirection>(), focusEntrySink.entries)
+    }
+    finally {
+      scope.cancel()
+    }
+  }
+
+  @Test
+  fun swingFocusTransfer_notifiesPageLeave() {
+    val engine = FakeComponentBackedEngine()
+    val focusEntrySink = RecordingFocusEntrySink()
+    @Suppress("RAW_SCOPE_CREATION") // Test scope has no parent in this pure Swing geometry test.
+    val scope = CoroutineScope(SupervisorJob())
+    try {
+      val host = SwingWebViewHostPanel(scope, engine, focusEntrySink)
+      val outsideComponent = JPanel()
+
+      host.focusListeners.forEach { listener ->
+        listener.focusGained(FocusEvent(host, FocusEvent.FOCUS_GAINED, false, outsideComponent, FocusEvent.Cause.MOUSE_EVENT))
+      }
+      host.focusListeners.forEach { listener ->
+        listener.focusLost(FocusEvent(host, FocusEvent.FOCUS_LOST, false, outsideComponent, FocusEvent.Cause.MOUSE_EVENT))
+      }
+
+      assertEquals(1, focusEntrySink.leaveCount)
+      assertEquals(1, engine.clearFocusCount)
     }
     finally {
       scope.cancel()
@@ -392,9 +466,15 @@ class SwingWebViewHostPanelGeometryTest {
 
   private class RecordingFocusEntrySink : WebViewFocusEntrySink {
     val entries = ArrayList<WebViewFocusDirection>()
+    var leaveCount = 0
+      private set
 
     override fun enterWebViewFocus(direction: WebViewFocusDirection) {
       entries += direction
+    }
+
+    override fun leaveWebViewFocus() {
+      leaveCount++
     }
   }
 

@@ -97,7 +97,6 @@ import org.jetbrains.jewel.ui.component.styling.ComboBoxStyle
 import org.jetbrains.jewel.ui.icon.IconKey
 import org.jetbrains.jewel.ui.icon.PathIconKey
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
-import org.jetbrains.jewel.ui.theme.colorPalette
 import org.jetbrains.jewel.ui.theme.comboBoxStyle
 import org.jetbrains.jewel.ui.theme.defaultButtonStyle
 import org.jetbrains.jewel.ui.theme.scrollbarStyle
@@ -109,10 +108,19 @@ import javax.swing.JComponent
 @ApiStatus.Internal
 class WelcomeScreenRightTab(
   val project: Project,
-  val contentProvider: WelcomeRightTabContentProvider
+  val contentProvider: WelcomeRightTabContentProvider,
+  suppressInitialContentFocus: Boolean = false,
 ) {
   private val showCustomContent = mutableStateOf(false)
   private var customTabContentProvider: WelcomeRightCustomTabProvider? = null
+
+  /**
+   * While `true`, activating the tab does not pull input focus into its content, so that the left project view's
+   * recent-projects search field keeps focus during the passive startup open (accessibility: up/down navigation,
+   * IJPL-248588). Cleared via [enableContentFocus] once the initial startup focus has settled on the project view,
+   * so later user-driven activations (Esc from the project view, clicking the tab) focus the content.
+   */
+  private var contentFocusSuppressed = suppressInitialContentFocus
 
   val component: JComponent by lazy {
     JewelComposePanel {
@@ -133,6 +141,15 @@ class WelcomeScreenRightTab(
    */
   fun switchToDefaultContent() {
     showCustomContent.value = false
+  }
+
+  /**
+   * Re-enables moving focus into the tab content when the tab is activated. Called once the initial startup focus
+   * has settled on the left project view (IJPL-248588); afterwards, activating the tab (Esc from the project view,
+   * clicking the tab) focuses its content as usual.
+   */
+  fun enableContentFocus() {
+    contentFocusSuppressed = false
   }
 
   @OptIn(ExperimentalComposeUiApi::class)
@@ -164,7 +181,7 @@ class WelcomeScreenRightTab(
         .focusRequester(focusRequester)
         .trackComponentActivation(component)
         .onActivated { activated ->
-          if (activated) {
+          if (activated && !contentFocusSuppressed) {
             focusRequester.requestFocus(FocusDirection.Enter)
           }
         }
@@ -680,11 +697,8 @@ class WelcomeScreenRightTab(
   private val fontColor
     get() = retrieveColorOrUnspecified("*.foreground")
 
-  @get:Composable
   private val secondaryFontColor
-    get() = color(dark = JewelTheme.colorPalette.grayOrNull(10),
-                  light = JewelTheme.colorPalette.grayOrNull(1),
-                  fallback = Color(0xFFB4B8BF))
+    get() = retrieveColorOrUnspecified("Component.infoForeground")
 
   private val panelBackgroundColor
     get() = retrieveColorOrUnspecified("EditorTabs.background")
@@ -732,12 +746,20 @@ class WelcomeScreenRightTab(
      */
     fun getInstance(project: Project): WelcomeScreenRightTab? = projectToTabMap[project.projectId()]
 
+    /**
+     * Opens the welcome right tab.
+     *
+     * @param focusContent whether focus should be moved into the tab content once it is activated. Pass `false`
+     * (default) for the passive startup open, so the left project view's recent-projects search field keeps input
+     * focus (accessibility, IJPL-248588); pass `true` for an explicit user-initiated open (e.g. the "Open Welcome
+     * Screen" action).
+     */
     @ApiStatus.Internal
-    suspend fun show(project: Project) {
+    suspend fun show(project: Project, focusContent: Boolean = false) {
       if (!isRightTabEnabled) return
       val contentProvider = WelcomeRightTabContentProvider.getSingleExtension() ?: return
       withContext(Dispatchers.EDT) {
-        val tab = WelcomeScreenRightTab(project, contentProvider)
+        val tab = WelcomeScreenRightTab(project, contentProvider, suppressInitialContentFocus = !focusContent)
         addToMap(project, tab)
 
         val settingsFile = WelcomeScreenRightTabVirtualFile(tab, project)

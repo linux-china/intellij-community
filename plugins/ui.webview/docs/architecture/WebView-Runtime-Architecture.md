@@ -98,7 +98,8 @@ Backend URL shapes are internal details:
 
 - WKWebView uses the custom `ij-webview-asset:/...` scheme.
 - JCEF uses `https://ij-webview-assets.local/...` and a CEF resource handler.
-- Windows WebView2 uses `https://ij-webview-assets.local/...` and handles requests through `WebResourceRequested`.
+- Windows WebView2 uses the custom `ij-webview-asset://assets/...` origin and handles requests through each view's `WebResourceRequested` callback.
+  The fixed `assets` authority is intentional: WebView2 ES module loading needs a non-opaque custom-scheme origin, while per-view routing still happens through the per-`CoreWebView2` handler.
 - Linux WebKitGTK currently rejects `loadAsset`; its provider reports `assetServing = false`.
 
 ## Message Bus
@@ -139,6 +140,27 @@ await notifications.ready.send({ timestamp: Date.now() })
 ```
 
 The wire format is JSON-RPC 2.0. Old notification-only `{"method":"...","params":...}` frames are invalid protocol and are not dispatched to handlers. Kotlin -> JS uses `WebViewEngine.transferToJs(rawJson)`; JS -> Kotlin callbacks enter the bus through `transferFromJs(rawJson)`.
+
+## Browser Console Logging
+
+`WebViewEngineProvider.createWebView(...)` installs console capture for every runtime-created WebView. The provider creates `WebViewConsoleCapture`, registers its internal notification handler on the same `WebViewMessageBusImpl`, and passes `WebViewConsoleCapture.DOCUMENT_START_SCRIPT` to the selected engine through `WebViewEngineCreationOptions.documentStartScripts`.
+
+The page-side shim wraps supported `console.*` methods, calls the original browser method first, and then sends a JSON-RPC 2.0 notification with method `$/webview/console`. This is an internal runtime notification, not an application protocol surface. Feature code should not register handlers for it or send it manually.
+
+The payload contains the console method, a bounded string preview of arguments, and `jsTimeEpochMs` captured immediately around the JavaScript `console.*` call. Kotlin formats that epoch as a readable instant in the real log message prefix:
+
+```text
+[js=2026-07-02T18:30:15.123Z] message text
+```
+
+The default logger category is `#com.intellij.ui.webview.console`. `WebViewPanelOptions.consoleLogCategory` and `WebViewCreationOptions.consoleLogCategory` can override the base category. When a loaded `WebViewAssetRoot` carries a view id, the runtime appends the sanitized id to the base category; otherwise it logs to the base category only. Logger instances are obtained by category when each event is written.
+
+Backend injection guarantees:
+
+- Windows WebView2 installs document-start scripts through the native WebView2 document-created hook before page scripts run.
+- macOS WKWebView installs them as `WKUserScript`s at document start.
+- JCEF injects them from the load-start handler with `executeJavaScript`; this is the earliest common JCEF path currently wired through the runtime, but it is not the same native document-start guarantee as WebView2 or WKWebView.
+- The Linux WebKitGTK backend is not part of the supported console-capture path.
 
 ## Backend Boundaries
 

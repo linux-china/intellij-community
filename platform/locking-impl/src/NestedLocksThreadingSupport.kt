@@ -1260,7 +1260,10 @@ class NestedLocksThreadingSupport : ThreadingSupport {
     } finally {
       attachNewlyArrivedListeners(preparatoryWriteIntent)
     }
-    return WriteLockInitResult(shouldRelease, preparatoryWriteIntent.listeners + preparatoryWriteIntent.newlyArrivedListeners.get(), state, clazz, exposedData, this)
+    val newlyArrivedListeners = preparatoryWriteIntent.newlyArrivedListeners.get()
+    // avoid allocation of a new array list
+    val actualSetOfListeners = if (newlyArrivedListeners.isEmpty()) preparatoryWriteIntent.listeners else preparatoryWriteIntent.listeners + newlyArrivedListeners
+    return WriteLockInitResult(shouldRelease, actualSetOfListeners, state, clazz, exposedData, this)
   }
 
   private fun attachNewlyArrivedListeners(preparatoryWriteIntent: PreparatoryWriteIntent) {
@@ -1730,6 +1733,9 @@ class NestedLocksThreadingSupport : ThreadingSupport {
         hack_setThisLevelPermit(permit.writePermit)
         val currentWriteThreadAcquired = myWriteAcquired
         myWriteAcquired = Thread.currentThread()
+        if (!isWriteAccessAllowed()) {
+          logger.error("Unexpected write state: write access is now allowed. Current thread with WA: $myWriteAcquired. This thread: ${Thread.currentThread()}")
+        }
         try {
           action.run()
         }

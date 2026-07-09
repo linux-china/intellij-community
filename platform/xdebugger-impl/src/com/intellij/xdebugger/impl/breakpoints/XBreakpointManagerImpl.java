@@ -108,10 +108,9 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
     myDebuggerManager = debuggerManager;
     myCoroutineScope = coroutineScope;
     myDependentBreakpointManager = new XDependentBreakpointManager(this);
-    myLineBreakpointManager = new XLineBreakpointManager(project, coroutineScope, !SplitDebuggerMode.isSplitDebugger(),
-                                                         MonolithBreakpointManagerKt.asProxy(this));
+    myLineBreakpointManager = new XLineBreakpointManager(project, MonolithBreakpointManagerKt.asProxy(this));
 
-    XBreakpointType.EXTENSION_POINT_NAME.addExtensionPointListener(new ExtensionPointListener<>() {
+    XBreakpointType.EXTENSION_POINT_NAME.addExtensionPointListener(coroutineScope, new ExtensionPointListener<>() {
       @SuppressWarnings("unchecked")
       @Override
       public void extensionAdded(@NotNull XBreakpointType type, @NotNull PluginDescriptor pluginDescriptor) {
@@ -143,7 +142,7 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
           myDefaultBreakpoints.remove(type);
         });
       }
-    }, debuggerManager);
+    });
 
     messageBusConnection.subscribe(VirtualFileManager.VFS_CHANGES, new BulkVirtualFileListenerAdapter(new VirtualFileUrlChangeAdapter() {
       @Override
@@ -263,7 +262,7 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
       }
       myAllBreakpoints.add(breakpoint);
       if (breakpoint instanceof XLineBreakpointImpl<?> lineBreakpoint) {
-        myLineBreakpointManager.registerBreakpoint(asProxy(lineBreakpoint), initUI);
+        myLineBreakpointManager.registerBreakpoint(asProxy(lineBreakpoint));
       }
     });
     sendBreakpointEvent(type, listener -> listener.breakpointAdded(breakpoint));
@@ -286,9 +285,6 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
 
   public void fireBreakpointChanged(XBreakpointBase<?, ?, ?> breakpoint) {
     if (isRegistered(breakpoint)) {
-      if (breakpoint instanceof XLineBreakpointImpl<?> lineBreakpoint) {
-        myLineBreakpointManager.breakpointChanged(asProxy(lineBreakpoint));
-      }
       sendBreakpointEvent(breakpoint.getType(), listener -> listener.breakpointChanged(breakpoint));
     }
   }
@@ -566,14 +562,8 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
     presentation.setErrorMessage(errorMessage);
     presentation.setIcon(icon);
     lineBreakpoint.setCustomizedPresentation(presentation);
-    if (SplitDebuggerMode.isSplitDebugger()) {
-      // for split, we call update directly since visual presentation is disabled on the backend
-      lineBreakpoint.fireBreakpointPresentationUpdated(null);
-    }
-    else {
-      myLineBreakpointManager.queueBreakpointUpdate(breakpoint,
-                                                    () -> lineBreakpoint.fireBreakpointPresentationUpdated(null));
-    }
+    // we call update directly since visual presentation is disabled on the backend
+    lineBreakpoint.fireBreakpointPresentationUpdated(null);
   }
 
   @ApiStatus.Internal
@@ -699,7 +689,6 @@ public final class XBreakpointManagerImpl implements XBreakpointManager {
         }
 
         myDependentBreakpointManager.loadState();
-        myLineBreakpointManager.updateBreakpointsUI();
         myDefaultGroup = state.getDefaultGroup();
         myFirstLoadDone = true;
       });

@@ -5,6 +5,7 @@ import ai.grazie.rules.promptAnalysis.LlmAnalyzer
 import ai.grazie.rules.promptAnalysis.LlmAnalyzer.LlmIssue
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.LocalInspectionToolSession
+import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptorBase
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
@@ -21,13 +22,12 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPointerManager
 import org.intellij.plugins.markdown.lang.psi.impl.MarkdownFile
 import org.jetbrains.annotations.ApiStatus
-import java.util.UUID
 
 @ApiStatus.Internal
 @ApiStatus.Experimental
 abstract class SpecificationBaseInspection<T> : LocalInspectionTool() {
 
-  private fun reportProblem(holder: ProblemsHolder, file: PsiFile, id: UUID, issue: LlmIssue<T>) {
+  private fun reportProblem(holder: ProblemsHolder, file: PsiFile, dependencies: Set<PsiFile>, issue: LlmIssue<T>) {
     if (issue.startOffset() == -1 && issue.endOffset() == -1) {
       thisLogger().warn("No occurrences found by ${javaClass.name} in text")
       return
@@ -36,18 +36,25 @@ abstract class SpecificationBaseInspection<T> : LocalInspectionTool() {
     val range = TextRange(issue.startOffset(), issue.endOffset())
     val underline = SmartPointerManager.getInstance(file.project).createSmartPsiFileRangePointer(file, range)
     val replacements = issue.replacements
-    val fixes = if (replacements.isNotEmpty()) {
-      SpecificationReplacementQuickFix(id, underline, replacements).getAllAsFixes().toTypedArray()
-    } else {
-      emptyArray()
+    val fixes = mutableListOf<LocalQuickFix>()
+    if (replacements.isNotEmpty()) {
+      fixes.addAll(SpecificationReplacementQuickFix(underline, replacements).getAllAsFixes())
     }
+    fixes.addAll(getAdditionalFixes(issue, dependencies))
     val descriptor = ProblemDescriptorBase(
-      file, file, issue.message, fixes,
+      file, file, issue.message, fixes.toTypedArray(),
       ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
       false, range, true, true
     )
     holder.registerProblem(descriptor)
   }
+
+  open fun getAdditionalFixes(issue: LlmIssue<T>, analyzedFiles: Set<PsiFile>): List<LocalQuickFix> = emptyList()
+
+  /**
+   * Returns the dependency set for a given file. The resulting set must always contain [root].
+   */
+  open fun getDependencies(root: PsiFile): Set<PsiFile> = setOf(root)
 
   abstract fun getAnalyzer(file: PsiFile): LlmAnalyzer<T>?
 
@@ -69,13 +76,14 @@ abstract class SpecificationBaseInspection<T> : LocalInspectionTool() {
           return
         }
         val analyzer = getAnalyzer(file) ?: return
-        val (id, issues) = SpecificationAnalyzer.analyze(analyzer, file, client)
-        issues.forEach { reportProblem(holder, file, id, it) }
+        val dependencies = getDependencies(file)
+        val issues = SpecificationAnalyzer.analyze(analyzer, file, dependencies , client)
+        issues.forEach { reportProblem(holder, file, dependencies, it) }
       }
     }
   }
 
-  private fun isSpecificationLikeFile(file: PsiFile): Boolean {
+  internal fun isSpecificationLikeFile(file: PsiFile): Boolean {
     if (SPECIFICATION_LIKE_PATTERN.matches(file.name)) return true
     val pattern = Regex(Registry.stringValue("grazie.specification.semantics.specification.pattern"))
     return pattern.matches(file.virtualFile.path)

@@ -5,8 +5,10 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.NlsSafe
 import com.intellij.xdebugger.XDebugProcess
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.Serializable
 import org.jetbrains.annotations.ApiStatus
 
 /**
@@ -17,6 +19,9 @@ import org.jetbrains.annotations.ApiStatus
 @ApiStatus.NonExtendable
 interface HotSwapSession<T> {
   val project: Project
+
+  @get:ApiStatus.Internal
+  val source: HotSwapSource
 
   /**
    * Get elements modified since the last hot swap.
@@ -112,6 +117,18 @@ interface HotSwapInDebugSessionEnabler {
   }
 }
 
+@ApiStatus.Internal
+@Serializable
+enum class HotSwapSource {
+  RELOAD_FILE,
+  RELOAD_ALL,
+  ON_REBUILD_AUTO,
+  ON_REBUILD_ASK,
+  RELOAD_MODIFIED_ACTION,
+  RELOAD_MODIFIED_BUTTON,
+  UNKNOWN,
+}
+
 /**
  * Listener to report the hot swap status.
  * @see HotSwapSession.startHotSwapListening
@@ -163,7 +180,7 @@ interface SourceFileChangesListener {
   /**
    * Changes detected since the last reset, but they are not expected to be supported by HotSwap.
    */
-  fun onIncompatibleChanges(reason: String)
+  fun onIncompatibleChanges(reason: @NlsSafe String)
 
   /**
    * Modified files were reverted to the original state, so no changes currently available.

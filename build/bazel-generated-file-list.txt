@@ -293,6 +293,7 @@ java/debugger/backend
 java/debugger/debugger-agent
 java/debugger/frontend
 java/debugger/impl
+java/debugger/jb-jdi
 java/debugger/memory-agent
 java/debugger/openapi
 java/debugger/shared
@@ -923,7 +924,6 @@ platform/testIntegration-ui
 platform/testRunner
 platform/testRunner/plugin
 platform/threadDumpParser
-platform/tips-of-the-day
 platform/todo
 platform/todo/backend
 platform/todo/plugin
@@ -1036,6 +1036,7 @@ plugins/cucumber-jvm-formatter5
 plugins/dev
 plugins/dev/intellij.dev
 plugins/dev/intellij.dev.codeInsight
+plugins/dev/intellij.dev.leakDetection
 plugins/dev/intellij.dev.psiViewer
 plugins/dev/intellij.groovy.dev
 plugins/dev/intellij.java.dev
@@ -1051,6 +1052,7 @@ plugins/devkit/devkit-tests
 plugins/devkit/intellij.devkit.compose
 plugins/devkit/intellij.devkit.debugger
 plugins/devkit/intellij.devkit.gradle
+plugins/devkit/intellij.devkit.gradle.tooling
 plugins/devkit/intellij.devkit.i18n
 plugins/devkit/intellij.devkit.intelliLang
 plugins/devkit/intellij.devkit.mcp
@@ -1113,6 +1115,7 @@ plugins/gradle-maven
 plugins/gradle/completion
 plugins/gradle/completion/kotlin
 plugins/gradle/completion/kotlin/tests
+plugins/gradle/completion/kotlin/tests.benchmark
 plugins/gradle/completion/toml
 plugins/gradle/gradle-declarative-sync
 plugins/gradle/gradle-dependency-updater
@@ -1125,6 +1128,7 @@ plugins/gradle/java/groovy/toml
 plugins/gradle/java/performance
 plugins/gradle/java/plugin
 plugins/gradle/java/properties
+plugins/gradle/java/tests.benchmark
 plugins/gradle/java/toml
 plugins/gradle/java/toml/tests
 plugins/gradle/jps-plugin
@@ -1134,6 +1138,8 @@ plugins/gradle/native/tooling
 plugins/gradle/plugin
 plugins/gradle/properties
 plugins/gradle/settings
+plugins/gradle/tests.benchmark
+plugins/gradle/tests.benchmark.main
 plugins/gradle/tooling-extension-api
 plugins/gradle/tooling-extension-impl
 plugins/gradle/tooling-proxy
@@ -1166,6 +1172,7 @@ plugins/hg4idea
 plugins/htmltools
 plugins/ide-features-trainer
 plugins/ide-features-trainer/onboarding
+plugins/ide-features-trainer/tips
 plugins/ide-startup/importSettings
 plugins/java-decompiler/engine
 plugins/java-decompiler/plugin
@@ -1474,7 +1481,9 @@ plugins/mcp-server/mcpserver.vcs
 plugins/mcp-server/tests
 plugins/mcp-server/tests/plugin
 plugins/mermaid
+plugins/mermaid/json
 plugins/mermaid/markdown
+plugins/mermaid/spellchecker
 plugins/ml-local-models
 plugins/ml-local-models/java
 plugins/performanceTesting/backend
@@ -1549,6 +1558,7 @@ plugins/terminal/frontend
 plugins/terminal/sh
 plugins/terminal/tests
 plugins/testng
+plugins/testng/langInjection
 plugins/testng_rt
 plugins/testng_rt/tests
 plugins/textmate
@@ -1559,6 +1569,8 @@ plugins/textmate/core/tests
 plugins/textmate/joni
 plugins/textmate/plugin
 plugins/textmate/tests
+plugins/tips-of-the-day
+plugins/tips-of-the-day/plugin
 plugins/toml
 plugins/toml/backend
 plugins/toml/core
@@ -1602,6 +1614,7 @@ python/intellij.python.community.communityOnly
 python/intellij.python.ml.features
 python/interpreters
 python/junit5Tests-framework
+python/mcp
 python/openapi
 python/pipenv
 python/pluginCore

@@ -15,7 +15,6 @@ import {
 import { useAcpChat } from "../runtime/useAcpChat"
 import { AgentSelector } from "./AgentSelector"
 import { ApprovalPrompt } from "./ApprovalPrompt"
-import { AuthPrompt } from "./AuthPrompt"
 import { ChatList } from "./ChatList"
 import { acpIconSrc, SEND_ICON_PATH } from "./icons/AcpChatIconSet"
 import { MarkdownRenderer } from "./MarkdownRenderer"
@@ -44,7 +43,7 @@ export function ChatView() {
         {chat.status ? <header className="acpChatHeader"><span className="acpChatStatus">{chat.status}</span></header> : null}
         <PlanView plan={chat.plan} />
         <ThreadPrimitive.Root className="acpThread">
-          <ThreadPrimitive.Viewport className="acpThreadViewport">
+          <ThreadPrimitive.Viewport className="acpThreadViewport webview-selectable-text">
             <ThreadPrimitive.Empty>
               <div className="acpEmpty">Select an agent and send a message to start.</div>
             </ThreadPrimitive.Empty>
@@ -100,7 +99,6 @@ export function ChatView() {
         </ThreadPrimitive.Root>
         </main>
         {chat.permission ? <ApprovalPrompt permission={chat.permission} /> : null}
-        {chat.auth ? <AuthPrompt auth={chat.auth} /> : null}
       </div>
     </AssistantRuntimeProvider>
   )

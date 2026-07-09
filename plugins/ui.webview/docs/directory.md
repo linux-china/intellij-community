@@ -8,6 +8,7 @@
 
 - Add a WebView UI to a feature: [guides/WebView-UI-Authoring-Guide](guides/WebView-UI-Authoring-Guide.md)
 - Understand the runtime (engines, providers, asset loading): [architecture/WebView-Runtime-Architecture](architecture/WebView-Runtime-Architecture.md)
+- Configure browser console forwarding to IDE loggers: [guides/WebView-UI-Authoring-Guide § Use Browser Console Logging](guides/WebView-UI-Authoring-Guide.md#use-browser-console-logging)
 - Review the API surface and the 13-item cleanup state: [architecture/WebView-Architecture-Review](architecture/WebView-Architecture-Review.md)
 - Design a new JSON-RPC contract: [architecture/WebView-JsonRpc-Design](architecture/WebView-JsonRpc-Design.md) + [architecture/WebView-TS-RPC-API-Design](architecture/WebView-TS-RPC-API-Design.md)
 - Preview or browser-test a WebView UI without IDE/Kotlin: [guides/WebView-UI-Authoring-Guide](guides/WebView-UI-Authoring-Guide.md) and [frontend/WebView-Frontend-Testability](frontend/WebView-Frontend-Testability.md)
@@ -51,7 +52,7 @@ new mechanism ──┼─ one feature only? ───────────�
                 └─ native bridge? ──────────────── impl/<os>/ + community/native/<crate>
 ```
 
-Rule of thumb: anything a feature author should NOT have to remember to install (focus, theme, IME hooks, accessibility bootstrap) goes into common runtime. See [architecture/WebView-Common-Runtime-Injection-Proposal](architecture/WebView-Common-Runtime-Injection-Proposal.md).
+Rule of thumb: anything a feature author should NOT have to remember to install (focus, theme, browser console capture, IME hooks, accessibility bootstrap) goes into common runtime. See [architecture/WebView-Common-Runtime-Injection-Proposal](architecture/WebView-Common-Runtime-Injection-Proposal.md).
 
 ### 2.3 Level-1 bus or Level-2 interop?
 
@@ -117,6 +118,7 @@ Use the same status legend everywhere; don't invent new icons.
 - ⬜ WebView IconSet loading for classloader-backed IntelliJ icons — [frontend/WebView-IconSet-Loading-Plan](frontend/WebView-IconSet-Loading-Plan.md)
 - ⬜ Frontend SDK Distribution (versioned npm + SDK tarball + compatibility check) — [frontend/WebView-Frontend-SDK-Distribution](frontend/WebView-Frontend-SDK-Distribution.md)
 - ⬜ Control Parity scaffold (`@jetbrains/intellij-webview-controls`) — [frontend/WebView-Control-Parity-Design](frontend/WebView-Control-Parity-Design.md)
+- ⬜ React Base UI controls package (`@jetbrains/intellij-webview-react-controls`) — [frontend/WebView-React-Base-UI-Controls-Plan](frontend/WebView-React-Base-UI-Controls-Plan.md)
 - ⬜ Bazel `webview_assets` rule (replace manual build) — [frontend/WebView-Frontend-Build-Strategy](frontend/WebView-Frontend-Build-Strategy.md)
 
 ### P3 — Strategic / long-term
@@ -156,6 +158,7 @@ Use the same status legend everywhere; don't invent new icons.
 - [Testability Without IDE](frontend/WebView-Frontend-Testability.md) — ⏳ browser mock testkit V1 implemented; covers `@jetbrains/intellij-webview-testkit`, TS/Bun preview entry points, package scripts, IDE Bun runtime setup, and Playwright smoke tests.
 - [IconSet Loading Plan](frontend/WebView-IconSet-Loading-Plan.md) — ⬜ design only.
 - [Control Parity Design](frontend/WebView-Control-Parity-Design.md) — ⬜ design only.
+- [React Base UI Controls Plan](frontend/WebView-React-Base-UI-Controls-Plan.md) — ⬜ design only for an optional React package layered over Base UI primitives.
 
 ### `interop/` — Swing ↔ WebView boundary
 - [Focus & Tab Interop](interop/WebView-Focus-Tab-Interop-Plan.md) — ✅ implemented (stages 1–6, 8); Stage 7 diagnostics ⏳.
@@ -165,7 +168,7 @@ Use the same status legend everywhere; don't invent new icons.
 - [Markdown WebView Preview API](interop/Markdown-WebView-Preview-API-Plan.md) — 🚫 blocked on approval for broad Markdown preview API changes.
 
 ### `backends/` — Native rendering / engine impls
-- [Windows WebView2 Implementation](backends/windows-webview2-implementation-plan.md) — ✅ done.
+- [Windows WebView2 Implementation](backends/windows-webview2-implementation-plan.md) — ✅ done; includes keyboard and shortcut interop ownership.
 - [Windows WebView2 Application Mode](backends/windows-webview2-application-mode-plan.md) — ✅ implemented.
 - [macOS WKWebView Application Mode](backends/macos-wkwebview-application-mode-plan.md) — ✅ implemented.
 - [Windows WebView2 Off-EDT](backends/windows-webview2-off-edt-plan.md) — Stage 1 ✅, Stages 2–3 ⬜.

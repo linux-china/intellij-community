@@ -1,9 +1,12 @@
 // Copyright 2000-2026 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.types
 
+import com.jetbrains.python.allure.Subsystems
+import com.jetbrains.python.allure.Layers
+import com.jetbrains.python.allure.Components
 import com.intellij.idea.TestFor
 import com.jetbrains.python.fixtures.PyCodeInsightTestCase
-import com.jetbrains.python.psi.LanguageLevel
+
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -12,6 +15,9 @@ import org.junit.jupiter.api.Test
  * `assert`, identity/equality narrowing, `TypeGuard`, `TypeIs`, conditional/else narrowing, narrowing in
  * conditional expressions and comprehensions, and structural-type `isinstance` checks.
  */
+@Subsystems.Typing
+@Components.TypeInference
+@Layers.Functional
 class PyNarrowingTypeTest : PyCodeInsightTestCase() {
 
   @Nested
@@ -546,15 +552,14 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-32113"])
     fun `assertion on variable from outer scope`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       class B: pass
 
       class D(B): pass
 
       g_b: B = undefined
-      #  │     ^^^^^^^^^ ERROR Unresolved reference 'undefined'
-      #  ^^^ ERROR Python version 3.5 does not support variable annotations
+      #        ^^^^^^^^^ ERROR Unresolved reference 'undefined'
 
       def main() -> None:
           assert isinstance(g_b, D)
@@ -566,7 +571,7 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
     @Test
     @TestFor(issues = ["PY-32113"])
     fun `assertion on function from outer scope`() = test(
-      TestOptions(languageLevel = LanguageLevel.PYTHON35, assertRecursionPrevention = false),
+      TestOptions(assertRecursionPrevention = false),
       """
       class B: pass
 
@@ -582,7 +587,7 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
   }
 
   @Nested
-  inner class IsinstanceIssubclassNarrowingPython3Latest {
+  inner class IsinstanceIssubclassNarrowing {
     @Test
     @TestFor(issues = ["PY-83047"])
     fun `qualified reference type narrowing`() = test("""
@@ -1101,6 +1106,62 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
       expr = conditional
       #└ TYPE (p: {attr}) -> None
       """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by dunder class is`() = test("""
+      def g(x):
+         assert x.__class__ is int
+         expr = x
+      #   └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by type call is`() = test(TestOptions(assertRecursionPrevention = false), """
+      def g(x):
+          assert type(x) is int
+          expr = x
+      #    └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by dunder class from union`() = test("""
+      def g(x: int | str):
+          if x.__class__ is int:
+              expr = x
+      #        └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by class equality`() = test(TestOptions(assertRecursionPrevention = false), """
+      def g(x: int | str):
+          if type(x) == int:
+              expr = x
+      #        └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by dunder class reversed operands`() = test("""
+      def g(x: int | str):
+          if int is x.__class__:
+              expr = x
+      #        └ TYPE int
+      """)
+
+    @Test
+    @TestFor(issues=["PY-87917"])
+    fun `type narrowing by dunder class keeps type on negative edge`() = test("""
+      def g(x: int | str):
+          if x.__class__ is int:
+              pass
+          else:
+              expr = x
+      #        └ TYPE int | str
+      """)
   }
 
   @Nested
@@ -1292,7 +1353,8 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
       from typing_extensions import TypeIs
 
 
-      def is_str_list(val: List[object]) -> TypeIs[List[str]]: # WARNING Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]'
+      def is_str_list(val: List[object]) -> TypeIs[List[str]]: 
+      # WARNING FIXME Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]' # PY-89564
           return all(isinstance(x, str) for x in val)
 
 
@@ -1306,7 +1368,8 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
       from typing import List
       from typing_extensions import TypeIs
 
-      def is_str_list(val: List[object]) -> TypeIs[List[str]]: # WARNING Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]'
+      def is_str_list(val: List[object]) -> TypeIs[List[str]]: 
+      # WARNING FIXME Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]' # PY-89564
           return all(isinstance(x, str) for x in val)
 
       def func1(val: List[object]):
@@ -1323,7 +1386,8 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
 
       MyTypeIs = TypeIs[List[str]]
 
-      def is_str_list(val: List[object]) -> MyTypeIs: # WARNING Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]'
+      def is_str_list(val: List[object]) -> MyTypeIs: 
+      # WARNING FIXME Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]' # PY-89564
           return all(isinstance(x, str) for x in val)
 
       def func1(val: List[object]):
@@ -1339,7 +1403,8 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
 
       type MyTypeIs[T] = TypeIs[T]
 
-      def is_str_list(val: List[object]) -> MyTypeIs[List[str]]: # WARNING Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]'
+      def is_str_list(val: List[object]) -> MyTypeIs[List[str]]: 
+      # WARNING FIXME Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]' # PY-89564
           return all(isinstance(x, str) for x in val)
 
       def func1(val: List[object]):
@@ -1504,7 +1569,8 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
 
 
       def func1(val: List[int] | List[str]):
-          if not is_str_list(val): # WARNING Expected type 'list[object]', got 'list[int] | list[str]' instead
+          if not is_str_list(val):
+      # WARNING FIXME Expected type 'list[object]', got 'list[int] | list[str]' instead # PY-89564
               expr = val
       #       └ TYPE list[int] | list[str]
           else:
@@ -1516,11 +1582,13 @@ class PyNarrowingTypeTest : PyCodeInsightTestCase() {
       from typing import List
       from typing_extensions import TypeIs
 
-      def is_str_list(val: List[object]) -> TypeIs[List[str]]: # WARNING Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]'
+      def is_str_list(val: List[object]) -> TypeIs[List[str]]: 
+      # WARNING FIXME Return type of TypeIs 'list[str]' is not consistent with the type of the first parameter 'list[object]' # PY-89564
           return all(isinstance(x, str) for x in val)
 
       def func1(val: List[int] | List[str]):
-          if not is_str_list(val): # WARNING Expected type 'list[object]', got 'list[int] | list[str]' instead
+          if not is_str_list(val):
+      # WARNING FIXME Expected type 'list[object]', got 'list[int] | list[str]' instead # PY-89564
               expr = val
       #       └ TYPE list[int]
           else:

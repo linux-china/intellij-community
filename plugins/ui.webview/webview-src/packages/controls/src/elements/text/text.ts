@@ -15,6 +15,8 @@ export class JbText extends LitElement {
     .text {
       color: var(--jb-text-color);
       margin: 0;
+      -webkit-user-select: text;
+      user-select: text;
     }
 
     .small {

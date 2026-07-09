@@ -15,16 +15,22 @@ import com.intellij.ui.mac.foundation.Foundation.nsString
 import com.intellij.ui.mac.foundation.Foundation.registerObjcClassPair
 import com.intellij.ui.mac.foundation.Foundation.toStringViaUTF8
 import com.intellij.ui.mac.foundation.ID
-import com.intellij.ui.webview.impl.WebViewEditCommand
-import com.intellij.ui.webview.impl.WebViewAssetResponse
-import com.intellij.ui.webview.impl.WebViewApplicationModeScripts
-import com.intellij.ui.webview.impl.WebViewLogger
 import com.intellij.ui.webview.impl.WEBVIEW_ASSET_CUSTOM_SCHEME
+import com.intellij.ui.webview.impl.WebViewApplicationModeScripts
+import com.intellij.ui.webview.impl.WebViewAssetResponse
+import com.intellij.ui.webview.impl.WebViewEditCommand
+import com.intellij.ui.webview.impl.WebViewLogger
+import com.intellij.ui.webview.impl.engine.WebViewScript
 import com.sun.jna.Callback
+import com.sun.jna.Function
 import com.sun.jna.Memory
+import com.sun.jna.NativeLibrary
 import com.sun.jna.Pointer
+import com.sun.jna.Structure
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 
 /**
  * Low-level JNA bridge to macOS `WKWebView` via the existing [Foundation] ObjC runtime.
@@ -68,6 +74,7 @@ internal object WKWebViewBridge {
 
   // WKWebView
   private val SEL_INIT_WITH_FRAME_CONFIGURATION = createSelector("initWithFrame:configuration:")
+  private val SEL_FLAGS_CHANGED = createSelector("flagsChanged:")
   private val SEL_LOAD_REQUEST = createSelector("loadRequest:")
   private val SEL_LOAD_HTML_STRING_BASE_URL = createSelector("loadHTMLString:baseURL:")
   private val SEL_EVALUATE_JAVASCRIPT = createSelector("evaluateJavaScript:completionHandler:")
@@ -81,6 +88,7 @@ internal object WKWebViewBridge {
   private val SEL_SET_INSPECTABLE = createSelector("setInspectable:")
   private val SEL_SET_CAN_USE_CREDENTIAL_STORAGE = createSelector("_setCanUseCredentialStorage:")
   private val SEL_SET_RUBBER_BANDING_ENABLED = createSelector("_setRubberBandingEnabled:")
+  private val SEL_SET_UI_DELEGATE = createSelector("setUIDelegate:")
   private val SEL_REMOVE_FROM_SUPERVIEW = createSelector("removeFromSuperview")
   private val SEL_COPY = createSelector("copy:")
   private val SEL_PASTE = createSelector("paste:")
@@ -131,6 +139,10 @@ internal object WKWebViewBridge {
 
   // WKScriptMessage
   private val SEL_BODY = createSelector("body")
+
+  // NSEvent
+  private val SEL_MODIFIER_FLAGS = createSelector("modifierFlags")
+  private val SEL_KEY_CODE = createSelector("keyCode")
   // endregion
 
   /** Name used for the JS→JVM postMessage channel. JS calls: `window.webkit.messageHandlers.webviewIpc.postMessage(...)` */
@@ -152,12 +164,20 @@ internal object WKWebViewBridge {
   private var messageHandlerCallback: Callback? = null
 
   private var urlSchemeHandlerClass: ID = ID.NIL
+  private var uiDelegateClass: ID = ID.NIL
+  private var webViewClass: ID = ID.NIL
 
   @Suppress("unused") // prevent GC
   private var urlSchemeStartCallback: Callback? = null
 
   @Suppress("unused") // prevent GC
   private var urlSchemeStopCallback: Callback? = null
+
+  @Suppress("unused") // prevent GC
+  private var uiDelegateCreateWebViewCallback: Callback? = null
+
+  @Suppress("unused") // prevent GC
+  private var webViewFlagsChangedCallback: Callback? = null
 
   /**
    * Per-webview callback registry. Key = the ObjC `self` pointer of the handler instance.
@@ -167,16 +187,37 @@ internal object WKWebViewBridge {
 
   private val urlSchemeHandlerCallbacks = java.util.concurrent.ConcurrentHashMap<Long, (String) -> WebViewAssetResponse?>()
 
+  private val newWindowCallbacks = java.util.concurrent.ConcurrentHashMap<Long, (String) -> Unit>()
+
+  // AppKit delivers bare modifier key transitions through `flagsChanged:` instead of `keyDown:`/`keyUp:`.
+  // One ObjC subclass is shared by all WKWebView instances, so callbacks and last modifier state are keyed
+  // by the native WebView pointer.
+  private val modifierKeyCallbacks = java.util.concurrent.ConcurrentHashMap<Long, (ModifierKeyEvent) -> Unit>()
+  private val modifierStateByWebView = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+
+  // AWT-shaped payload produced by the native layer. Posting to AWT is intentionally left to the host peer,
+  // which owns Swing component lifecycle and can choose the correct event source.
+  internal data class ModifierKeyEvent(
+    val id: Int,
+    val keyCode: Int,
+    val modifiersEx: Int,
+    val keyLocation: Int,
+  )
+
   /**
    * Creates and configures a new `WKWebView` instance.
    *
    * @param onMessage callback invoked on the main thread when JS calls `postMessage`
    * @param resolveAssetUrl callback invoked by the private URL scheme handler.
+   * @param onNewWindowRequested callback invoked when WebKit asks for a secondary WebView.
    * @return handles that must be passed to [release].
    */
   fun createWKWebView(
     onMessage: (String) -> Unit,
     resolveAssetUrl: (String) -> WebViewAssetResponse?,
+    onNewWindowRequested: (String) -> Unit,
+    onModifierKeyEvent: (ModifierKeyEvent) -> Unit,
+    documentStartScripts: List<WebViewScript> = emptyList(),
   ): WebViewHandles {
     // 1. Create WKWebViewConfiguration
     val configuration = invoke(invoke(getObjcClass(CLS_WKWEBVIEW_CONFIGURATION), SEL_ALLOC), SEL_INIT)
@@ -188,6 +229,9 @@ internal object WKWebViewBridge {
 
     // 3. Set up user content controller with message handler
     val userContentController = invoke(configuration, SEL_USER_CONTENT_CONTROLLER)
+    documentStartScripts.forEach { script ->
+      installDocumentStartUserScript(userContentController, script.script)
+    }
     installApplicationModeUserScript(userContentController)
     val handlerInstance = createAndRegisterMessageHandler(onMessage)
     invoke(userContentController, SEL_ADD_SCRIPT_MESSAGE_HANDLER, handlerInstance, nsString(IPC_HANDLER_NAME))
@@ -196,10 +240,15 @@ internal object WKWebViewBridge {
     invoke(configuration, SEL_SET_URL_SCHEME_HANDLER_FOR_URL_SCHEME, urlSchemeHandlerInstance, nsString(WEBVIEW_ASSET_CUSTOM_SCHEME))
 
     // 4. Allocate WKWebView with zero frame (will be set when attached)
-    val webView = invoke(getObjcClass(CLS_WKWEBVIEW), SEL_ALLOC)
+    // Use a tiny WKWebView subclass only to observe `flagsChanged:`. The override always calls super, so
+    // WebKit keeps its normal first-responder and browser behavior.
+    val webView = invoke(ensureWebViewClassRegistered(), SEL_ALLOC)
     val initializedWebView = invoke(webView, SEL_INIT_WITH_FRAME_CONFIGURATION,
                                     NSRect(0.0, 0.0, 0.0, 0.0), configuration)
+    modifierKeyCallbacks[initializedWebView.toLong()] = onModifierKeyEvent
     configureWebViewApplicationMode(initializedWebView)
+    val uiDelegateInstance = createAndRegisterUiDelegate(onNewWindowRequested)
+    invoke(initializedWebView, SEL_SET_UI_DELEGATE, uiDelegateInstance)
 
     // 5. Keep Swing host geometry as the only frame source. The WebView is attached
     // to the window content view, so AppKit autoresizing would follow the whole window.
@@ -212,6 +261,7 @@ internal object WKWebViewBridge {
       webView = initializedWebView,
       messageHandler = handlerInstance,
       urlSchemeHandler = urlSchemeHandlerInstance,
+      uiDelegate = uiDelegateInstance,
     )
   }
 
@@ -349,6 +399,7 @@ internal object WKWebViewBridge {
     val configuration = invoke(handles.webView, "configuration")
     val ucc = invoke(configuration, SEL_USER_CONTENT_CONTROLLER)
     invoke(ucc, SEL_REMOVE_SCRIPT_MESSAGE_HANDLER, nsString(IPC_HANDLER_NAME))
+    invoke(handles.webView, SEL_SET_UI_DELEGATE, ID.NIL)
 
     // 2. Detach from superview
     invoke(handles.webView, SEL_REMOVE_FROM_SUPERVIEW)
@@ -356,20 +407,139 @@ internal object WKWebViewBridge {
     // 3. Unregister message callback
     messageHandlerCallbacks.remove(handles.messageHandler.toLong())
     urlSchemeHandlerCallbacks.remove(handles.urlSchemeHandler.toLong())
+    newWindowCallbacks.remove(handles.uiDelegate.toLong())
+    modifierKeyCallbacks.remove(handles.webView.toLong())
+    modifierStateByWebView.remove(handles.webView.toLong())
 
     // 4. Release native objects
     invoke(handles.messageHandler, SEL_RELEASE)
     invoke(handles.urlSchemeHandler, SEL_RELEASE)
+    invoke(handles.uiDelegate, SEL_RELEASE)
     invoke(handles.webView, SEL_RELEASE)
   }
+
+  // region WKWebView subclass registration
+  //
+  // This is the macOS-specific fallback for modifier-only shortcuts while focus is inside WKWebView.
+  // Pure AWT events do not reliably see Shift/Ctrl transitions in that state, but AppKit does.
+  // We observe only left/right Shift and Control, translate the state transition to a Java KeyEvent shape,
+  // and leave the original AppKit event unconsumed.
+
+  @Synchronized
+  private fun ensureWebViewClassRegistered(): ID {
+    if (!ID.NIL.equals(webViewClass)) return webViewClass
+
+    val superclass = getObjcClass(CLS_WKWEBVIEW)
+    val cls = allocateObjcClassPair(superclass, "IdeaWKWebView")
+
+    val flagsChangedCallback = object : Callback {
+      @Suppress("unused", "UNUSED_PARAMETER") // called from native
+      fun callback(self: ID, selector: Pointer, event: ID) {
+        try {
+          handleFlagsChanged(self, event)
+        }
+        finally {
+          // Do not consume or short-circuit the AppKit event. WKWebView still needs the original
+          // modifier state for selection, text editing, WebKit internals, and browser shortcuts.
+          invokeSuperFlagsChanged(self, superclass, event)
+        }
+      }
+    }
+    webViewFlagsChangedCallback = flagsChangedCallback
+
+    addMethod(cls, SEL_FLAGS_CHANGED, flagsChangedCallback, "v@:@")
+
+    registerObjcClassPair(cls)
+    webViewClass = cls
+    return cls
+  }
+
+  private fun handleFlagsChanged(webView: ID, event: ID) {
+    val keyEvent = modifierKeyEvent(webView, event) ?: return
+    // AppKit can deliver modifier changes to windows that are not currently owned by this WebView.
+    // Forward only when WKWebView, or one of its private descendants, is the active first responder.
+    if (!firstResponderIsInsideWebView(webView)) return
+    modifierKeyCallbacks[webView.toLong()]?.invoke(keyEvent)
+  }
+
+  private fun modifierKeyEvent(webView: ID, event: ID): ModifierKeyEvent? {
+    val keyCode = invoke(event, SEL_KEY_CODE).toInt()
+    val javaKeyCode = macModifierKeyCodeToJavaKeyCode(keyCode) ?: return null
+    val currentModifiers = macModifierFlagsToJavaModifiers(invoke(event, SEL_MODIFIER_FLAGS).toLong())
+    val previousModifiers = modifierStateByWebView.put(webView.toLong(), currentModifiers) ?: 0
+    val modifierMask = when (javaKeyCode) {
+      KeyEvent.VK_SHIFT -> InputEvent.SHIFT_DOWN_MASK
+      KeyEvent.VK_CONTROL -> InputEvent.CTRL_DOWN_MASK
+      else -> return null
+    }
+    if ((previousModifiers and modifierMask) == (currentModifiers and modifierMask)) return null
+
+    // `flagsChanged:` is state-based. Compare with the previous modifier mask to synthesize the
+    // press/release edge expected by IntelliJ's AWT shortcut dispatch.
+    return ModifierKeyEvent(
+      id = if (currentModifiers and modifierMask != 0) KeyEvent.KEY_PRESSED else KeyEvent.KEY_RELEASED,
+      keyCode = javaKeyCode,
+      modifiersEx = currentModifiers,
+      keyLocation = macModifierKeyLocation(keyCode),
+    )
+  }
+
+  private fun macModifierKeyCodeToJavaKeyCode(keyCode: Int): Int? {
+    return when (keyCode) {
+      MAC_KEY_LEFT_SHIFT, MAC_KEY_RIGHT_SHIFT -> KeyEvent.VK_SHIFT
+      MAC_KEY_LEFT_CONTROL, MAC_KEY_RIGHT_CONTROL -> KeyEvent.VK_CONTROL
+      else -> null
+    }
+  }
+
+  private fun macModifierKeyLocation(keyCode: Int): Int {
+    return when (keyCode) {
+      MAC_KEY_LEFT_SHIFT, MAC_KEY_LEFT_CONTROL -> KeyEvent.KEY_LOCATION_LEFT
+      MAC_KEY_RIGHT_SHIFT, MAC_KEY_RIGHT_CONTROL -> KeyEvent.KEY_LOCATION_RIGHT
+      else -> KeyEvent.KEY_LOCATION_UNKNOWN
+    }
+  }
+
+  private fun macModifierFlagsToJavaModifiers(flags: Long): Int {
+    var result = 0
+    if (flags and NSEVENT_MODIFIER_FLAG_SHIFT != 0L) result = result or InputEvent.SHIFT_DOWN_MASK
+    if (flags and NSEVENT_MODIFIER_FLAG_CONTROL != 0L) result = result or InputEvent.CTRL_DOWN_MASK
+    return result
+  }
+
+  private fun invokeSuperFlagsChanged(receiver: ID, superclass: ID, event: ID) {
+    OBJC_MSG_SEND_SUPER.invokeVoid(arrayOf(ObjcSuper(receiver.toLong(), superclass.toLong()), SEL_FLAGS_CHANGED, event))
+  }
+
+  // JNA passes this structure directly to objc_msgSendSuper. Fields must stay public JVM fields so the
+  // native call can read the exact Objective-C `struct objc_super` layout.
+  @Structure.FieldOrder("receiver", "superclass")
+  internal class ObjcSuper() : Structure() {
+    @JvmField
+    var receiver: Long = 0
+
+    @JvmField
+    var superclass: Long = 0
+
+    constructor(receiver: Long, superclass: Long) : this() {
+      this.receiver = receiver
+      this.superclass = superclass
+    }
+  }
+
+  // endregion
 
   // region Message handler class registration
 
   private fun installApplicationModeUserScript(userContentController: ID) {
+    installDocumentStartUserScript(userContentController, WebViewApplicationModeScripts.DOM_HARDENING_SCRIPT)
+  }
+
+  private fun installDocumentStartUserScript(userContentController: ID, @Language("JavaScript") source: String) {
     val userScript = invoke(
       invoke(getObjcClass(CLS_WKUSER_SCRIPT), SEL_ALLOC),
       SEL_INIT_WITH_SOURCE_INJECTION_TIME_FOR_MAIN_FRAME_ONLY,
-      nsString(WebViewApplicationModeScripts.DOM_HARDENING_SCRIPT),
+      nsString(source),
       WK_USER_SCRIPT_INJECTION_TIME_AT_DOCUMENT_START,
       false,
     )
@@ -443,6 +613,58 @@ internal object WKWebViewBridge {
 
   // endregion
 
+  // region UI delegate class registration
+
+  private fun createAndRegisterUiDelegate(onNewWindowRequested: (String) -> Unit): ID {
+    ensureUiDelegateClassRegistered()
+
+    val instance = invoke(invoke(uiDelegateClass, SEL_ALLOC), SEL_INIT)
+    newWindowCallbacks[instance.toLong()] = onNewWindowRequested
+    return instance
+  }
+
+  @Synchronized
+  private fun ensureUiDelegateClassRegistered() {
+    if (!ID.NIL.equals(uiDelegateClass)) return
+
+    val superclass = getObjcClass(CLS_NSOBJECT)
+    val cls = allocateObjcClassPair(superclass, "IdeaWKUiDelegate")
+
+    val protocol = getProtocol("WKUIDelegate")
+    if (!isNil(protocol)) {
+      addProtocol(cls, protocol)
+    }
+
+    val createWebViewCallback = object : Callback {
+      @Suppress("unused", "UNUSED_PARAMETER") // called from native
+      fun callback(self: ID, selector: String, webView: ID, configuration: ID, navigationAction: ID, windowFeatures: ID): ID {
+        val url = urlFromNavigationAction(navigationAction)
+        if (url != null) {
+          newWindowCallbacks[self.toLong()]?.invoke(url)
+        }
+        return ID.NIL
+      }
+    }
+    uiDelegateCreateWebViewCallback = createWebViewCallback
+
+    addMethod(
+      cls,
+      createSelector("webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:"),
+      createWebViewCallback,
+      "@@:@@@@",
+    )
+
+    registerObjcClassPair(cls)
+    uiDelegateClass = cls
+  }
+
+  private fun urlFromNavigationAction(navigationAction: ID): String? {
+    val request = invoke(navigationAction, SEL_REQUEST)
+    return urlFromRequest(request)
+  }
+
+  // endregion
+
   // region URL scheme handler class registration
 
   private fun createAndRegisterUrlSchemeHandler(resolve: (String) -> WebViewAssetResponse?): ID {
@@ -490,6 +712,10 @@ internal object WKWebViewBridge {
 
   private fun urlFromSchemeTask(task: ID): String? {
     val request = invoke(task, SEL_REQUEST)
+    return urlFromRequest(request)
+  }
+
+  private fun urlFromRequest(request: ID): String? {
     if (isNil(request)) return null
     val url = invoke(request, SEL_URL)
     if (isNil(url)) return null
@@ -584,11 +810,20 @@ internal object WKWebViewBridge {
            invoke(responder, SEL_IS_DESCENDANT_OF, webView).booleanValue()
   }
 
+  private const val NSEVENT_MODIFIER_FLAG_SHIFT = 1L shl 17
+  private const val NSEVENT_MODIFIER_FLAG_CONTROL = 1L shl 18
+  private const val MAC_KEY_LEFT_SHIFT = 56
+  private const val MAC_KEY_LEFT_CONTROL = 59
+  private const val MAC_KEY_RIGHT_SHIFT = 60
+  private const val MAC_KEY_RIGHT_CONTROL = 62
+  private val OBJC_MSG_SEND_SUPER: Function = NativeLibrary.getInstance("objc").getFunction("objc_msgSendSuper")
+
   // endregion
 
   data class WebViewHandles(
     val webView: ID,
     val messageHandler: ID,
     val urlSchemeHandler: ID,
+    val uiDelegate: ID,
   )
 }

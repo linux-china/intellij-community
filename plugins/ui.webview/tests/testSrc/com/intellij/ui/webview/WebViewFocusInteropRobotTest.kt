@@ -5,6 +5,7 @@ import com.intellij.jna.JnaLoader
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.junit5.TestApplication
 import com.intellij.ui.webview.impl.NativeBridgeLibraryAvailability
 import com.intellij.ui.webview.impl.WebViewEngineBridge
 import com.intellij.ui.webview.impl.host.NativeWebViewHostPeer
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.TempDir
 import java.awt.Desktop
 import java.awt.Dimension
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
@@ -44,6 +46,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @EnabledOnOs(OS.MAC, OS.WINDOWS)
 @DisabledIfSystemProperty(named = "java.awt.headless", matches = "true")
+@TestApplication
 class WebViewFocusInteropRobotTest {
 
   private var frame: JFrame? = null
@@ -113,6 +116,83 @@ class WebViewFocusInteropRobotTest {
   }
 
   @Test
+  fun modifierDoubleClickInsideWebViewReachesAwt(@TempDir tempDir: Path): Unit = runBlocking {
+    val facade = createPlatformEngine(scope!!)
+    try {
+      WebViewFocusRobotTestSupport.runModifierDoubleClickShortcutScenario(
+        frame!!,
+        scope!!,
+        facade,
+        createNativeHostPeer(scope!!, facade),
+        tempDir,
+      )
+    }
+    finally {
+      facade.close()
+    }
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  fun browserTextNavigationShortcutsStayInsideWebView(): Unit = runBlocking {
+    val tempDir = Files.createTempDirectory("webview-text-navigation-test")
+    val facade = createPlatformEngine(scope!!)
+    try {
+      WebViewFocusRobotTestSupport.runBrowserTextNavigationScenario(
+        frame!!,
+        scope!!,
+        facade,
+        createNativeHostPeer(scope!!, facade),
+        tempDir,
+      )
+    }
+    finally {
+      facade.close()
+      tempDir.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  fun altF1InsideWebViewReachesAwtWithAltModifier(): Unit = runBlocking {
+    val tempDir = Files.createTempDirectory("webview-alt-f1-test")
+    val facade = createPlatformEngine(scope!!)
+    try {
+      WebViewFocusRobotTestSupport.runAltF1ShortcutScenario(
+        frame!!,
+        scope!!,
+        facade,
+        createNativeHostPeer(scope!!, facade),
+        tempDir,
+      )
+    }
+    finally {
+      facade.close()
+      tempDir.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  fun altF4InsideWebViewClosesFrame(): Unit = runBlocking {
+    val tempDir = Files.createTempDirectory("webview-alt-f4-test")
+    val facade = createPlatformEngine(scope!!)
+    try {
+      WebViewFocusRobotTestSupport.runAltF4WindowCloseScenario(
+        frame!!,
+        scope!!,
+        facade,
+        createNativeHostPeer(scope!!, facade),
+        tempDir,
+      )
+    }
+    finally {
+      facade.close()
+      tempDir.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
   @EnabledOnOs(OS.MAC)
   fun returningToSwingMovesMacFirstResponderOutsideWebView(@TempDir tempDir: Path): Unit = runBlocking {
     ensureJna()
@@ -138,6 +218,24 @@ class WebViewFocusInteropRobotTest {
     val facade = createPlatformEngine(scope!!)
     try {
       WebViewFocusRobotTestSupport.runNonTabbableSelectionScenario(
+        frame!!,
+        scope!!,
+        facade,
+        createNativeHostPeer(scope!!, facade),
+        tempDir,
+      )
+    }
+    finally {
+      facade.close()
+    }
+  }
+
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  fun clickingBadComboPopupThenSwingFieldClosesPopupAndMovesFocusBack(@TempDir tempDir: Path): Unit = runBlocking {
+    val facade = createPlatformEngine(scope!!)
+    try {
+      WebViewFocusRobotTestSupport.runBadComboPopupThenSwingRefocusScenario(
         frame!!,
         scope!!,
         facade,

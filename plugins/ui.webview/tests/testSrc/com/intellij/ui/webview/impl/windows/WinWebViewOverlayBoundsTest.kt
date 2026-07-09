@@ -203,7 +203,7 @@ internal class WinWebViewOverlayBoundsTest {
 
     fun visibilitySnapshot(): List<Visibility> = visibility.toList()
 
-    override fun create(parentHwnd: Long, userDataDir: String, callbacks: WinWebView2Bridge.Callbacks): Long {
+    override fun create(parentHwnd: Long, userDataDir: String, documentStartScript: String, callbacks: WinWebView2Bridge.Callbacks): Long {
       this.callbacks = callbacks
       return nextHandle++.also { createdHandles.add(it) }
     }
@@ -234,10 +234,16 @@ internal class WinWebViewOverlayBoundsTest {
     override fun loadUrl(handle: Long, url: String) {
     }
 
+    override fun setVirtualHostNameToFolderMapping(handle: Long, hostName: String, folderPath: String) {
+    }
+
     override fun loadHtml(handle: Long, html: String, baseUrl: String?) {
     }
 
     override fun evaluateJavaScript(handle: Long, evalId: Long, script: String) {
+    }
+
+    override fun callDevToolsProtocolMethod(handle: Long, callId: Long, methodName: String, paramsJson: String) {
     }
 
     override fun transferToJs(handle: Long, rawJson: String) {

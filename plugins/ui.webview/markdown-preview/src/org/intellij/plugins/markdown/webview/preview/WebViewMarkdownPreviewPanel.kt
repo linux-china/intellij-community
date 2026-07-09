@@ -12,6 +12,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.diagnostic.trace
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolder
@@ -24,6 +25,8 @@ import com.intellij.ui.webview.api.WebViewIconSet
 import com.intellij.ui.webview.api.WebViewPanel
 import com.intellij.ui.webview.api.WebViewPanelOptions
 import com.intellij.ui.webview.api.createWebViewPanel
+import com.intellij.ui.webview.impl.traceWebViewPerf
+import com.intellij.ui.webview.impl.traceWebViewPerfSince
 import com.intellij.util.asDisposable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,12 +39,14 @@ import org.intellij.plugins.markdown.extensions.jcef.commandRunner.RunnerPlace
 import org.intellij.plugins.markdown.settings.MarkdownPreviewSettings
 import org.intellij.plugins.markdown.ui.preview.MarkdownContentPanel
 import org.intellij.plugins.markdown.ui.preview.MarkdownHtmlPanel
+import org.intellij.plugins.markdown.ui.preview.PreviewLAFThemeStyles
 import org.intellij.plugins.markdown.ui.preview.accessor.MarkdownLinkOpener
 import org.jetbrains.annotations.ApiStatus
 import java.awt.BorderLayout
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
+import kotlin.time.TimeSource
 
 private val LOG = logger<WebViewMarkdownPreviewPanel>()
 
@@ -54,6 +59,8 @@ class WebViewMarkdownPreviewPanel(
   private val coroutineScope = service<ScopeHolder>()
     .coroutineScope
     .childScope("Markdown WebView preview")
+
+  private val pathLinkResolver = project?.let { MarkdownPreviewPathLinkResolver(it, coroutineScope) }
 
   private val rootComponent = JPanel(BorderLayout())
 
@@ -71,6 +78,8 @@ class WebViewMarkdownPreviewPanel(
 
   @Volatile
   private var nextContentVersion: Int = 0
+
+  private val panelCreatedAt = TimeSource.Monotonic.markNow()
 
   init {
     ApplicationManager.getApplication().messageBus.connect(coroutineScope.asDisposable()).subscribe(
@@ -99,6 +108,7 @@ class WebViewMarkdownPreviewPanel(
     )
     lastUpdate = update
     lastCommandSession = MarkdownRunCommandSession.EMPTY
+    LOG.trace { "markdown.webview.setMarkdown - ${update.diagnosticDetails()}" }
     sendContentUpdate(update)
   }
 
@@ -160,6 +170,11 @@ class WebViewMarkdownPreviewPanel(
     return object : MarkdownPreviewHostApi {
       override suspend fun pageReady() {
         pageReady = true
+        LOG.traceWebViewPerfSince(
+          "markdown.webview.pageReady.sincePanelCreate",
+          panelCreatedAt,
+          markdownDiagnosticDetails(lastUpdate),
+        )
         sendContentUpdate()
       }
 
@@ -175,6 +190,52 @@ class WebViewMarkdownPreviewPanel(
       override suspend fun runCommand(params: MarkdownRunCommandParams) {
         runMarkdownCommand(params)
       }
+
+      override suspend fun resolvePathLinks(params: MarkdownResolvePathLinksParams): MarkdownResolvedPathLinksParams {
+        return MarkdownResolvedPathLinksParams(resolveMarkdownPathLinks(params))
+      }
+
+      override suspend fun navigatePathLink(params: MarkdownNavigatePathLinkParams) {
+        navigateMarkdownPathLink(params)
+      }
+
+      override suspend fun setFontSize(params: MarkdownSetFontSizeParams) {
+        setMarkdownFontSize(params)
+      }
+    }
+  }
+
+  private suspend fun resolveMarkdownPathLinks(params: MarkdownResolvePathLinksParams): List<String> {
+    val update = lastUpdate ?: return emptyList()
+    if (params.contentVersion != update.contentVersion) return emptyList()
+    val resolver = pathLinkResolver ?: return emptyList()
+
+    val resolvedRawPaths = LinkedHashSet<String>()
+    for ((_, rawPath) in params.candidates.distinctBy { it.rawPath }) {
+      if (resolver.resolve(rawPath, update.document).isNotEmpty()) {
+        resolvedRawPaths.add(rawPath)
+      }
+    }
+    return params.candidates.mapNotNull { candidate -> candidate.id.takeIf { candidate.rawPath in resolvedRawPaths } }
+  }
+
+  private suspend fun navigateMarkdownPathLink(params: MarkdownNavigatePathLinkParams) {
+    val update = lastUpdate ?: return
+    if (params.contentVersion != update.contentVersion) return
+    val resolver = pathLinkResolver ?: return
+
+    resolver.navigate(params.rawPath, update.document, rootComponent, params.clientX, params.clientY)
+  }
+
+  private fun setMarkdownFontSize(params: MarkdownSetFontSizeParams) {
+    val previewSettings = service<MarkdownPreviewSettings>()
+    val currentFontSize = previewSettings.state.fontSize
+    val defaultFontSize = MarkdownPreviewSettings.State().fontSize
+    val normalizedFontSize = closestFontSize(params.fontSize, previewFontSizeOptions(currentFontSize, defaultFontSize))
+    if (normalizedFontSize == currentFontSize) return
+
+    previewSettings.update { settings ->
+      settings.state.fontSize = normalizedFontSize
     }
   }
 
@@ -265,14 +326,16 @@ class WebViewMarkdownPreviewPanel(
     val actualUpdate = update ?: return
     coroutineScope.launch {
       try {
-        panel.interop.callable(MarkdownPreviewPageApi.ID).contentChanged(
-          MarkdownContentChangedParams(
-            markdown = actualUpdate.markdown,
-            scrollLine = actualUpdate.initialScrollLineNumber,
-            settings = currentPreviewSettings(),
-            contentVersion = actualUpdate.contentVersion,
+        LOG.traceWebViewPerf("markdown.webview.contentChanged.call", actualUpdate.diagnosticDetails()) {
+          panel.interop.callable(MarkdownPreviewPageApi.ID).contentChanged(
+            MarkdownContentChangedParams(
+              markdown = actualUpdate.markdown,
+              scrollLine = actualUpdate.initialScrollLineNumber,
+              settings = currentPreviewSettings(),
+              contentVersion = actualUpdate.contentVersion,
+            )
           )
-        )
+        }
       }
       catch (e: CancellationException) {
         throw e
@@ -286,7 +349,12 @@ class WebViewMarkdownPreviewPanel(
   private fun currentPreviewSettings(): MarkdownPreviewSettingsParams {
     val fontSize = service<MarkdownPreviewSettings>().state.fontSize
     val defaultFontSize = MarkdownPreviewSettings.State().fontSize
-    return MarkdownPreviewSettingsParams(fontSize = fontSize.takeIf { it != defaultFontSize })
+    return MarkdownPreviewSettingsParams(
+      fontSize = fontSize.takeIf { it != defaultFontSize },
+      effectiveFontSize = fontSize,
+      defaultFontSize = defaultFontSize,
+      fontSizeOptions = previewFontSizeOptions(fontSize, defaultFontSize),
+    )
   }
 
   override fun addScrollListener(listener: MarkdownHtmlPanel.ScrollListener) {
@@ -313,7 +381,12 @@ class WebViewMarkdownPreviewPanel(
     val initialScrollLineNumber: Int,
     val document: VirtualFile?,
     val contentVersion: Int,
-  )
+  ) {
+    fun diagnosticDetails(): String {
+      return "file=${document?.name.orEmpty()}, contentVersion=$contentVersion, markdownChars=${markdown.length}, " +
+             "markdownLines=${markdownLineCount(markdown)}, scrollLine=$initialScrollLineNumber"
+    }
+  }
 
   @Service(Service.Level.APP)
   private class ScopeHolder(
@@ -332,6 +405,30 @@ class WebViewMarkdownPreviewPanel(
         if (text[index] == '\n') line++
       }
       return line
+    }
+
+    private fun markdownDiagnosticDetails(update: MarkdownUpdate?): String {
+      return update?.diagnosticDetails() ?: "file=, contentVersion=none, markdownChars=0, markdownLines=0, scrollLine=none"
+    }
+
+    private fun markdownLineCount(text: String): Int {
+      if (text.isEmpty()) return 0
+      var lines = 1
+      for (ch in text) {
+        if (ch == '\n') lines++
+      }
+      return lines
+    }
+
+    private fun previewFontSizeOptions(vararg extraFontSizes: Int): List<Int> {
+      return (PreviewLAFThemeStyles.fontSizeOptions + extraFontSizes.asIterable())
+        .filter { it > 0 }
+        .distinct()
+        .sorted()
+    }
+
+    private fun closestFontSize(fontSize: Int, options: List<Int>): Int {
+      return options.minByOrNull { kotlin.math.abs(it - fontSize) } ?: fontSize.coerceAtLeast(1)
     }
   }
 }

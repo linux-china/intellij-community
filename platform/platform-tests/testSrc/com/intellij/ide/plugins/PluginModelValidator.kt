@@ -590,9 +590,7 @@ internal class PluginModelValidator(
                         |""".trimMargin())
               continue
             }
-            !isMainModule && loadingRule == ModuleLoadingRuleValue.OPTIONAL
-            && moduleName != "intellij.platform.backend" -> { // remove this check when IJPL-201428 is fixed
-
+            !isMainModule && loadingRule == ModuleLoadingRuleValue.OPTIONAL -> {
               val thisModuleName = referencingModuleInfo.name ?: error("Module name is not specified for $referencingModuleInfo")
               val thisLoadingRule = contentModuleNameFromThisPluginToLoadingRule.getValue(thisModuleName)
               val problemDescription = when (thisLoadingRule) {

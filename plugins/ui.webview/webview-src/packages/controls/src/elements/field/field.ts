@@ -22,6 +22,8 @@ export class JbField extends LitElement {
     .body {
       display: grid;
       gap: var(--jb-space-xs);
+      -webkit-user-select: text;
+      user-select: text;
     }
   `]
 
